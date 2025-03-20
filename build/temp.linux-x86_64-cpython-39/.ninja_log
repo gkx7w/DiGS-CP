@@ -1,0 +1,21 @@
+# ninja log v5
+1	1062	1729447723745419752	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms_kernel.o	221292dcee4937b6
+0	7925	1729447730605556925	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/iou3d_nms/src/iou3d_cpu.o	54269bc71f8879e6
+0	9226	1729447731906582943	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms.o	e97bf5d1007044b7
+1	9320	1729447732000584823	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms_api.o	7d6d5fad887250e1
+2	420	1729447732672598263	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/roiaware_pool3d/src/roiaware_pool3d_kernel.o	50009873aa9a283a
+2	8506	1729447740755759939	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/roiaware_pool3d/src/roiaware_pool3d.o	d2e036da00ee4ae7
+2	10377	1729447751370972323	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/pointnet2_api.o	3173cb3003c094b2
+2	13696	1729447754685038643	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/group_points_gpu.o	188404209336c87f
+2	14266	1729447755254050030	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/ball_query_gpu.o	cc1a82492a125295
+2	14287	1729447755275050450	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/interpolate_gpu.o	c9f5bb608e156706
+2	14940	1729447755929063539	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/sampling_gpu.o	28347a5b193321c5
+8	7975	1729459822562568207	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms_api.o	7d6d5fad887250e1
+8	8223	1729459822810571919	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/iou3d_nms/src/iou3d_cpu.o	54269bc71f8879e6
+8	8300	1729459822887573071	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms.o	e97bf5d1007044b7
+7	7960	1729459831108696062	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/roiaware_pool3d/src/roiaware_pool3d.o	d2e036da00ee4ae7
+8	9597	1729459840963843419	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/pointnet2_api.o	3173cb3003c094b2
+8	13587	1729459844946902950	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/group_points_gpu.o	188404209336c87f
+8	13845	1729459845205906820	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/ball_query_gpu.o	cc1a82492a125295
+8	14275	1729459845636913261	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/interpolate_gpu.o	c9f5bb608e156706
+9	14962	1729459846323923528	/home/ypy/projects/CoAlign/build/temp.linux-x86_64-cpython-39/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/sampling_gpu.o	28347a5b193321c5

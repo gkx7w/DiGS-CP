@@ -1,0 +1,25 @@
+# ninja log v5
+0	1015	1742265169940081606	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms_kernel.o	229f7f660d924e0c
+0	7972	1742265176894246153	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms.o	1e0fcd88db6714eb
+0	8501	1742265177423258670	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/iou3d_nms/src/iou3d_cpu.o	311bce9995ef6be4
+0	8540	1742265177463259616	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/iou3d_nms/src/iou3d_nms_api.o	f034c867ebffca7e
+2	403	1742265178048273458	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/roiaware_pool3d/src/roiaware_pool3d_kernel.o	952051a042e8dd55
+2	7876	1742265185517450182	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/roiaware_pool3d/src/roiaware_pool3d.o	c22a77d406efad71
+2	3648	1742265189348540823	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/sampling.o	177bf95518a0af1d
+1	3677	1742265189379541557	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/ball_query.o	924d59c4e0a5f8f9
+1	3728	1742265189430542764	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/interpolate.o	1ee8995cac5880c
+1	3777	1742265189479543923	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/group_points.o	aa8d1f41d59221a8
+2	9827	1742265195528687037	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/pointnet2_api.o	520a3101d265dfa5
+2	12151	1742265197851741995	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/interpolate_gpu.o	8749ccb3b7973198
+2	12173	1742265197872742492	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/sampling_gpu.o	7961c4cb6c9b4684
+1	12176	1742265197877742610	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/group_points_gpu.o	4ac3721724f08126
+1	12448	1742265198148749021	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_stack/src/ball_query_gpu.o	b42ea54154dca729
+2	3385	1742265201700833054	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/interpolate.o	35b2a281d6f8c105
+2	3397	1742265201713833362	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/ball_query.o	2dee534ff50338e2
+2	3574	1742265201890837549	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/group_points.o	c06ae6b7739f5165
+2	3600	1742265201916838164	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/sampling.o	53d6b087a30d806e
+2	9178	1742265207493970100	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/pointnet2_api.o	43dabd3105ddfa9
+2	11264	1742265209579019423	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/ball_query_gpu.o	86a0d3f096167748
+2	11518	1742265209832025409	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/group_points_gpu.o	52d1aec113ad0230
+2	11690	1742265210004029477	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/interpolate_gpu.o	eb0c7e541b2a7b1b
+2	11810	1742265210124032316	/home/ubuntu/Code2/build/temp.linux-x86_64-cpython-310/opencood/pcdet_utils/pointnet2/pointnet2_batch/src/sampling_gpu.o	ffc792b627509d4
