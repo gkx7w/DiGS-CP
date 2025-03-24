@@ -40,7 +40,7 @@ def train_parser():
     parser = argparse.ArgumentParser(description="synthetic data generation")
 
     # V2VNET
-    parser.add_argument("--hypes_yaml", "-y", type=str, default="/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diffusion.yaml",
+    parser.add_argument("--hypes_yaml", "-y", type=str, default="/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
                         help='data generation yaml file needed ')
 
     parser.add_argument('--qkv', default='',
@@ -163,13 +163,13 @@ def main():
             ouput_dict = model(batch_data['ego'])
             
             # 可视化
-            if i < 6760:
-                gt_bev_feature = ouput_dict['gt_feature'][0]
-                pre_bev_feature = ouput_dict['pred_feature'][0]
-                # 可视化gt bev
-                visualize_averaged_channels_individual(gt_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/gt_bev_{i}")
-                # 可视化预测bev
-                visualize_averaged_channels_individual(pre_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/pre_bev_{i}")
+            # if i > 6760:
+            #     gt_bev_feature = ouput_dict['gt_feature'][0]
+            #     pre_bev_feature = ouput_dict['pred_feature'][0]
+            #     # 可视化gt bev
+            #     visualize_averaged_channels_individual(gt_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/gt_bev_{i}")
+            #     # 可视化预测bev
+            #     visualize_averaged_channels_individual(pre_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/pre_bev_{i}")
             
             
             final_loss = criterion(ouput_dict, batch_data['ego']['label_dict'])

@@ -42,6 +42,8 @@ preprocess:
     max_points_per_voxel: &T 32
     max_voxel_train: 32000
     max_voxel_test: 70000
+    max_hwl: &max_hwl [1.98,2.36,5.63]
+    use_hwl: true
   # lidar range for each individual cav.
   cav_lidar_range: &cav_lidar [-140.8, -40, -3, 140.8, 40, 1]
   keep_original_lidar: true

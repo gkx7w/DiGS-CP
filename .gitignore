@@ -1,4 +1,5 @@
-opencood/bev_visualizations/*
-opencood/vis_output/*
+bev_visualizations/*
+vis_output/*
 opencood/logs/*
 spconv/
+checkpoints/

@@ -28,7 +28,7 @@ from opencood.models.sub_modules.torch_transformation_utils import warp_affine_s
 
 from icecream import ic
 from opencood.models.sub_modules.pillar_vfe import PillarVFE
-from opencood.models.sub_modules.point_pillar_scatter import PointPillarScatter
+from opencood.models.sub_modules.point_pillar_scatter_diffusion import PointPillarScatter
 from opencood.models.sub_modules.base_bev_backbone_resnet import ResNetBEVBackbone
 from opencood.models.sub_modules.base_bev_backbone import BaseBEVBackbone
 from opencood.models.sub_modules.downsample_conv import DownsampleConv

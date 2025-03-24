@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from opencood.models.sub_modules.pillar_vfe_nonet import PillarVFE
-from opencood.models.sub_modules.point_pillar_scatter import PointPillarScatter
+from opencood.models.sub_modules.pillar_vfe_dec_diff import PillarVFE
+from opencood.models.sub_modules.point_pillar_scatter_diffusion import PointPillarScatter
 from opencood.models.sub_modules.base_bev_backbone_resnet import ResNetBEVBackbone
 from opencood.models.sub_modules.base_bev_backbone import BaseBEVBackbone
 from opencood.models.sub_modules.downsample_conv import DownsampleConv
@@ -54,8 +54,10 @@ class PointPillarDiffusion(nn.Module):
         batch_dict = self.pillar_vfe(batch_dict)
         batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       
         # 将gt抠出来的bev特征输入到mdd中
-        # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
-        batch_dict = self.mdd(batch_dict)
+        batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
+        batch_dict['pred_feature'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
+        batch_dict['batch_gt_spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
+        # batch_dict = self.mdd(batch_dict)
         # ！！V2X-R没有单独训练diffusion，是整体一起训的
         output_dict = {'pred_feature' : batch_dict['pred_feature'], 
                        'gt_feature' : batch_dict['batch_gt_spatial_features']}

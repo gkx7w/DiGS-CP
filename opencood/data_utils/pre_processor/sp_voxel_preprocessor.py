@@ -84,6 +84,7 @@ class SpVoxelPreprocessor(BasePreprocessor):
         if self.spconv == 1:
             voxel_output = self.voxel_generator.generate(pcd_np)
         else:
+            # 注意voxel_generator中的雷达范围
             pcd_tv = self.tv.from_numpy(pcd_np)
             voxel_output = self.voxel_generator.point_to_voxel(pcd_tv)
         if isinstance(voxel_output, dict):

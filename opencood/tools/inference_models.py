@@ -3,7 +3,7 @@
 
 import sys
 
-sys.path.append("/home/ypy/projects/Code")
+sys.path.append("/home/ubuntu/Code2")
 import argparse
 import os
 import time
@@ -32,9 +32,12 @@ def test_parser():
                         help='mark this process')
 
     parser.add_argument('--model_dir', type=str,
-                        default="/home/ypy/projects/Code/checkpoints/compare/moreloss_convert_bsa_best",
+                        default="/home/ubuntu/Code2/checkpoints/fisrt_no_fuse",
                         help='Continued training path')
 
+    # parser.add_argument("--hypes_yaml", "-y", type=str, default="/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/SDCoper/SDCoper.yaml",
+    #                     help='data generation yaml file needed ')
+    
     parser.add_argument('--also_laplace', action='store_true',
                         help="whether to use laplace to simulate noise. Otherwise Gaussian")
     parser.add_argument('--fusion_method', type=str,

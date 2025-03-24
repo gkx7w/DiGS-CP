@@ -1,11 +1,14 @@
 from opencood.data_utils.datasets.late_fusion_dataset import getLateFusionDataset
 from opencood.data_utils.datasets.early_fusion_dataset import getEarlyFusionDataset
 from opencood.data_utils.datasets.early_fusion_dataset_diffusion import getEarlydiffusionFusionDataset
+from opencood.data_utils.datasets.early_fusion_dataset_diffusion_dec import getDecdiffusionFusionDataset
+
 from opencood.data_utils.datasets.intermediate_fusion_dataset import getIntermediateFusionDataset
 from opencood.data_utils.datasets.intermediate_2stage_fusion_dataset import getIntermediate2stageFusionDataset
 from opencood.data_utils.datasets.intermediate_2stage_fusion_dataset_new import getIntermediate2stageFusionDataset as getIntermediate2stagenewFusionDataset
 # from opencood.data_utils.datasets.intermediate_2stage_fusion_dataset_compare import getIntermediate2stageFusionDataset as getIntermediate2stagecompareFusionDataset
 from opencood.data_utils.datasets.intermediate_2stage_fusion_dataset_sdcoper import getIntermediate2stageFusionDataset as getIntermediate2stagesdcoperFusionDataset
+from opencood.data_utils.datasets.intermediate_2stage_fusion_dataset_sdcoper2 import getIntermediate2stageFusionDataset as getIntermediate2stagesdcoper2FusionDataset
 
 from opencood.data_utils.datasets.basedataset.opv2v_basedataset import OPV2VBaseDataset
 from opencood.data_utils.datasets.basedataset.v2xsim_basedataset import V2XSIMBaseDataset
@@ -16,7 +19,7 @@ def build_dataset(dataset_cfg, visualize=False, train=True):
     fusion_name = dataset_cfg['fusion']['core_method']
     dataset_name = dataset_cfg['fusion']['dataset']
 
-    assert fusion_name in ['late', 'intermediate', 'intermediate2stage', 'early', 'earlydiffusion',"intermediate2stagenew" , "intermediate2stagesdcoper"]
+    assert fusion_name in ['late', 'intermediate', 'intermediate2stage', 'early', 'earlydiffusion',"intermediate2stagenew" , "intermediate2stagesdcoper","intermediate2stagesdcoper2","decdiffusion"]
     assert dataset_name in ['opv2v', 'v2xsim', 'dairv2x', 'v2xset']
 
     fusion_dataset_func = "get" + fusion_name.capitalize() + "FusionDataset"

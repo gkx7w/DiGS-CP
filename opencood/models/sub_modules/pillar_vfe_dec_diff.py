@@ -102,7 +102,7 @@ class PillarVFE(nn.Module):
         paddings_indicator = actual_num.int() > max_num
         return paddings_indicator
 
-    def forward(self, batch_dict):
+    def forward(self, batch_dict, stage):
         """encoding voxel feature using point-pillar method
         Args:
             voxel_features: [M, 32, 4]
@@ -111,9 +111,14 @@ class PillarVFE(nn.Module):
         Returns:
             features: [M,64], after PFN
         """
-        voxel_features, voxel_num_points, coords = \
-            batch_dict['voxel_features'], batch_dict['voxel_num_points'], \
-            batch_dict['voxel_coords']
+        if stage == 'dec':  
+            voxel_features, voxel_num_points, coords = \
+                batch_dict['dec_voxel_features'], batch_dict['dec_voxel_num_points'], \
+                batch_dict['dec_voxel_coords']
+        else:
+            voxel_features, voxel_num_points, coords = \
+                batch_dict['voxel_features'], batch_dict['voxel_num_points'], \
+                batch_dict['voxel_coords']
 
         points_mean = \
             voxel_features[:, :, :3].sum(dim=1, keepdim=True) / \
@@ -148,9 +153,15 @@ class PillarVFE(nn.Module):
                                            axis=0)
         mask = torch.unsqueeze(mask, -1).type_as(voxel_features)
         features *= mask # torch.Size([N, 16, 10])
-        # features = features.view(features.size(0), 8, 20) # 将 [N, 16, 10] 重塑为 [N, 8, 20]
-        features = features.mean(dim=1) # 在第二维(dim=1)上取平均，结果为 [N, 20]
-        features = features.squeeze()
-        batch_dict['pillar_features'] = features
+        if stage == 'dec':
+            for pfn in self.pfn_layers:
+                features = pfn(features)
+            features = features.squeeze()
+            batch_dict['dec_pillar_features'] = features
+        else:
+            # features = features.view(features.size(0), 8, 20) # 将 [N, 16, 10] 重塑为 [N, 8, 20]
+            features = features.mean(dim=1) # 在第二维(dim=1)上取平均，结果为 [N, 20]
+            features = features.squeeze()
+            batch_dict['pillar_features'] = features
 
         return batch_dict

@@ -136,11 +136,11 @@ def getEarlydiffusionFusionDataset(cls):
             else:    
                 # 5. 将点云数据转换为体素/BEV/降采样点云
                 gt_boxes = object_bbx_center[mask.astype(bool)]
-                pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+                # pc_range = [-140.8, -40, -3, 140.8, 40, 1]
                 # visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_gt_boxes.png")
                 # 将gt扩展到相同大小 3:6 hwl
                 gt_boxes[:, 3:6] = np.array(self.max_hwl)
-                visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_gt_boxes.png")        
+                # visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_gt_boxes.png")        
                 # 获取gt框中的点云  不能使用gpu版与dataloader多线程有关
                 point_indices = points_in_boxes_cpu(projected_lidar_stack[:, :3], gt_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
                 gt_voxel_stack = []
@@ -152,14 +152,14 @@ def getEarlydiffusionFusionDataset(cls):
                     # 获取当前box中的点并平移到以box中心为原点的坐标系
                     gt_point = projected_lidar_stack[point_indices[car_idx] > 0]
                     gt_point[:, :3] -= gt_boxes[car_idx][0:3]
-                    gt_boxes[car_idx][0:3] = [0, 0, 0]
-                    pc_range = [-15, -15, -1, 15, 15, 1]
-                    visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
+                    # gt_boxes[car_idx][0:3] = [0, 0, 0]
+                    # pc_range = [-15, -15, -1, 15, 15, 1]
+                    # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
                     # 旋转点云 
                     gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
                     gt_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(gt_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(gt_boxes[car_idx][6])]))[0,0]
                     gt_boxes[car_idx][6] -= float(gt_boxes[car_idx][6])
-                    visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
+                    # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
                     # 体素化 不能并行！！
                     processed_lidar_car = self.pre_processor.preprocess(gt_point)
                     gt_voxel_stack.append(processed_lidar_car['voxel_features'])
