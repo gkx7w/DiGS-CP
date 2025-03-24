@@ -3,3 +3,4 @@ vis_output/*
 opencood/logs/*
 spconv/
 checkpoints/
+build/

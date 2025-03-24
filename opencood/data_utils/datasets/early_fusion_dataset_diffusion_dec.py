@@ -220,7 +220,7 @@ def getDecdiffusionFusionDataset(cls):
                     gt_boxes[car_idx][6] -= float(gt_boxes[car_idx][6])
                     # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
                     # 体素化 不能并行！！
-                    processed_lidar_car = self.pre_processor.preprocess(gt_point)
+                    processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
                     gt_voxel_stack.append(processed_lidar_car['voxel_features'])
                     gt_coords_stack.append(processed_lidar_car['voxel_coords'])
                     gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])
@@ -319,7 +319,7 @@ def getDecdiffusionFusionDataset(cls):
 
             if self.proj_first: # 
                 lidar_np[:, :3] = projected_lidar
-            processed_lidar = self.pre_processor.preprocess(lidar_np)
+            processed_lidar = self.pre_processor.preprocess(lidar_np, is_car=False)
             selected_cav_processed.update({'projected_lidar': projected_lidar,
                                             'projected_vsa_lidar': vsa_project_lidar,
                                             'no_projected_lidar': no_project_lidar,

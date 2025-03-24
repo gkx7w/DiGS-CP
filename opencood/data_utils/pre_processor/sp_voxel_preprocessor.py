@@ -51,36 +51,41 @@ class SpVoxelPreprocessor(BasePreprocessor):
         # use sparse conv library to generate voxel
         if self.spconv == 1:
             if self.use_hwl:
-                self.voxel_generator = VoxelGenerator(
+                self.voxel_generator_car = VoxelGenerator(
                     voxel_size=self.voxel_size,
                     point_cloud_range=self.gt_range,
                     max_num_points=self.max_points_per_voxel,
                     max_voxels=self.max_voxels
                 )
-            else:
-                self.voxel_generator = VoxelGenerator(
-                    voxel_size=self.voxel_size,
-                    point_cloud_range=self.lidar_range,
-                    max_num_points=self.max_points_per_voxel,
-                    max_voxels=self.max_voxels)
+            
+            self.voxel_generator_lidar = VoxelGenerator(
+                voxel_size=self.voxel_size,
+                point_cloud_range=self.lidar_range,
+                max_num_points=self.max_points_per_voxel,
+                max_voxels=self.max_voxels)
         else:
             if self.use_hwl:
-                self.voxel_generator = VoxelGenerator(
+                self.voxel_generator_car = VoxelGenerator(
                     vsize_xyz=self.voxel_size,
                     coors_range_xyz=self.gt_range,
                     max_num_points_per_voxel=self.max_points_per_voxel,
                     num_point_features=4,
                     max_num_voxels=self.max_voxels
                     )
-            else:
-                self.voxel_generator = VoxelGenerator(
-                    vsize_xyz=self.voxel_size,
-                    coors_range_xyz=self.lidar_range,
-                    max_num_points_per_voxel=self.max_points_per_voxel,
-                    num_point_features=4,
-                    max_num_voxels=self.max_voxels)
-    def preprocess(self, pcd_np):
+            
+            self.voxel_generator_lidar = VoxelGenerator(
+                vsize_xyz=self.voxel_size,
+                coors_range_xyz=self.lidar_range,
+                max_num_points_per_voxel=self.max_points_per_voxel,
+                num_point_features=4,
+                max_num_voxels=self.max_voxels)
+    def preprocess(self, pcd_np, is_car):
         data_dict = {}
+        if is_car:
+            self.voxel_generator = self.voxel_generator_car
+        else:
+            self.voxel_generator = self.voxel_generator_lidar
+            
         if self.spconv == 1:
             voxel_output = self.voxel_generator.generate(pcd_np)
         else:
