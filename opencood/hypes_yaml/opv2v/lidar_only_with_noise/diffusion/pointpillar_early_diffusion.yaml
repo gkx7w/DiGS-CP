@@ -6,7 +6,7 @@ test_dir: "/datasets/OPV2V/test"
 yaml_parser: "load_point_pillar_params"
 train_params:
   batch_size: &batch_size 1
-  epoches: 1
+  epoches: 10
   eval_freq: 2
   save_freq: 1
   max_cav: &max_cav 5

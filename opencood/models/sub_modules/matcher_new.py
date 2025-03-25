@@ -23,7 +23,10 @@ class Matcher(nn.Module):
 
     @torch.no_grad()
     def forward(self, data_dict):
-        clusters, scores = self.clustering(data_dict)
+        clusters, scores,cluster_indices,cur_cluster_id = self.clustering(data_dict)
+        
+        data_dict['cluster_indices'], data_dict[
+            'cur_cluster_id'] = cluster_indices,cur_cluster_id
         data_dict['boxes_fused'], data_dict[
             'scores_fused'] = self.cluster_fusion(clusters, scores)
         self.merge_keypoints(data_dict)
@@ -56,7 +59,7 @@ class Matcher(nn.Module):
                     cur_boxes_ego = corner_to_center_torch(cur_corners_ego, order='hwl')
                     cur_boxes_list_ego.append(cur_boxes_ego)
                 cur_boxes_list = cur_boxes_list_ego
-
+            # 投影到同一个坐标系下，再运算
 
             cur_scores_list = data_dict['det_scores'][sum(record_len[:i]):sum(record_len[:i])+l]
             cur_boxes_list = [b for b in cur_boxes_list if len(b) > 0]
@@ -75,7 +78,9 @@ class Matcher(nn.Module):
             cluster_indices = torch.zeros(len(ious)).int() # gt assignments of preds
             cur_cluster_id = 1
             while torch.any(cluster_indices == 0):
+                # 找到第一个0出现的位置
                 cur_idx = torch.where(cluster_indices == 0)[0][0] # find the idx of the first pred which is not assigned yet
+                # 找到和它iou>0.1的所有box,给这些box索引上分，标注它属于第几个集合
                 cluster_indices[torch.where(ious[cur_idx] > 0.1)[0]] = cur_cluster_id
                 cur_cluster_id += 1
             clusters = []
@@ -83,10 +88,11 @@ class Matcher(nn.Module):
             for j in range(1, cur_cluster_id):
                 clusters.append(pred_boxes_cat[cluster_indices==j])
                 scores.append(pred_scores_cat[cluster_indices==j])
+            # 在这个上面可以添加一个feature  
             clusters_batch.append(clusters)
             scores_batch.append(scores)
 
-        return clusters_batch, scores_batch
+        return clusters_batch, scores_batch,cluster_indices,cur_cluster_id
 
     def cluster_fusion(self, clusters, scores):
         """
@@ -156,7 +162,6 @@ class Matcher(nn.Module):
         record_len = data_dict['record_len']
         lidar_poses = data_dict['lidar_pose'].cpu().numpy()
         for l in data_dict['record_len']:
-            # Added by Yifan Lu
             # if not project first, first transform the keypoints coords
             if data_dict['proj_first'] is False:
                 kpts_coor_cur = []
@@ -179,6 +184,6 @@ class Matcher(nn.Module):
 
         data_dict['merge_point_features'] = kpts_feat_out
         data_dict['merge_point_coords'] = kpts_coor_out
-
+        # 点云必须投影，同时第一阶段的框也必须投影，不然无法融合,这个部分是能走的
         if data_dict['proj_first'] is False:
-            data_dict['point_coords'] = kpts_coor_out_ego
+            data_dict['merge_point_coords'] = kpts_coor_out_ego

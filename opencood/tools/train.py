@@ -18,10 +18,9 @@ import glob
 from opencood.utils.box_utils import boxes_to_corners_3d
 import random
 import numpy as np
-
-import torch
+from numpy import cov, trace, iscomplexobj
+from scipy.linalg import sqrtm
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.colors import Normalize
 
 # 设置随机种子以确保确定性
@@ -222,6 +221,28 @@ def main():
             cmd = f"python opencood/tools/inference.py --model_dir {saved_path} --fusion_method {fusion_method}"
         print(f"Running command: {cmd}")
         os.system(cmd)
+
+
+# def calculate_fid(act1, act2):
+#     # calculate mean and covariance statistics
+#     mu1, sigma1 = act1.mean(axis=0), cov(act1, rowvar=False)
+#     mu2, sigma2 = act2.mean(axis=0), cov(act2, rowvar=False)
+#     # calculate sum squared difference between means
+#     ssdiff = np.sum((mu1 - mu2)**2.0)
+#     # calculate sqrt of product between cov
+#     # 添加小的对角矩阵以提高数值稳定性
+#     eps = 1e-6
+#     sigma1 = sigma1 + np.eye(sigma1.shape[0]) * eps
+#     sigma2 = sigma2 + np.eye(sigma2.shape[0]) * eps
+    
+#     covmean = sqrtm(sigma1.dot(sigma2))
+    
+#     # check and correct imaginary numbers from sqrt
+#     if iscomplexobj(covmean):
+#         covmean = covmean.real
+#     # calculate score
+#     fid = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
+#     return fid
 
 
 def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=5):

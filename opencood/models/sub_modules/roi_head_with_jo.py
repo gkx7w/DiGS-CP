@@ -236,12 +236,15 @@ class RoIHead(nn.Module):
                                                   output_channels=
                                                   self.model_cfg[
                                                       'num_cls'] * 7)
+        # 匹配物体特征代码
+        self.mv_boxes_feature = False
         
+        # 解耦代码 
         self.decoupling = True
         self.factor_num = 8
-        self.factor_dim = 64
+        self.factor_dim = 32
         self.factor_encoder = nn.modules.ModuleList()
-        fc_layers = [256,128]
+        fc_layers = [128,64]
         print(fc_layers)
         for i in range(self.factor_num):
             self.factor_encoder.append(self._make_fc_layers(pre_channel, fc_layers,
@@ -478,42 +481,19 @@ class RoIHead(nn.Module):
 
 
     def first_stage_roi_grid_pool(self, batch_dict, rois):
-        batch_size = len(batch_dict['gt_boxes_len'])
-
+        batch_size = len(rois)
 
         point_coords = batch_dict['point_coords']
         point_features = batch_dict['point_features']
+
+        label_record_len = [t.shape[0] for t in rois]
         
-        
-        
-        label_record_len = batch_dict['gt_boxes_len']
-        Multi_view_box_index = batch_dict['Multi_view_box_index']
         mv_len = batch_dict['record_len']
+        # print("拿gt去产生多视角gt的输出：")
+        # print([t.shape for t in rois])
 
-        tmp_rois, start_index, start_rois, tmp_rois_len = [], 0, 0, []
-        for i, v in enumerate(mv_len):
-            for j in range(v):
-                tmp = []
-                for k in range(label_record_len[i]):
-                    if Multi_view_box_index[start_index + j][k] == 1:
-                        tmp.append(rois[start_rois + k].unsqueeze(0))
-                if len(tmp) > 0:
-                    tmp_rois.append(torch.cat(tmp, dim=0))
-                    tmp_rois_len.append(len(tmp))
-                else:
-                    print("为啥会是0？", Multi_view_box_index[start_index + j].sum())
-                    tmp_rois_len.append(0)
-            start_index += v
-            start_rois += label_record_len[i]
-
-        rois = torch.cat(tmp_rois, dim=0)
-        
-        print("拿gt去产生多视角gt的输出：")
-        print([t.shape for t in rois])
-        label_record_len = tmp_rois_len
+        rois = torch.cat(rois, dim=0)
         batch_size = len(label_record_len)
-        batch_dict['gt_box_record_len'] = label_record_len
-
 
         point_features = torch.cat(point_features, dim=0)
         # (BxN, 6x6x6, 3)
@@ -687,7 +667,7 @@ class RoIHead(nn.Module):
             rois = augment_box(gts)
             ious = boxes_iou3d_gpu(rois, gts)
             max_ious = torch.diag(ious)
-
+            rcnn_labels = (max_ious > self.score_threshold).float()
             mask = torch.logical_not(rcnn_labels.bool())
 
             # set negative samples back to rois, no correction in stage2 for them
@@ -843,469 +823,68 @@ class RoIHead(nn.Module):
             'rcnn_reg': rcnn_reg,
         }
 
-
-        if self.decoupling:
+        # 解耦完成了，但是还有一个小任务，就是单车特征扔到匹配机制中，
+        # 我要拿到第一阶段的box+分数（已经有了）和这个box对应的特征
+        if self.decoupling or self.mv_boxes_feature:
 
             if 'det_boxes' in batch_dict:
                 dets_list = batch_dict['det_boxes']
-                max_len = max([len(dets) for dets in dets_list])
-                boxes = torch.zeros((len(dets_list), max_len, 7), dtype=dets_list[0].dtype,
-                                    device=dets_list[0].device)
+                # max_len = max([len(dets) for dets in dets_list])
+                # boxes = torch.zeros((len(dets_list), max_len, 7), dtype=dets_list[0].dtype,
+                #                     device=dets_list[0].device)
+                boxes = []
                 for i, dets in enumerate(dets_list):
                     # 这个是新增的部分
                     dets = dets[:, [0, 1, 2, 5, 4, 3, 6]]  # hwl -> lwh
                     if len(dets)==0:
                         continue
-                    cur_dets = dets.clone()
-
-                    boxes[i, :len(dets)] = cur_dets
+                    boxes.append(dets)
 
 
-                print("查看gt和第一阶段框区别：")
-                print(batch_dict['gt_boxes'].shape)
-                print([ t.shape for t in batch_dict['gt_boxes']])
-                print([ t.shape for t in boxes])
+                # print("查看gt和第一阶段框区别：")
+                # print(batch_dict['gt_boxes'].shape)
+                # # print([ t.shape for t in batch_dict['gt_boxes']])
+                # print([ t.shape for t in boxes])
 
-            pooled_features_gt = self.first_stage_roi_grid_pool(batch_dict, batch_dict['gt_boxes'])
+            pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, boxes)
+            # pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, batch_dict['gt_boxes'])
 
-            batch_size_gt = pooled_features_gt.shape[0]
-            pooled_features_gt = pooled_features_gt.permute(0, 2, 1). \
-                contiguous().view(batch_size_gt, -1, self.grid_size,
+            batch_size_mv = pooled_features_mv.shape[0]
+            pooled_features_mv = pooled_features_mv.permute(0, 2, 1). \
+                contiguous().view(batch_size_mv, -1, self.grid_size,
                                   self.grid_size,
                                   self.grid_size)  # (BxN, C, 6, 6, 6)
-            # true cls
-            shared_features_gt = self.shared_fc_layers(
-                pooled_features_gt.view(batch_size_gt, -1, 1))
+            # 共享特征提取
+            shared_features_mv = self.shared_fc_layers(
+                pooled_features_mv.view(batch_size_mv, -1, 1))
 
-            # 
-
-
-
-        if self.isTest:
-            return batch_dict
-
-        mv_box_loss = torch.tensor(0.).to(rcnn_cls.device)
-        cls_box_loss = torch.tensor(0.).to(rcnn_cls.device)
-        loss_cls_gt_mv = torch.tensor(0.).to(rcnn_cls.device)
-        loss_cls_gt_fused = torch.tensor(0.).to(rcnn_cls.device)
-
-        judge = True
-        for t in batch_dict['gt_boxes_len']:
-            if t == 0:
-                judge = False
-        if batch_dict['Multi_view_box_index'].sum() > 0 and sum(batch_dict['gt_boxes_len']) > 0 and judge:
-            # if sum(batch_dict['gt_boxes_len']) > 0 and (
-            #             self.s_s_weight > 0 or self.cls_box_weight > 0):
-            # gt fused
-            pooled_features_gt_fused = self.gt_fused_roi_grid_pool(batch_dict, batch_dict['gt_boxes'])
-            batch_size_gt = pooled_features_gt_fused.shape[0]
-            pooled_features_gt_fused = pooled_features_gt_fused.permute(0, 2, 1). \
-                contiguous().view(batch_size_gt, -1, self.grid_size,
-                                  self.grid_size,
-                                  self.grid_size)  # (BxN, C, 6, 6, 6)
-
-            shared_features_gt_fused = self.shared_fc_layers(
-                pooled_features_gt_fused.view(batch_size_gt, -1, 1))
-
-            rcnn_cls_gt_fused = self.cls_layers(shared_features_gt_fused).transpose(1,
-                                                                                    2).contiguous().squeeze(
-                dim=1)
-            rcnn_reg_gt_fused = self.reg_layers(shared_features_gt_fused).transpose(1,
-                                                                                    2).contiguous().squeeze(
-                dim=1)
-            rcnn_iou_gt_fused = self.iou_layers(shared_features_gt_fused).transpose(1,
-                                                                                    2).contiguous().squeeze(
-                dim=1)
-
-
-            # gt mv
-            pooled_features_gt = self.gt_roi_grid_pool(batch_dict, batch_dict['gt_boxes'])
-
-            batch_size_gt = pooled_features_gt.shape[0]
-            pooled_features_gt = pooled_features_gt.permute(0, 2, 1). \
-                contiguous().view(batch_size_gt, -1, self.grid_size,
-                                  self.grid_size,
-                                  self.grid_size)  # (BxN, C, 6, 6, 6)
-            # true cls
-            shared_features_gt = self.shared_fc_layers(
-                pooled_features_gt.view(batch_size_gt, -1, 1))
-
-            # 添加转换器
-            if self.use_convertor:
-                shared_features_gt = self.convertor(shared_features_gt)
-
-            rcnn_cls_gt = self.cls_layers(shared_features_gt).transpose(1,
-                                                                        2).contiguous().squeeze(
-                dim=1)  # (B, 1 or 2)
-
-
-            rcnn_reg_gt = self.reg_layers(shared_features_gt).transpose(1,
-                                                                        2).contiguous().squeeze(
-                dim=1)  # (B, C)
-            rcnn_iou_gt = self.iou_layers(shared_features_gt).transpose(1,
-                                                                        2).contiguous().squeeze(
-                dim=1)  # (B, C)
-
-            batch_dict['rcnn_iou_gt'] = rcnn_iou_gt
-            batch_dict['rcnn_cls_gt'] = rcnn_cls_gt
-
-
-            if self.add_more_augmented_supervision:
-                batch_dict = self.assign_targets_fv_more(batch_dict)
-                pooled_features_gt_fused_more = self.gt_fused_roi_grid_pool(batch_dict,
-                                                                            batch_dict['rcnn_label_dict_fv_more'][
-                                                                                'rois'])
-                batch_size_gt = pooled_features_gt_fused_more.shape[0]
-                pooled_features_gt_fused_more = pooled_features_gt_fused_more.permute(0, 2, 1). \
-                    contiguous().view(batch_size_gt, -1, self.grid_size,
-                                      self.grid_size,
-                                      self.grid_size)  # (BxN, C, 6, 6, 6)
-
-                shared_features_gt_fused_more = self.shared_fc_layers(
-                    pooled_features_gt_fused_more.view(batch_size_gt, -1, 1))
-                # 这是fused_gt对应的分数，如果需要用的话，还要把一些信息加上，因为融合后和融合前要一一对齐
-                rcnn_cls_gt_fused_more = self.cls_layers(shared_features_gt_fused_more).transpose(1,
-                                                                                                  2).contiguous().squeeze(
-                    dim=1)
-                rcnn_reg_gt_fused_more = self.reg_layers(shared_features_gt_fused_more).transpose(1,
-                                                                                                  2).contiguous().squeeze(
-                    dim=1)
-                rcnn_iou_gt_fused_more = self.iou_layers(shared_features_gt_fused_more).transpose(1,
-                                                                                                  2).contiguous().squeeze(
-                    dim=1)
-                batch_dict['stage2_out']['rcnn_cls_fv_more'] = rcnn_cls_gt_fused_more
-                batch_dict['stage2_out']['rcnn_iou_fv_more'] = rcnn_iou_gt_fused_more
-                batch_dict['stage2_out']['rcnn_reg_fv_more'] = rcnn_reg_gt_fused_more
-
-                # 单视角
-                batch_dict = self.assign_targets_mv_more(batch_dict)
-                pooled_features_gt_more = self.gt_roi_grid_pool(batch_dict,
-                                                                batch_dict['rcnn_label_dict_fv_more']['rois'])
-                batch_size_gt = pooled_features_gt_more.shape[0]
-                pooled_features_gt_more = pooled_features_gt_more.permute(0, 2, 1). \
-                    contiguous().view(batch_size_gt, -1, self.grid_size,
-                                      self.grid_size,
-                                      self.grid_size)  # (BxN, C, 6, 6, 6)
-
-                shared_features_gt_more = self.shared_fc_layers(
-                    pooled_features_gt_more.view(batch_size_gt, -1, 1))
-
-                # 添加转换器
-                if self.use_convertor:
-                    shared_features_gt_more = self.convertor(shared_features_gt_more)
-
-
-                rcnn_cls_gt_more = self.cls_layers(shared_features_gt_more).transpose(1,
-                                                                                      2).contiguous().squeeze(
-                    dim=1)
-                rcnn_reg_gt_more = self.reg_layers(shared_features_gt_more).transpose(1,
-                                                                                      2).contiguous().squeeze(
-                    dim=1)
-                rcnn_iou_gt_more = self.iou_layers(shared_features_gt_more).transpose(1,
-                                                                                      2).contiguous().squeeze(
-                    dim=1)
-                batch_dict['stage2_out']['rcnn_cls_mv_more'] = rcnn_cls_gt_more
-                batch_dict['stage2_out']['rcnn_iou_mv_more'] = rcnn_iou_gt_more
-                batch_dict['stage2_out']['rcnn_reg_mv_more'] = rcnn_reg_gt_more
-
-            # 添加额外监督，这里不用sigmod，nn里面自带了，这里只能算真正的loss，其他的加强loss要放到原本的loss上
-            if self.add_more_pos_supervision:
-                # 这里是纯粹的正样本
-                batch_dict = self.assign_targets_mv(batch_dict)
-                cls_gt_mv = rcnn_cls_gt.view(1, -1, 1)
-                cls_gt_fv = rcnn_cls_gt_fused.view(1, -1, 1)
-                cls_tgt_gt_mv = batch_dict['rcnn_label_dict_mv']["cls_tgt_mv"].view(1, -1, 1)
-                cls_tgt_gt_fv = batch_dict['rcnn_label_dict_mv']["cls_tgt_fv"].view(1, -1, 1)
-
-                loss_cls_gt_mv = weighted_sigmoid_binary_cross_entropy(cls_gt_mv, cls_tgt_gt_mv)
-                loss_cls_gt_fused = weighted_sigmoid_binary_cross_entropy(cls_gt_fv, cls_tgt_gt_fv)
-
-            if self.s_s_weight > 0 or self.cls_box_weight > 0:
-                if self.mv_loss_sigmod:
-                    rcnn_cls_gt = rcnn_cls_gt.sigmoid().view(-1)
-                    rcnn_cls_gt_fused = rcnn_cls_gt_fused.sigmoid().view(-1)
-                    rcnn_iou_gt = rcnn_iou_gt.sigmoid().view(-1)
-                    rcnn_iou_gt_fused = rcnn_iou_gt_fused.sigmoid().view(-1)
-                else:
-                    rcnn_cls_gt = rcnn_cls_gt.view(-1)
-                    rcnn_cls_gt_fused = rcnn_cls_gt_fused.view(-1)
-                    rcnn_iou_gt = rcnn_iou_gt.view(-1)
-                    rcnn_iou_gt_fused = rcnn_iou_gt_fused.view(-1)
-
-                # print("mv output:")
-                # print(rcnn_cls_gt)
-                # print("fv output:")
-                # print(rcnn_cls_gt_fused)
-
-                cls_box_data_1 = rcnn_cls_gt.unsqueeze(1).repeat(1, rcnn_reg_gt.shape[0], 1)
-                cls_box_data_2 = rcnn_cls_gt.unsqueeze(0).repeat(rcnn_reg_gt.shape[0], 1, 1)
-
-                # print("计算cls_box信息",cls_box_data_1.shape,cls_box_data_2.shape)
-                # print(rcnn_reg_gt)
-                # print(rcnn_cls_gt)
-                # print(rcnn_iou_gt)
-
-                if rcnn_cls_gt.shape[0] > 1:
-                    cls_box_loss = torch.norm(cls_box_data_1 - cls_box_data_2, p=1).sum() * self.cls_box_weight / (
-                            rcnn_cls_gt.shape[0] * (rcnn_cls_gt.shape[0] - 1))
-
-                # 第一步，根据个数将其拆分开
-                car_box_num = batch_dict['gt_box_record_len']
-                start, mv_box_loss_data = 0, []
-                # bs*car*box,1 -> box1,1  box2,1 …… boxn,1  这个是按照car去拆分
-                for t in car_box_num:
-                    if self.compute_var:
-                        # 为了统计方差，所记录的features 数据
-                        mv_box_loss_data.append(shared_features_gt[start:start + t])
-                    else:
-                        if self.mv_loss_object == "all":
-                            mv_box_loss_data.append(shared_features_gt[start:start + t])
-                        elif self.mv_loss_object == "cls":
-                            mv_box_loss_data.append(rcnn_cls_gt[start:start + t])
-                        elif self.mv_loss_object == "reg":
-                            mv_box_loss_data.append(rcnn_reg_gt[start:start + t])
-                        elif self.mv_loss_object == "iou":
-                            mv_box_loss_data.append(rcnn_iou_gt[start:start + t])
-                        else:
-                            mv_box_loss_data.append(rcnn_cls_gt[start:start + t])
-
-                    start += t
-
-                bs_box_num = batch_dict['gt_boxes_len']
-                start, fused_box_loss_data = 0, []
-                for t in bs_box_num:
-                    if self.mv_loss_object == "all":
-                        fused_box_loss_data.append(shared_features_gt_fused[start:start + t])
-                    elif self.mv_loss_object == "cls":
-                        fused_box_loss_data.append(rcnn_cls_gt_fused[start:start + t])
-                    elif self.mv_loss_object == "reg":
-                        fused_box_loss_data.append(rcnn_reg_gt_fused[start:start + t])
-                    elif self.mv_loss_object == "iou":
-                        fused_box_loss_data.append(rcnn_iou_gt_fused[start:start + t])
-                    else:
-                        fused_box_loss_data.append(rcnn_cls_gt_fused[start:start + t])
-
-                    start += t
-
-                box_loss_data_bs, box_index, point_num_bs = [], [], []
-                bs_len = batch_dict['record_len']
-
-
-                points_in_boxes = batch_dict['Multi_view_box_points']
-                Multi_view_box_index = batch_dict['Multi_view_box_index']
-                start_bs = 0
-                # n1,1  n2,1 …… nx,1 - > [n1,1  n2,1],[n3,1 n4,1 …… nx,1]  将这个car按照bs组合起来
-                for t in bs_len:
-                    tmp1, tmp2, tmp3 = [], [], []
-                    for j in range(t):
-                        tmp1.append(mv_box_loss_data[start_bs + j])
-                        tmp2.append(Multi_view_box_index[start_bs + j])
-                        tmp3.append(points_in_boxes[start_bs + j])
-
-                    point_num_bs.append(tmp3)
-                    box_loss_data_bs.append(tmp1)
-                    box_index.append(tmp2)
-                    start_bs += t
-
-                box_loss_data_mv, point_num_mv = [], []
-                label_record_len = batch_dict['gt_boxes_len']
-                for bs_fused_data, bs_data, bs_num, bs_index, bs_box_len in zip(fused_box_loss_data, box_loss_data_bs,
-                                                                                point_num_bs, box_index,
-                                                                                label_record_len):
-                    tmp = [[] for t in range(bs_box_len)]
-                    tmp_num = [[] for t in range(bs_box_len)]
-
-                    for index, object_list in enumerate(tmp):
-                        object_list.append(bs_fused_data[index].unsqueeze(0))
-
-                    for index, car in enumerate(bs_index):
-                        cnt = 0
-                        for t in range(bs_box_len):
-                            if car[t] == 1:
-                                tmp[t].append(bs_data[index][cnt].unsqueeze(0))
-                                tmp_num[t].append(bs_num[index][t].unsqueeze(0))
-                                cnt += 1
-
-                    # 如果所有的计算都符合逻辑的话，那么最终这个对齐应该很简单
-                    for t in tmp:
-                        if self.compute_var:
-                            # 为了统计方差,所以这里已经统计进去了只有多视角信息的代码
-                            if len(t) > 1:
-                                # print([m.shape for m in t])
-                                # 因为统计信息不需要 mv -> fused
-                                box_loss_data_mv.append(torch.cat(t[1:], dim=0))
-                        else:
-                            if len(t) > 0:
-                                box_loss_data_mv.append(torch.cat(t, dim=0))
-
-                    for t in tmp_num:
-                        if len(t) > 0:
-                            point_num_mv.append(torch.cat(t, dim=0))
-
-                box_mse_data = []
-                box_mse_data_add = []
-                for i, data in enumerate(box_loss_data_mv):
-
-                    if self.compute_var and data.shape[0] > 1:
-                        var_compute = data.squeeze()
-                        # var_feature = torch.var(var_compute, dim=0, unbiased=False)
-                        self.feature_var_list.extend(var_compute.detach().cpu().numpy().tolist())
-
-                    t = data[1:]
-                    repeat_num = t.shape[0]
-
-                    # print(t.shape)
-                    dim_repeat1 = [1] * len(t.squeeze().shape)
-                    dim_repeat2 = [1] * len(t.squeeze().shape)
-                    dim_repeat1.insert(0, repeat_num)
-                    dim_repeat2.insert(1, repeat_num)
-
-                    if repeat_num > 1:
-                        # nolimit
-                        entroy_box_datas1 = t.squeeze().unsqueeze(0).repeat(*dim_repeat1)
-                        entroy_box_datas2 = t.squeeze().unsqueeze(1).repeat(*dim_repeat2)
-                        # print(entroy_box_datas1.shape,entroy_box_datas2.shape)
-
-                        if self.limit_mv_to_fused:
-                            # 由于靠齐的局限性，所以需要设置较小的权重
-                            # self.s_s_weight = 0.1
-                            # 融合后的信息需要detach
-                            entroy_box_datas1 = data[0].squeeze().repeat(repeat_num).detach().view(t.shape)
-                            entroy_box_datas2 = t
-
-                        if self.mv_loss_compute == "l1":
-                            # L1
-                            box_mse_data.append(torch.norm(entroy_box_datas1 - entroy_box_datas2, p=1).unsqueeze(0) / (
-                                    repeat_num * (repeat_num - 1)))
-                        elif self.mv_loss_compute == "kl":
-                            # kl散度
-                            # print(kl_divergence(entroy_box_datas1 , entroy_box_datas2),entroy_box_datas1.shape)
-                            box_mse_data.append(kl_divergence(entroy_box_datas1, entroy_box_datas2).unsqueeze(0) / (
-                                    repeat_num * (repeat_num - 1)))
-                        elif self.mv_loss_compute == "js":
-                            # js散度
-                            box_mse_data.append(js_divergence(entroy_box_datas1, entroy_box_datas2).unsqueeze(0) / (
-                                    repeat_num * (repeat_num - 1)))
-                        else:
-                            # 默认L1
-                            box_mse_data.append(torch.norm(entroy_box_datas1 - entroy_box_datas2, p=1).unsqueeze(0) / (
-                                    repeat_num * (repeat_num - 1)))
-
-                        if self.add_s_f:
-                            # print(data[0])
-                            entroy_box_datas3 = data[0].squeeze().repeat(repeat_num).detach().view(t.shape)
-                            # print(entroy_box_datas3)
-                            entroy_box_datas4 = t
-                            # print("reg shape:",data.shape,t.shape,entroy_box_datas4.shape,entroy_box_datas3.shape)
-                            if self.mv_loss_compute == "l1":
-                                # L1
-                                box_mse_data_add.append(
-                                    torch.norm(entroy_box_datas3 - entroy_box_datas4, p=1).unsqueeze(0) / (
-                                            repeat_num * (repeat_num - 1)))
-                            elif self.mv_loss_compute == "kl":
-                                # kl散度
-                                # print(kl_divergence(entroy_box_datas3 , entroy_box_datas4),entroy_box_datas3.shape)
-                                box_mse_data_add.append(
-                                    kl_divergence(entroy_box_datas3, entroy_box_datas4).unsqueeze(0) / (
-                                            repeat_num * (repeat_num - 1)))
-                            elif self.mv_loss_compute == "js":
-                                # js散度
-                                box_mse_data_add.append(
-                                    js_divergence(entroy_box_datas3, entroy_box_datas4).unsqueeze(0) / (
-                                            repeat_num * (repeat_num - 1)))
-                            else:
-                                # 默认L1
-                                box_mse_data_add.append(
-                                    torch.norm(entroy_box_datas3 - entroy_box_datas4, p=1).unsqueeze(0) / (
-                                            repeat_num * (repeat_num - 1)))
-
-
-                if len(box_mse_data) > 0:
-                    mv_box_loss = torch.cat(box_mse_data, dim=0).sum() * self.s_s_weight / len(bs_len)
-
-                if self.add_s_f and len(box_mse_data_add) > 0:
-                    # if self.mv_loss_object == "reg":
-                    mv_box_loss = mv_box_loss + 0.01 * torch.cat(box_mse_data_add,
-                                                                 dim=0).sum() * self.s_s_weight / len(bs_len)
-
-        batch_dict['mv_box_loss'] = mv_box_loss
-        batch_dict['cls_box_loss'] = cls_box_loss
-
-        batch_dict['loss_cls_gt_mv'] = loss_cls_gt_mv
-        batch_dict['loss_cls_gt_fused'] = loss_cls_gt_fused
-        print("算出来的loss", mv_box_loss, cls_box_loss, loss_cls_gt_mv, loss_cls_gt_fused)
-
-        import json
-        if self.compute_var and self.write_cnt % 100 == 0:
-            with open(self.feature_var_path, 'w', encoding='utf-8') as f:
-                json.dump(self.feature_var_list, f, ensure_ascii=False, indent=4)
-        self.write_cnt += 1
-
-
+            if self.mv_boxes_feature:
+                batch_dict["mv_boxes_feature"] = shared_features_mv
+            # 下一步才是解耦，但是这里有一个问题就是需要找到公共物体，
+            # 公共物体的寻找是基于投影+iou找到的，理论上要经过一次matcher_new，
+            # 不然这个融合框问题的 ，这个特征能拼到box+分数，送入融合
+            if self.decoupling:
+                boxes_factors = []
+                for i in range(self.factor_num):
+                    boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
+                print([t.shape for t in boxes_factors])
+                # all box , 32 *8
+                boxes_factors = torch.cat(boxes_factors,dim=1)
+                # 需要用iou来寻找公共物体再融合，当前box没有投影，点也没有投影，先投影再运算
+                # 这些代码，已经存在在matcher 的结果上了，问题就在于找到最终索引就能合并框了
+                cluster_indices,cur_cluster_id =  batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
+                # 寻找公共物体
+                object_factors = [] 
+                # 可以直接融合，取平均值，因子内融合
+                for j in range(1, cur_cluster_id):
+                    object_factors.append(boxes_factors[cluster_indices==j].mean(dim=0).unsqueeze(dim=0))
+                
+                # print([t.shape for t in object_factors])
+                
+                # 这是物体级的feature
+                object_factors = torch.cat(object_factors,dim=0)
+                print("解耦后并融合的物体级因子： 物体数量 ， 8 * 32 ：",object_factors.shape)
+                batch_dict["fused_object_factors"] = object_factors
+        
+        
         return batch_dict
-
-
-# 测试，下述代码无bug
-import torch
-import torch.nn.functional as F
-
-
-# 定义 KL 散度函数
-def kl_divergence(logits1, logits2):
-    # 将1维的logits通过sigmoid转换为概率
-    prob1 = logits1.view(-1, 1)
-    prob2 = logits2.view(-1, 1)
-
-    # 将每个目标框的概率值组成二分类的分布 (p, 1-p)
-    prob1 = torch.cat([prob1, 1 - prob1], dim=-1)
-    prob2 = torch.cat([prob2, 1 - prob2], dim=-1)
-
-
-    # 使用KL散度来比较两个分布
-    kl_loss = F.kl_div(prob1.log(), prob2, reduction='sum')
-    return kl_loss
-
-
-def js_divergence(x, y):
-    # 确保x和y的维度一样
-    assert x.size() == y.size()
-    # 计算softmax，将x转换为概率分布，现在已经是概率分布了
-    # p = torch.nn.functional.softmax(x, dim=1)
-    # q = torch.nn.functional.softmax(y, dim=1)
-    prob1 = x.view(-1, 1)
-    prob2 = y.view(-1, 1)
-    # 将每个目标框的概率值组成二分类的分布 (p, 1-p)
-    p = torch.cat([prob1, 1 - prob1], dim=-1)
-    q = torch.cat([prob2, 1 - prob2], dim=-1)
-    p = F.softmax(p, dim=-1)
-    q = F.softmax(q, dim=-1)
-    KL = nn.KLDivLoss(reduction='sum')
-    m = ((q + p) / 2).log()
-    return (KL(m, p) + KL(m, q)) / 2
-
-
-def weighted_sigmoid_binary_cross_entropy(preds, tgts, weights=None,
-                                          class_indices=None):
-    if weights is not None:
-        weights = weights.unsqueeze(-1)
-    if class_indices is not None:
-        weights *= (
-            indices_to_dense_vector(class_indices, preds.shape[2])
-                .view(1, 1, -1)
-                .type_as(preds)
-        )
-    per_entry_cross_ent = nn.functional.binary_cross_entropy_with_logits(preds,
-                                                                         tgts,
-                                                                         weights)
-    return per_entry_cross_ent
-
-
-# 示例: logits1 和 logits2 是模型输出的1维类别分数
-logits1 = torch.tensor([0.8])  # 例如第一个视角的输出
-logits2 = torch.tensor([0.9])  # 第二个视角的输出
-
-# 计算 KL 散度
-kl_loss = kl_divergence(logits1, logits2)
-js_loss = js_divergence(logits1, logits2)
-# print("KL散度:", kl_loss.item())
-# print("JS散度:", js_loss.item())
