@@ -121,7 +121,7 @@ class PointPillarDiffusionDec(nn.Module):
         # self.reg_head = nn.Conv2d(self.out_channel, 7 * args['anchor_number'], # 384
         #                           kernel_size=1)
         
-
+    
     def forward(self, batch_dict):
         # decople
         dec_voxel_features = batch_dict['dec_processed_lidar']['voxel_features']
@@ -133,8 +133,8 @@ class PointPillarDiffusionDec(nn.Module):
         voxel_coords = batch_dict['processed_lidar']['voxel_coords']
         voxel_num_points = batch_dict['processed_lidar']['voxel_num_points']
         voxel_gt_mask = batch_dict['processed_lidar']['gt_masks']
-
         batch_dict.pop('processed_lidar')
+        batch_dict.pop('dec_processed_lidar')
         batch_dict.update({'voxel_features': voxel_features,
                            'voxel_coords': voxel_coords,
                            'voxel_num_points': voxel_num_points,
@@ -190,14 +190,13 @@ class PointPillarDiffusionDec(nn.Module):
         batch_dict['det_boxes'] = pred_box3d_list
         batch_dict['det_scores'] = scores_list
         if pred_box3d_list is not None and self.train_stage2:
-
             batch_dict = self.rmpa(batch_dict)
             batch_dict = self.matcher(batch_dict)
             batch_dict = self.roi_head(batch_dict)
             
         # diff     
         # 得到低层BEV特征 [B,C,H,W] 
-        batch_dict = self.pillar_vfe(batch_dict, stage='dis')
+        batch_dict = self.pillar_vfe(batch_dict, stage='diff')
         batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       
         # 将gt抠出来的bev特征输入到mdd中
         # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)

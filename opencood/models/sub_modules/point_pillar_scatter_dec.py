@@ -11,8 +11,8 @@ class PointPillarScatter(nn.Module):
         super().__init__()
 
         self.model_cfg = model_cfg
-        self.num_bev_features = self.model_cfg['num_features']
-        self.nx, self.ny, self.nz = model_cfg['grid_size']  # [704, 200, 1] 
+        self.num_bev_features = self.model_cfg['num_features_dec']
+        self.nx, self.ny, self.nz = model_cfg['grid_size_dec']  # [704, 200, 1] 
 
         assert self.nz == 1
 

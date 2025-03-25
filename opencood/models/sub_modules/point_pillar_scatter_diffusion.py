@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch.nn as nn
+import math
 
 
 class PointPillarScatter(nn.Module):
@@ -16,6 +17,35 @@ class PointPillarScatter(nn.Module):
 
         assert self.nz == 1
 
+    def positionalencoding2d(self,d_model, height, width):
+        """
+        生成二维位置编码
+        :param d_model: 特征通道数 (8)
+        :param height: 特征图高度 (256)
+        :param width: 特征图宽度 (512)
+        :return: [d_model, height, width]
+        """
+        if d_model % 4 != 0:
+            raise ValueError("Cannot use sin/cos positional encoding with "
+                            "odd dimension (got dim={:d})".format(d_model))
+        pe = torch.zeros(d_model, height, width)
+        # 每个维度使用一半的通道
+        d_model = int(d_model / 2)
+        div_term = torch.exp(torch.arange(0., d_model, 2) *
+                            -(math.log(10000.0) / d_model))
+        pos_w = torch.arange(0., width).unsqueeze(1)
+        pos_h = torch.arange(0., height).unsqueeze(1)
+        
+        # 编码宽度方向
+        pe[0:d_model:2, :, :] = torch.sin(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
+        pe[1:d_model:2, :, :] = torch.cos(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
+        
+        # 编码高度方向
+        pe[d_model::2, :, :] = torch.sin(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
+        pe[d_model+1::2, :, :] = torch.cos(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
+        
+        return pe
+    
     def forward(self, batch_dict):
         """ 将生成的pillar按照坐标索引还原到原空间中
         Args:
@@ -83,6 +113,11 @@ class PointPillarScatter(nn.Module):
                 gt_spatial_features_dict[gt_id.item()] = gt_spatial_feature
             # 将该batch的gt空间特征字典添加到batch列表中 ！！此时每个gtbev大小一致，可堆叠为tensor
             batch_gt_spatial_features.append(torch.stack(list(gt_spatial_features_dict.values())))
+        
+        # 添加位置编码
+        pe = self.positionalencoding2d(self.num_bev_features, self.ny, self.nx).to(pillar_features.device)
+        pe = [pe.unsqueeze(0).repeat(batch_gt_spatial_features[i].shape[0], 1, 1, 1) for i in range(len(batch_gt_spatial_features))]
+        batch_gt_spatial_features = [batch_gt_spatial_features[i] + pe[i] for i in range(len(batch_gt_spatial_features))]
         
         batch_dict['batch_gt_spatial_features'] = batch_gt_spatial_features
         

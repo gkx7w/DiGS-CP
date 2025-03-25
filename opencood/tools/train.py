@@ -76,7 +76,6 @@ def main():
                               collate_fn=opencood_train_dataset.collate_batch_train,
                             #   shuffle=True,
                               shuffle=False,
-
                               pin_memory=True,
                               drop_last=True,
                               prefetch_factor=2

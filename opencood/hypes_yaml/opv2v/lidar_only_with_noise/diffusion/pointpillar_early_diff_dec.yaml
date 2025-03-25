@@ -123,17 +123,17 @@ model:
       num_out_features: &cpm_features 32
 
       features_source:
-        spatial_features: 64
-        spatial_features_2x: 64
-        spatial_features_4x: 128
-        spatial_features_8x: 256
+        dec_spatial_features: 64
+        dec_spatial_features_2x: 64
+        dec_spatial_features_4x: 128
+        dec_spatial_features_8x: 256
 
 
       features_stride:
-        spatial_features: 1
-        spatial_features_2x: 2
-        spatial_features_4x: 4
-        spatial_features_8x: 8
+        dec_spatial_features: 1
+        dec_spatial_features_2x: 2
+        dec_spatial_features_4x: 4
+        dec_spatial_features_8x: 8
 
       sa_layer:
         raw_points:
@@ -181,6 +181,7 @@ model:
     point_pillar_scatter:
       max_hwl: *max_hwl
       num_features: &num_features 10 # pillar_features维度
+      num_features_dec: &num_features_dec 64 
       voxel_size: *voxel_size
       lidar_range: *cav_lidar
     

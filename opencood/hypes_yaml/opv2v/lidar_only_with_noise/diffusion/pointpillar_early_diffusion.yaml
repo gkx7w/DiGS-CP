@@ -93,13 +93,13 @@ model:
       num_filters: [64]
     point_pillar_scatter:
       max_hwl: *max_hwl
-      num_features: &num_features 10 # pillar_features维度
+      num_features: &num_features 8 # pillar_features维度
       voxel_size: *voxel_size
       lidar_range: *cav_lidar
 
     mdd_block:
       model:
-        in_channels: 5
+        in_channels: 4
         out_ch: *num_features # in_channels*2
         ch: 8
         ch_mult: [1, 1]

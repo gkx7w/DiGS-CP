@@ -51,13 +51,11 @@ class PointPillarDiffusion(nn.Module):
                       'voxel_gt_mask': voxel_gt_mask}
         # 对每辆车进行处理
         # 得到低层BEV特征 [B,C,H,W] 每辆车的低层BEV特征维度一样吗？
-        batch_dict = self.pillar_vfe(batch_dict)
+        batch_dict = self.pillar_vfe(batch_dict, stage = 'diff')
         batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       
         # 将gt抠出来的bev特征输入到mdd中
-        batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
-        batch_dict['pred_feature'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
-        batch_dict['batch_gt_spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
-        # batch_dict = self.mdd(batch_dict)
+        # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
+        batch_dict = self.mdd(batch_dict)
         # ！！V2X-R没有单独训练diffusion，是整体一起训的
         output_dict = {'pred_feature' : batch_dict['pred_feature'], 
                        'gt_feature' : batch_dict['batch_gt_spatial_features']}

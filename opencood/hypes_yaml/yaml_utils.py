@@ -154,16 +154,15 @@ def load_point_pillar_params(param):
     max_h, max_w, max_l = max_hwl
     gt_range = [-max_l/2, -max_w/2, -1, max_l/2, max_w/2, 1] #z轴不能为0
     use_hwl = param['preprocess']['args']['use_hwl']
-    if use_hwl:
-            grid_size = (np.array(gt_range[3:6]) -
-                     np.array(gt_range[0:3])) / np.array(voxel_size)
-    else:
-        grid_size = (np.array(cav_lidar_range[3:6]) -
+    grid_size_car = (np.array(gt_range[3:6]) -
+                np.array(gt_range[0:3])) / np.array(voxel_size)
+    grid_size_car = np.maximum(np.round(grid_size_car).astype(np.int64), 1)
+    grid_size_lidar = (np.array(cav_lidar_range[3:6]) -
                     np.array(cav_lidar_range[0:3])) / np.array(voxel_size)
-    grid_size = np.maximum(np.round(grid_size).astype(np.int64), 1)
+    grid_size_lidar = np.maximum(np.round(grid_size_lidar).astype(np.int64), 1)
     
-    
-    param['model']['args']['point_pillar_scatter']['grid_size'] = grid_size
+    param['model']['args']['point_pillar_scatter']['grid_size'] = grid_size_car
+    param['model']['args']['point_pillar_scatter']['grid_size_dec'] = grid_size_lidar
 
     anchor_args = param['postprocess']['anchor_args']
 

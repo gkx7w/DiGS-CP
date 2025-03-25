@@ -5,6 +5,8 @@ Pillar VFE, credits to OpenPCDet.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class PFNLayer(nn.Module):
@@ -102,6 +104,60 @@ class PillarVFE(nn.Module):
         paddings_indicator = actual_num.int() > max_num
         return paddings_indicator
 
+    def analyze_features(self, statistical_features):
+        """分析特征的统计分布
+        Args:
+            statistical_features: [M, 7] tensor, 包含相对偏移[0:3]，方差[3:6]，最大距离[6]
+        """
+        # 转换为numpy进行分析
+        features = statistical_features.detach().cpu().numpy()
+        
+        # 创建子图
+        fig, axes = plt.subplots(3, 1, figsize=(10, 15))
+        
+        # 1. 分析相对偏移量
+        offsets = features[:, :3]
+        axes[0].boxplot([offsets[:, i] for i in range(3)], labels=['x', 'y', 'z'])
+        axes[0].set_title('Relative Offsets Distribution')
+        axes[0].set_ylabel('Offset Value')
+        
+        # 2. 分析方差
+        vars = features[:, 3:6]
+        axes[1].boxplot([vars[:, i] for i in range(3)], labels=['x', 'y', 'z'])
+        axes[1].set_title('Variance Distribution')
+        axes[1].set_ylabel('Variance Value')
+        
+        # 3. 分析最大距离
+        max_dist = features[:, 6]
+        axes[2].hist(max_dist, bins=50)
+        axes[2].set_title('Max Distance Distribution')
+        axes[2].set_xlabel('Distance')
+        axes[2].set_ylabel('Count')
+        
+        # 打印基本统计信息
+        print("\nFeature Statistics:")
+        print("\nRelative Offsets (x, y, z):")
+        print(f"Mean: {np.mean(offsets, axis=0)}")
+        print(f"Std: {np.std(offsets, axis=0)}")
+        print(f"Min: {np.min(offsets, axis=0)}")
+        print(f"Max: {np.max(offsets, axis=0)}")
+        
+        print("\nVariance (x, y, z):")
+        print(f"Mean: {np.mean(vars, axis=0)}")
+        print(f"Std: {np.std(vars, axis=0)}")
+        print(f"Min: {np.min(vars, axis=0)}")
+        print(f"Max: {np.max(vars, axis=0)}")
+        
+        print("\nMax Distance:")
+        print(f"Mean: {np.mean(max_dist)}")
+        print(f"Std: {np.std(max_dist)}")
+        print(f"Min: {np.min(max_dist)}")
+        print(f"Max: {np.max(max_dist)}")
+        
+        plt.tight_layout()
+        plt.savefig('feature_analysis.png')
+        plt.close()
+    
     def forward(self, batch_dict, stage):
         """encoding voxel feature using point-pillar method
         Args:
@@ -115,53 +171,108 @@ class PillarVFE(nn.Module):
             voxel_features, voxel_num_points, coords = \
                 batch_dict['dec_voxel_features'], batch_dict['dec_voxel_num_points'], \
                 batch_dict['dec_voxel_coords']
-        else:
-            voxel_features, voxel_num_points, coords = \
-                batch_dict['voxel_features'], batch_dict['voxel_num_points'], \
-                batch_dict['voxel_coords']
-
-        points_mean = \
+            points_mean = \
             voxel_features[:, :, :3].sum(dim=1, keepdim=True) / \
             voxel_num_points.type_as(voxel_features).view(-1, 1, 1)
-        # 点相对于体素内质心的偏移量
-        f_cluster = voxel_features[:, :, :3] - points_mean
-        # 点相对于体素中心的偏移量
-        f_center = torch.zeros_like(voxel_features[:, :, :3])
-        f_center[:, :, 0] = voxel_features[:, :, 0] - (
-                coords[:, 3].to(voxel_features.dtype).unsqueeze(
-                    1) * self.voxel_x + self.x_offset)
-        f_center[:, :, 1] = voxel_features[:, :, 1] - (
-                coords[:, 2].to(voxel_features.dtype).unsqueeze(
-                    1) * self.voxel_y + self.y_offset)
-        f_center[:, :, 2] = voxel_features[:, :, 2] - (
-                coords[:, 1].to(voxel_features.dtype).unsqueeze(
-                    1) * self.voxel_z + self.z_offset)
+            # 点相对于体素内质心的偏移量
+            f_cluster = voxel_features[:, :, :3] - points_mean
+            # 点相对于体素中心的偏移量
+            f_center = torch.zeros_like(voxel_features[:, :, :3])
+            f_center[:, :, 0] = voxel_features[:, :, 0] - (
+                    coords[:, 3].to(voxel_features.dtype).unsqueeze(
+                        1) * self.voxel_x + self.x_offset)
+            f_center[:, :, 1] = voxel_features[:, :, 1] - (
+                    coords[:, 2].to(voxel_features.dtype).unsqueeze(
+                        1) * self.voxel_y + self.y_offset)
+            f_center[:, :, 2] = voxel_features[:, :, 2] - (
+                    coords[:, 1].to(voxel_features.dtype).unsqueeze(
+                        1) * self.voxel_z + self.z_offset)
 
-        if self.use_absolute_xyz:
-            features = [voxel_features, f_cluster, f_center]
-        else:
-            features = [voxel_features[..., 3:], f_cluster, f_center]
+            if self.use_absolute_xyz:
+                features = [voxel_features, f_cluster, f_center]
+            else:
+                features = [voxel_features[..., 3:], f_cluster, f_center]
 
-        if self.with_distance:
-            points_dist = torch.norm(voxel_features[:, :, :3], 2, 2,
-                                     keepdim=True)
-            features.append(points_dist)
-        features = torch.cat(features, dim=-1)
+            if self.with_distance:
+                points_dist = torch.norm(voxel_features[:, :, :3], 2, 2,
+                                        keepdim=True)
+                features.append(points_dist)
+            features = torch.cat(features, dim=-1)
 
-        voxel_count = features.shape[1]
-        mask = self.get_paddings_indicator(voxel_num_points, voxel_count,
-                                           axis=0)
-        mask = torch.unsqueeze(mask, -1).type_as(voxel_features)
-        features *= mask # torch.Size([N, 16, 10])
-        if stage == 'dec':
+            voxel_count = features.shape[1]
+            mask = self.get_paddings_indicator(voxel_num_points, voxel_count,
+                                            axis=0)
+            mask = torch.unsqueeze(mask, -1).type_as(voxel_features)
+            features *= mask # torch.Size([N, 16, 10])
             for pfn in self.pfn_layers:
                 features = pfn(features)
             features = features.squeeze()
             batch_dict['dec_pillar_features'] = features
-        else:
+        else: # stage == 'diff'
+            voxel_features, voxel_num_points, coords = \
+                batch_dict['voxel_features'], batch_dict['voxel_num_points'], \
+                batch_dict['voxel_coords']
+            # 创建mask来标识有效点 [M, 16, 1]
+            points_mask = torch.arange(voxel_features.shape[1], device=voxel_features.device) \
+                .unsqueeze(0).expand(voxel_features.shape[0], -1) \
+                < voxel_num_points.unsqueeze(-1)
+            points_mask = points_mask.unsqueeze(-1)
+            
+            # 使用mask获取有效点的xyz坐标 [M, 16, 3]
+            valid_points = voxel_features[:, :, :3] * points_mask.float()
+            
+            # 1. 计算相对于质心的平均偏移量 [M, 3]
+            # 首先计算质心
+            points_mean = valid_points.sum(dim=1) / voxel_num_points.unsqueeze(-1).float()  # [M, 3]
+            
+            # 计算每个点到质心的相对偏移
+            relative_offsets = valid_points - points_mean.unsqueeze(1)  # [M, 16, 3]
+            
+            # 计算有效点的平均相对偏移（使用mask确保只考虑有效点）
+            mean_relative_offsets = (relative_offsets * points_mask.float()).sum(dim=1) / \
+                                voxel_num_points.unsqueeze(-1).float()  # [M, 3]
+            
+            # 2. 计算点云方差 Variance [M, 3]
+            # 广播减法计算每个点到均值的差
+            centered_points = valid_points - points_mean.unsqueeze(1)  # [M, 16, 3]
+            # 计算平方
+            squared_diff = (centered_points * points_mask.float()) ** 2  # [M, 16, 3]
+            # 使用sum和voxel_num_points计算方差
+            variance = squared_diff.sum(dim=1) / voxel_num_points.unsqueeze(-1).float()  # [M, 3]
+            
+            # 3. 计算最大点间距离 Diameter [M, 1]
+            # 使用广播计算所有点对之间的距离
+            # reshape以便使用cdist
+            points_expanded = valid_points.view(-1, voxel_features.shape[1], 3)  # [M, 16, 3]
+            # 计算每个柱体内所有点对的距离
+            distances = torch.cdist(points_expanded, points_expanded)  # [M, 16, 16]
+            # 创建mask来处理无效点对
+            mask_matrix = points_mask.squeeze(-1).unsqueeze(-1) * points_mask.squeeze(-1).unsqueeze(1)  # [M, 16, 16]
+            # 将无效点对的距离设为0
+            distances = distances * mask_matrix
+            # 获取每个柱体内的最大距离
+            max_distances = torch.max(distances.view(distances.shape[0], -1), dim=1)[0].unsqueeze(-1)  # [M, 1]
+            
+            # 将voxel_num_points转换为浮点数并增加维度 [M, 1]
+            points_count = voxel_num_points.float().unsqueeze(-1)
+            
+            # 拼接所有特征 [M, 8] (原来是[M, 7])
+            statistical_features = torch.cat([mean_relative_offsets, variance, max_distances, points_count], dim=1)
+            
+            # 处理只有一个点的情况（方差和最大距离应为0）
+            single_point_mask = (voxel_num_points == 1).unsqueeze(-1)  # [M, 1]
+            statistical_features[:, 1:4] = statistical_features[:, 1:4] * (~single_point_mask)  # 注意这里改为1:4，因为points_count不需要置零
+            
+            # 将统计特征添加到batch_dict中
+            batch_dict['pillar_features'] = statistical_features
+            
+            # 在返回之前添加分析
+            if False:  # 可以选择只在训练时分析
+                self.analyze_features(statistical_features)
+        
             # features = features.view(features.size(0), 8, 20) # 将 [N, 16, 10] 重塑为 [N, 8, 20]
-            features = features.mean(dim=1) # 在第二维(dim=1)上取平均，结果为 [N, 20]
-            features = features.squeeze()
-            batch_dict['pillar_features'] = features
+            # features = features.mean(dim=1) # 在第二维(dim=1)上取平均，结果为 [N, 20]
+            # features = features.squeeze()
+            # batch_dict['pillar_features'] = features
 
         return batch_dict
