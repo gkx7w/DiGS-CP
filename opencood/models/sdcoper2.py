@@ -14,6 +14,7 @@ from opencood.models.sub_modules.rmpa import Resolutionaware_Multiscale_Progress
 
 # from opencood.models.sub_modules.roi_head_with_sd import RoIHead
 
+# 这里仅仅增加了一些特征匹配
 from opencood.models.sub_modules.roi_head_with_jo import RoIHead
 
 
@@ -25,6 +26,8 @@ from opencood.models.sub_modules.roi_head_with_jo import RoIHead
 # new matcher
 from opencood.models.sub_modules.matcher_new import Matcher
 
+# 引入车辆类型，车辆图，图匹配算法，第一版图匹配方法
+# from opencood.MG.version1 import Vehicle,VehicleGraph,GraphMatcher 
 
 # 可以基于coalign做出第二版，稍后完善
 
@@ -44,7 +47,8 @@ from opencood.models.sub_modules.downsample_conv import DownsampleConv
 from opencood.models.sub_modules.naive_compress import NaiveCompressor
 from opencood.models.fuse_modules.fusion_in_one import MaxFusion, AttFusion, DiscoFusion, V2VNetFusion, V2XViTFusion, When2commFusion
 from opencood.utils.transformation_utils import normalize_pairwise_tfm
-
+from opencood.data_utils.pre_processor.sp_voxel_preprocessor import SpVoxelPreprocessor
+from opencood.data_utils.datasets.early_fusion_dataset_diffusion import visualize_gt_boxes
 
 def regroup(x, record_len):
     cum_sum_len = torch.cumsum(record_len, dim=0)
@@ -129,6 +133,7 @@ class SDCoper2(nn.Module):
             self.naive_compressor = NaiveCompressor(64, args['compression'])
 
         self.head = Head(**args['head'])
+        self.pre_processor = SpVoxelPreprocessor(args["preprocess"], train = True)
         self.post_processor = FpvrcnnPostprocessor(args['post_processer'],
                                                    train=True)
 
@@ -140,13 +145,33 @@ class SDCoper2(nn.Module):
         self.matcher = Matcher(args['matcher'], args['lidar_range'])
         self.roi_head = RoIHead(args['roi_head'])
 
-        # 新增阈值 小于才用特征
-        self.feature_threshold = 0
-        # 不确定性权重
-        self.uncertainty_weight = 0.1
+        # 解耦
+        self.roi_head.decoupling = True
+
+        
+        # # 新增阈值 小于才用特征
+        # self.feature_threshold = 0
+        # # 不确定性权重
+        # self.uncertainty_weight = 0.1
         # self.graph_matcher = GraphMatcher()
 
-
+    def get_processed_lidar(self, batch_dict):
+        processed_lidar_batch = []
+        ori_lidar = batch_dict['origin_lidar_for_diff'][:, 1:]
+        batch_indices = batch_dict['origin_lidar_for_diff'][:, 0].long()
+        for batch_i in range(len(batch_dict['boxes_fused'])):
+            bs_mask = (batch_indices == batch_i)
+            batch_ori_lidar = ori_lidar[bs_mask].cpu().numpy()  # (N, 4)
+            pre_fused_boxes = batch_dict['boxes_fused'][batch_i].cpu().numpy() # (n, 7)
+            pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+            visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_pre_boxes_sdcoper2.png")
+            # 将box扩展到相同大小 3:6 hwl
+            pre_fused_boxes[:, 3:6] = np.array(self.max_hwl)
+            visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_pre_boxes_sdcoper2.png")        
+            return batch_dict
+    
+    
+    
     def stage1_fix(self):
         """
         Fix the parameters of backbone during finetune on timedelay。
@@ -233,7 +258,8 @@ class SDCoper2(nn.Module):
         batch_dict = self.scatter(batch_dict)
 
 
-
+        # 标注一下点云不要投影，第一阶段框没有投影 点不投影 特征不能投影
+        batch_dict["rmpa_project_lidar"] = False
 
 
         # calculate pairwise affine transformation matrix
@@ -254,7 +280,7 @@ class SDCoper2(nn.Module):
         mv_feature = self.backbone.decode_multiscale_feature(feature_list)
         # print("合并后单车特征尺度：",mv_feature.shape)
 
-        # fused_feature_list = [].
+        # fused_feature_list = []
         # for i, fuse_module in enumerate(self.fusion_net):
         #     fused_feature_list.append(fuse_module(feature_list[i], record_len, normalized_affine_matrix))
         # fused_feature = self.backbone.decode_multiscale_feature(fused_feature_list)
@@ -262,19 +288,27 @@ class SDCoper2(nn.Module):
         # print("融合后特征列表尺度：",[t.shape for t in fused_feature_list])
         # print("融合后特征尺度：",fused_feature.shape)
 
+        # for i, t in enumerate(feature_list):
+        #     #  对特征投影 ，但是当下，没有对框投影，但是又对点投影了，所以精度有问题，
+        #     #  真实情况应该是，第一阶段不应该涉及任何投影，在第二阶段才能投影
+        #     out = normalized_affine_bev(t, normalized_affine_matrix, record_len)
+        #     batch_dict["spatial_features_%dx" % 2 ** (i + 1)] = out
+
+        # batch_dict['spatial_features'] = normalized_affine_bev(batch_dict['spatial_features'],
+        #                                                            normalized_affine_matrix, record_len)
+        
+        # 不涉及任何投影
         for i, t in enumerate(feature_list):
+            #  对特征投影 ，但是当下，没有对框投影，但是又对点和特征投影了，所以精度有问题，
+            #  真实情况应该是，第一阶段不应该涉及任何投影，在第二阶段才能投影
+            batch_dict["spatial_features_%dx" % 2 ** (i + 1)] = t
 
-            out = normalized_affine_bev(t, normalized_affine_matrix, record_len)
-            batch_dict["spatial_features_%dx" % 2 ** (i + 1)] = out
-
-        batch_dict['spatial_features'] = normalized_affine_bev(batch_dict['spatial_features'],
-                                                                   normalized_affine_matrix, record_len)
+        batch_dict['spatial_features'] = batch_dict['spatial_features']
+                     
+        
         if self.shrink_flag:
             # fused_feature = self.shrink_conv(fused_feature)
             mv_feature = self.shrink_conv(mv_feature)
-
-        # print("送入分类头特征尺度: ",fused_feature.shape)
-        # print("送入分类头单车特征尺度: ",mv_feature.shape)
 
         batch_dict['stage1_out'] = self.head(mv_feature)
 
@@ -283,11 +317,12 @@ class SDCoper2(nn.Module):
 
 
         # choose output in sd
-        # 返回nms后每个batch融合后的框
         pred_box3d_list, scores_list = \
             self.post_processor.post_process(data_dict, output_dict,
                                              stage1=True)
-
+        
+        # 这个阶段的结果是相对坐标，并不是全局坐标，因此后续还需要投影
+        # print("第一阶段结果：")
         # print([t.shape for t in pred_box3d_list],[t.shape for t in scores_list])
         # # 这就是我们第一阶段的结果，我们要认真使用，A，获取特征（在后续实现，先不动这个），B打包 cls和box等信息 
         # Vehicles = []
@@ -313,7 +348,7 @@ class SDCoper2(nn.Module):
 
         # 真正的对应关系呢，让我找一找 
 
-
+        # 10*7  20*7  
         batch_dict['det_boxes'] = pred_box3d_list
         batch_dict['det_scores'] = scores_list
 
@@ -335,5 +370,7 @@ class SDCoper2(nn.Module):
             batch_dict = self.rmpa(batch_dict)
             batch_dict = self.matcher(batch_dict)
             batch_dict = self.roi_head(batch_dict)
+            
+        self.get_processed_lidar(batch_dict)
 
         return batch_dict

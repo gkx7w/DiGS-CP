@@ -100,15 +100,19 @@ def getIntermediate2stageFusionDataset(cls):
                 if self.proj_first: # 
                     lidar_np[:, :3] = projected_lidar
 
+                lidar_np_diff = copy.deepcopy(lidar_np)
+                lidar_np_diff[:, :3] = projected_lidar
+                
                 if self.visualize:
                     # filter lidar
                     selected_cav_processed.update({'projected_lidar': projected_lidar})
                     
-                processed_lidar = self.pre_processor.preprocess(lidar_np)
+                processed_lidar = self.pre_processor.preprocess(lidar_np,is_car= False)
                 selected_cav_processed.update({'projected_lidar': projected_lidar,
                                                'projected_vsa_lidar': vsa_project_lidar,
                                                'no_projected_lidar': no_project_lidar,
-                                               'processed_features': processed_lidar})
+                                               'processed_features': processed_lidar,
+                                               'lidar_np_diff': lidar_np_diff,})
 
             # generate targets label single GT, note the reference pose is itself.
             object_bbx_center, object_bbx_mask, object_ids = self.generate_object_center(
@@ -298,6 +302,8 @@ def getIntermediate2stageFusionDataset(cls):
             
             # merge preprocessed features from different cavs into the same dict
             cav_num = len(cav_id_list)
+            ########################
+            projected_lidar_stack = []
             
             for _i, cav_id in enumerate(cav_id_list):
                 selected_cav_base = base_data_dict[cav_id]
@@ -306,6 +312,8 @@ def getIntermediate2stageFusionDataset(cls):
                     selected_cav_base,
                     ego_cav_base)
                 
+                projected_lidar_stack.append(
+                    selected_cav_processed['lidar_np_diff'])
                 object_stack.append(selected_cav_processed['object_bbx_center'])
                 object_id_stack += selected_cav_processed['object_ids']
 
@@ -330,6 +338,13 @@ def getIntermediate2stageFusionDataset(cls):
                 
                 single_label_list.append(selected_cav_processed['single_label_dict'])
 
+            # 4. 将所有车辆的点云数据堆叠在一起（完成点云融合）
+            projected_lidar_stack = np.vstack(projected_lidar_stack)
+            projected_lidar_stack = mask_points_by_range(projected_lidar_stack,
+                                                        self.params['preprocess'][
+                                                            'cav_lidar_range'])
+            processed_data_dict['ego'].update({'origin_lidar':
+                                                    projected_lidar_stack})
             # generate single view label (no coop) label
             label_dict_no_coop = single_label_list # [{cav1_label}, {cav2_label}...]
 
@@ -411,7 +426,8 @@ def getIntermediate2stageFusionDataset(cls):
             lidar_pose_list = []
             origin_lidar = []
             vsa_lidar = []
-            
+            #####################
+            origin_lidar = []
             # 增加2个
             vsa_lidar_project = []
             vsa_lidar_noproject = []
@@ -432,7 +448,7 @@ def getIntermediate2stageFusionDataset(cls):
                 if self.load_lidar_file:
                     processed_lidar_list.append(ego_dict['processed_lidar'])
                     vsa_lidar.append(ego_dict['vsa_lidar'])
-
+                    origin_lidar.append(ego_dict['origin_lidar'])
                     vsa_lidar_project.append(ego_dict['vsa_lidar_project'])
                     vsa_lidar_noproject.append(ego_dict['vsa_lidar_noproject'])
                 
@@ -546,6 +562,17 @@ def getIntermediate2stageFusionDataset(cls):
                 origin_lidar_for_vsa_noproject = np.concatenate(coords, axis=0)
                 origin_lidar_for_vsa_noproject = torch.from_numpy(origin_lidar_for_vsa_noproject)
                 output_dict['ego'].update({'origin_lidar_for_vsa_noproject': origin_lidar_for_vsa_noproject})
+                
+                
+                coords_ori = []
+                for batch_idx, points in enumerate(origin_lidar):
+                    batch_indices = np.full((points.shape[0], 1), batch_idx)
+                    points_with_indices = np.hstack((batch_indices, points))
+                    coords_ori.append(points_with_indices)
+
+                origin_lidar_for_diff = np.concatenate(coords_ori, axis=0)
+                origin_lidar_for_diff = torch.from_numpy(origin_lidar_for_diff)
+                output_dict['ego'].update({'origin_lidar_for_diff': origin_lidar_for_diff})
 
             if self.visualize:
                 origin_lidar = \

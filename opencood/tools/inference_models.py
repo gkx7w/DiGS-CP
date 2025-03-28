@@ -32,7 +32,7 @@ def test_parser():
                         help='mark this process')
 
     parser.add_argument('--model_dir', type=str,
-                        default="/home/ubuntu/Code2/checkpoints/fisrt_no_fuse",
+                        default="/home/ubuntu/Code2/checkpoints/moreloss_convert_bsa_best",
                         help='Continued training path')
 
     # parser.add_argument("--hypes_yaml", "-y", type=str, default="/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/SDCoper/SDCoper.yaml",
@@ -179,7 +179,7 @@ def main():
                                                                                   model,
                                                                                   opencood_dataset)
                         elif opt.fusion_method == 'intermediate':
-                            print("mid")
+                            # print("mid")
                             infer_result = inference_utils.inference_intermediate_fusion(batch_data,
                                                                                          model,
                                                                                          opencood_dataset)

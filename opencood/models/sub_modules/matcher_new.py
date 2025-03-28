@@ -24,11 +24,9 @@ class Matcher(nn.Module):
     @torch.no_grad()
     def forward(self, data_dict):
         clusters, scores,cluster_indices,cur_cluster_id = self.clustering(data_dict)
-        
-        data_dict['cluster_indices'], data_dict[
-            'cur_cluster_id'] = cluster_indices,cur_cluster_id
-        data_dict['boxes_fused'], data_dict[
-            'scores_fused'] = self.cluster_fusion(clusters, scores)
+        # 解耦特征 一一对应
+        data_dict['boxes_fused'], data_dict['scores_fused'], data_dict['cluster_indices'], data_dict['cur_cluster_id']= \
+            self.cluster_fusion(clusters, scores,cluster_indices,cur_cluster_id)
         self.merge_keypoints(data_dict)
         return data_dict
 
@@ -39,6 +37,8 @@ class Matcher(nn.Module):
         """
         clusters_batch = []
         scores_batch = []
+        cluster_indices_batch = []
+        cur_cluster_id_batch = []
         record_len = [int(l) for l in data_dict['record_len']]
         lidar_poses = data_dict['lidar_pose'].cpu().numpy()
         for i, l in enumerate(record_len):
@@ -91,10 +91,12 @@ class Matcher(nn.Module):
             # 在这个上面可以添加一个feature  
             clusters_batch.append(clusters)
             scores_batch.append(scores)
+            cluster_indices_batch.append(cluster_indices)
+            cur_cluster_id_batch.append(cur_cluster_id)
 
-        return clusters_batch, scores_batch,cluster_indices,cur_cluster_id
+        return clusters_batch, scores_batch,cluster_indices_batch,cur_cluster_id_batch
 
-    def cluster_fusion(self, clusters, scores):
+    def cluster_fusion(self, clusters, scores, cluster_indices_batch=None, cur_cluster_id_batch=None):
         """
         Merge boxes in each cluster with scores as weights for merging
         """
@@ -143,13 +145,47 @@ class Matcher(nn.Module):
             scores_fused[sum(len_records[:i]):sum(len_records[:i]) + l] for
             i, l in enumerate(len_records)]
 
+        new_cluster_indices_batch = []
+        new_cur_cluster_id_batch = []
         for i in range(len(boxes_fused)):
+            # Get the mask for boxes within range
             corners3d = boxes_to_corners_3d(boxes_fused[i], order='hwl')
             mask = get_mask_for_boxes_within_range_torch(corners3d, self.pc_range)
+            
+            # Apply mask to boxes_fused, scores_fused, and clusters
             boxes_fused[i] = boxes_fused[i][mask]
             scores_fused[i] = scores_fused[i][mask]
+            
+            # Get the cluster IDs that correspond to valid boxes
+            valid_cluster_ids = []
+            for j, valid in enumerate(mask):
+                if valid:
+                    valid_cluster_ids.append(j + 1)  # Cluster IDs start from 1
+            
+            # Create a mapping from old cluster IDs to new ones
+            old_to_new_id = {}
+            new_id = 1
+            for old_id in valid_cluster_ids:
+                old_to_new_id[old_id] = new_id
+                new_id += 1
+            
+            # Update cluster indices
+            original_indices = cluster_indices_batch[i]
+            new_indices = torch.zeros_like(original_indices)
+            
+            for old_id, new_id in old_to_new_id.items():
+                new_indices[original_indices == old_id] = new_id
+            
+            new_cluster_indices_batch.append(new_indices)
+            new_cur_cluster_id_batch.append(len(valid_cluster_ids) + 1)  # New maximum cluster ID
+            # corners3d = boxes_to_corners_3d(boxes_fused[i], order='hwl')
+            # mask = get_mask_for_boxes_within_range_torch(corners3d, self.pc_range)
+            # boxes_fused[i] = boxes_fused[i][mask]
+            # scores_fused[i] = scores_fused[i][mask]
+            # clusters[i] = clusters[i][mask]
+        
 
-        return boxes_fused, scores_fused
+        return boxes_fused, scores_fused, new_cluster_indices_batch, new_cur_cluster_id_batch
 
     def merge_keypoints(self, data_dict):
         # merge keypoints

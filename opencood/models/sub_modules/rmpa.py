@@ -168,8 +168,14 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
 
         # print("不同points shape: ",batch_dict['origin_lidar_for_vsa_project'].shape,batch_dict['origin_lidar_for_vsa_project'].shape,batch_dict['origin_lidar_for_vsa_noproject'].shape)
         if self.model_cfg['point_source'] == 'raw_points':
-            src_points = batch_dict['origin_lidar_for_vsa_project'][:, 1:]
-            batch_indices = batch_dict['origin_lidar_for_vsa_project'][:, 0].long()
+            # 根据投影要求选择是否投影
+            if "rmpa_project_lidar" in batch_dict and not batch_dict['rmpa_project_lidar']:
+                src_points = batch_dict['origin_lidar_for_vsa_noproject'][:, 1:]
+                batch_indices = batch_dict['origin_lidar_for_vsa_noproject'][:, 0].long()
+            else:
+                # 默认是投影的
+                src_points = batch_dict['origin_lidar_for_vsa_project'][:, 1:]
+                batch_indices = batch_dict['origin_lidar_for_vsa_project'][:, 0].long()
         elif self.model_cfg['point_source'] == 'voxel_centers':
             src_points = common_utils.get_voxel_centers(
                 batch_dict['voxel_coords'][:, 1:4],

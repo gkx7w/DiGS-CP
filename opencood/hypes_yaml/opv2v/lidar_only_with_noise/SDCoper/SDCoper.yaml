@@ -9,9 +9,9 @@ noise_setting:
     pos_mean: 0
     rot_mean: 0
 
-root_dir: "/raid/luogy/data/opencood/opv2v_data_dumping/train"
-validate_dir: "/raid/luogy/data/opencood/opv2v_data_dumping/validate"
-test_dir: "/raid/luogy/data/opencood/opv2v_data_dumping/test"
+root_dir: "/datasets/OPV2V/train"
+validate_dir: "/datasets/OPV2V/validate"
+test_dir: "/datasets/OPV2V/test"
 
 input_source: ['lidar']
 label_type: 'lidar'
@@ -28,13 +28,13 @@ train_params:
   max_cav: &max_cav 5
 
 fusion:
-  core_method: 'intermediate2stagesdcoper'
+  core_method: 'intermediate2stagesdcoper2'
   dataset: 'opv2v'
   args:
     proj_first: &proj_first false
 
 # preprocess-related
-preprocess:
+preprocess: &preprocess
   # options: BasePreprocessor, VoxelPreprocessor, BevPreprocessor
   core_method: 'SpVoxelPreprocessor'
   args:
@@ -42,8 +42,6 @@ preprocess:
     max_points_per_voxel: &T 32
     max_voxel_train: 32000
     max_voxel_test: 70000
-    max_hwl: &max_hwl [1.98,2.36,5.63]
-    use_hwl: true
   # lidar range for each individual cav.
   cav_lidar_range: &cav_lidar [-140.8, -40, -3, 140.8, 40, 1]
   keep_original_lidar: true
@@ -86,7 +84,7 @@ postprocess: &postprocess_params
 
 # model related
 model:
-  core_method: sdcoper
+  core_method: sdcoper2
   args:
 #    activate_stage2: False
     activate_stage2: True
@@ -97,6 +95,7 @@ model:
     anchor_num: *achor_num
     anchor_number: *achor_num
     max_cav: *max_cav
+    preprocess: *preprocess
     mean_vfe:
       num_point_features: 4
     spconv:

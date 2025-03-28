@@ -335,8 +335,10 @@ class Cond_Diff_Denoise(nn.Module):
     def forward(self, data_dict):
         # 获取batch中每个GT框的特征
         batch_gt_spatial_features = data_dict['batch_gt_spatial_features']
+        coords = data_dict['voxel_coords']
+        gt_masks = data_dict['voxel_gt_mask']
         # 解耦后的融合特征为条件，无则为none
-        cond = data_dict.get("condition", None)
+        cond = data_dict.get('fused_object_factors', None)
         combined_pred = cond
         # 最终结果存储 - 保持与输入相同的嵌套结构
         batch_pred_features = []
@@ -346,10 +348,29 @@ class Cond_Diff_Denoise(nn.Module):
                 # 获取相应的条件
                 gt_cond = None
                 if cond is not None:
-                    if isinstance(cond, dict) and batch_idx in cond:
+                    if isinstance(cond, list) and batch_idx < len(cond):
                         gt_cond = cond[batch_idx]
                     else:
                         gt_cond = combined_pred
+                batch_mask = coords[:, 0] == batch_idx
+                this_coords = coords[batch_mask, :]  # (batch_idx_voxel, 4)
+                # 获取该batch中的gt_mask
+                this_gt_mask = gt_masks[batch_mask]  # (batch_idx_voxel, )
+                unique_values_in_mask = torch.unique(this_gt_mask)
+                # 创建一个布尔掩码，指示哪些元素要保留
+                # 假设gt_cond的长度与可能的mask值对应
+                keep_indices = []
+                for i in range(len(gt_cond)):
+                    # 检查索引+1是否在mask的唯一值中
+                    if i in unique_values_in_mask:
+                        keep_indices.append(i)
+                # 如果有要保留的索引，则过滤gt_cond
+                if keep_indices:
+                    # 使用索引选择器保留需要的元素
+                    gt_cond = gt_cond[keep_indices]
+                else:
+                    # 如果没有要保留的元素，创建一个空tensor保持原始维度结构
+                    gt_cond = torch.zeros((0,) + gt_cond.shape[1:], device=gt_cond.device, dtype=gt_cond.dtype)
                 x_start = gt_features  # 当前GT框的特征
                 latent_shape = x_start.shape
                 t = torch.full((x_start.shape[0],), self.num_timesteps-1, device=x_start.device, dtype=torch.long)

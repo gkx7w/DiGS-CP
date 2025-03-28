@@ -46,6 +46,9 @@ def train_parser():
                         help='mark this process')
     parser.add_argument('--model_dir', default='',
                         help='Continued training path')
+    
+    parser.add_argument('--diff_model_dir', default='',
+                        help='Continued diffusion training path')
 
     parser.add_argument('--fusion_method', '-f', default="early",
                         help='passed to inference.')
@@ -107,10 +110,33 @@ def main():
     
 
     # if we want to train from last checkpoint.
-    if opt.model_dir:
+    if opt.model_dir and opt.diff_model_dir:
+        init_epoch = 78
+        diff_saved_path = opt.diff_model_dir
+        model = train_utils.load_saved_model_new(diff_saved_path, model)
         saved_path = opt.model_dir
-        init_epoch, model = train_utils.load_saved_model(saved_path, model)
-        lowest_val_epoch = init_epoch
+        model = train_utils.load_saved_model_new(saved_path, model)
+
+        for param in model.parameters():
+            param.requires_grad = False
+        trainable_layers = [
+            'roi_head.factor_encoder',
+            'attention_2',
+            'layernorm_2'
+        ]
+        for name, param in model.named_parameters():
+            if any(layer_name in name for layer_name in trainable_layers):
+                param.requires_grad = True
+                print(f"解冻层: {name}")     
+
+        scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch)
+        saved_path = train_utils.setup_train(hypes)
+        print(f"resume from {init_epoch} epoch.")
+    
+    elif opt.model_dir or opt.diff_model_dir:
+        init_epoch = 78 if opt.model_dir != '' else 10
+        saved_path = opt.model_dir if opt.model_dir != '' else opt.diff_model_dir
+        model = train_utils.load_saved_model_new(saved_path, model)
         scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch)
         saved_path = train_utils.setup_train(hypes)
         print(f"resume from {init_epoch} epoch.")
@@ -125,7 +151,7 @@ def main():
     # we assume gpu is necessary
     if torch.cuda.is_available():
         model.to(device)
-        
+
     # record training
     writer = SummaryWriter(saved_path)
 
@@ -138,7 +164,7 @@ def main():
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
         for i, batch_data in enumerate(train_loader):
-            if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or batch_data['ego']['processed_lidar'] == {}:
+            if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or ('processed_lidar' in batch_data['ego'] and batch_data['ego']['processed_lidar'] == {}):
                 continue
             # the model will be evaluation mode during validation
             model.train()

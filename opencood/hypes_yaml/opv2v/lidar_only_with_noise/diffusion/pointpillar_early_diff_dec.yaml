@@ -6,7 +6,7 @@ test_dir: "/datasets/OPV2V/test"
 yaml_parser: "load_point_pillar_params"
 train_params:
   batch_size: &batch_size 1
-  epoches: 1
+  epoches: 79
   eval_freq: 2
   save_freq: 1
   max_cav: &max_cav 5
@@ -17,26 +17,28 @@ label_type: 'lidar'
 comm_range: 70
 
 noise_setting:
-  add_noise: False
+  add_noise: True
   args:
-    pos_mean: 0
     pos_std: 0.2
-    rot_mean: 0
     rot_std: 0.2
+    pos_mean: 0
+    rot_mean: 0
 
 fusion:
   core_method: 'decdiffusion' # LateFusionDataset, EarlyFusionDataset, IntermediateFusionDataset supported
   dataset: 'opv2v'
   args:
-    proj_first: &proj_first false # early is proj first.
+    proj_first: &proj_first False # early is proj first.
 
 # preprocess-related
 preprocess: &preprocess
   # options: BasePreprocessor, VoxelPreprocessor, BevPreprocessor
   core_method: 'SpVoxelPreprocessor'
   args:
-    voxel_size: &voxel_size [0.2, 0.1, 4] #粒度可以变小一点
-    max_points_per_voxel: &T 16
+    voxel_size: &voxel_size [0.4, 0.4, 4] #粒度可以变小一点
+    max_points_per_voxel: &T 32
+    voxel_size_car: &voxel_size_car [0.2, 0.1, 4] #粒度可以变小一点
+    max_points_per_voxel_car: &T_car 16
     max_voxel_train: 32000
     max_voxel_test: 70000
     max_hwl: &max_hwl [1.98,2.36,5.63]
@@ -180,7 +182,7 @@ model:
       num_filters: [64]
     point_pillar_scatter:
       max_hwl: *max_hwl
-      num_features: &num_features 10 # pillar_features维度
+      num_features: &num_features 8 # pillar_features维度
       num_features_dec: &num_features_dec 64 
       voxel_size: *voxel_size
       lidar_range: *cav_lidar
@@ -207,7 +209,7 @@ model:
 
     mdd_block:
       model:
-        in_channels: 5
+        in_channels: 4
         out_ch: *num_features # in_channels*2
         ch: 8
         ch_mult: [1, 1]
@@ -215,7 +217,7 @@ model:
         attn_resolutions: [16]
         dropout: 0.0
         resamp_with_conv: True
-        # d_cond: 768
+        d_cond: 256
         n_head: 8
       diffusion:
         beta_schedule: linear

@@ -107,7 +107,7 @@ def getIntermediate2stageFusionDataset(cls):
                     # filter lidar
                     selected_cav_processed.update({'projected_lidar': projected_lidar})
 
-                processed_lidar = self.pre_processor.preprocess(lidar_np)
+                processed_lidar = self.pre_processor.preprocess(lidar_np,is_car=False)
                 selected_cav_processed.update({'projected_lidar': projected_lidar,
                                                'projected_vsa_lidar': vsa_project_lidar,
                                                'no_projected_lidar': no_project_lidar,

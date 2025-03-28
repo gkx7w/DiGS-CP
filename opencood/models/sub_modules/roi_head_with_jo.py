@@ -512,6 +512,7 @@ class RoIHead(nn.Module):
             new_xyz_batch_cnt[bs_idx] = label_record_len[
                                             bs_idx] * self.grid_size ** 3
 
+        # 报错？？
         pooled_points, pooled_features = self.roi_grid_pool_layer(
             xyz=xyz[:, :3].contiguous(),
             xyz_batch_cnt=xyz_batch_cnt,
@@ -867,24 +868,29 @@ class RoIHead(nn.Module):
                 boxes_factors = []
                 for i in range(self.factor_num):
                     boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
-                print([t.shape for t in boxes_factors])
+                # print([t.shape for t in boxes_factors])
                 # all box , 32 *8
                 boxes_factors = torch.cat(boxes_factors,dim=1)
                 # 需要用iou来寻找公共物体再融合，当前box没有投影，点也没有投影，先投影再运算
                 # 这些代码，已经存在在matcher 的结果上了，问题就在于找到最终索引就能合并框了
                 cluster_indices,cur_cluster_id =  batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
                 # 寻找公共物体
-                object_factors = [] 
+                object_factors_batch = []
                 # 可以直接融合，取平均值，因子内融合
-                for j in range(1, cur_cluster_id):
-                    object_factors.append(boxes_factors[cluster_indices==j].mean(dim=0).unsqueeze(dim=0))
-                
+                record_len = [int(l) for l in batch_dict['record_len']]
+                for i, l in enumerate(record_len):
+                    object_factors = [] 
+                    for j in range(1, cur_cluster_id[i]):
+                        object_factors.append(boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
+                    object_factors = torch.cat(object_factors,dim=0)
+                object_factors_batch.append(object_factors)
                 # print([t.shape for t in object_factors])
                 
                 # 这是物体级的feature
-                object_factors = torch.cat(object_factors,dim=0)
-                print("解耦后并融合的物体级因子： 物体数量 ， 8 * 32 ：",object_factors.shape)
-                batch_dict["fused_object_factors"] = object_factors
+                # 区分，区分每个场景下，特征属于哪个场景
+                # object_factors = torch.cat(object_factors,dim=0)
+                # print("解耦后并融合的物体级因子： 物体数量 ， 8 * 32 ：",[t.shape for t in object_factors_batch])
+                batch_dict["fused_object_factors"] = object_factors_batch
         
         
         return batch_dict

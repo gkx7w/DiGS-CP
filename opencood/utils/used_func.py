@@ -123,3 +123,27 @@
 #     visualize_gt_boxes(gt_boxes_ori[car_idx][np.newaxis, :], gt_point_ori, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_ori_{car_idx}.png",scale_3d=10)
 #     visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_3d=10)
     
+    
+# def count_trainable_parameters(model):
+#     # 只统计requires_grad=True的参数
+#     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+#     trainable_size_mb = trainable_params * 4 / (1024 * 1024)  # 假设用Float32
+    
+#     # 统计所有参数（包括冻结的）
+#     total_params = sum(p.numel() for p in model.parameters())
+#     total_size_mb = total_params * 4 / (1024 * 1024)
+    
+#     print(f"可训练参数数量: {trainable_params:,}")
+#     print(f"可训练参数大小: {trainable_size_mb:.2f} MB")
+#     print(f"总参数数量: {total_params:,}")
+#     print(f"总参数大小: {total_size_mb:.2f} MB")
+#     print(f"可训练参数占比: {trainable_params/total_params*100:.2f}%")
+    
+#     return trainable_params, total_params
+
+# trainable_params, total_params = count_trainable_parameters(model)
+# def check_trainable_params(model, model_name):
+#     print(f"\n{model_name} 参数训练状态:")
+#     for name, param in model.named_parameters():
+#         print(f"{name}: {'可训练' if param.requires_grad else '已冻结'}")
+# check_trainable_params(model,"model")    

@@ -39,8 +39,8 @@ class PointPillarScatter(nn.Module):
             Something like clockwise rotation of 90 degree.
 
         """
-        pillar_features, coords = batch_dict['dec_pillar_features'], batch_dict[
-            'dec_voxel_coords']
+        pillar_features, coords = batch_dict['pillar_features'], batch_dict[
+            'voxel_coords']
         batch_spatial_features = []
         batch_size = coords[:, 0].max().int().item() + 1
 

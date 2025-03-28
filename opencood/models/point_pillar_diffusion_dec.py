@@ -12,10 +12,11 @@ from opencood.models.sub_modules.downsample_conv import DownsampleConv
 from opencood.models.mdd_modules.radar_cond_diff_denoise import Cond_Diff_Denoise
 from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu
 from opencood.utils import common_utils
+from opencood.tools import train_utils
 from opencood.data_utils.pre_processor import build_preprocessor
 from opencood.data_utils.augmentor.augment_utils import global_rotation
 from opencood.utils.transformation_utils import normalize_pairwise_tfm
-
+from opencood.utils.common_utils import merge_features_to_dict
 from opencood.models.sub_modules.cia_ssd_utils import SSFA, Head
 from opencood.models.sub_modules.rmpa import Resolutionaware_Multiscale_Progressive_Attention
 from opencood.models.sub_modules.roi_head_with_jo import RoIHead
@@ -25,6 +26,8 @@ from opencood.data_utils.post_processor.fpvrcnn_postprocessor import \
 from opencood.models.sub_modules.torch_transformation_utils import warp_affine_simple
 from opencood.models.sub_modules.naive_compress import NaiveCompressor
 from opencood.models.fuse_modules.fusion_in_one import MaxFusion, AttFusion, DiscoFusion, V2VNetFusion, V2XViTFusion, When2commFusion
+from opencood.data_utils.pre_processor.sp_voxel_preprocessor import SpVoxelPreprocessor
+from opencood.data_utils.datasets.early_fusion_dataset_diffusion import visualize_gt_boxes
 
 def regroup(x, record_len):
     cum_sum_len = torch.cumsum(record_len, dim=0)
@@ -106,6 +109,7 @@ class PointPillarDiffusionDec(nn.Module):
             self.naive_compressor = NaiveCompressor(64, args['compression'])
 
         self.head = Head(**args['head'])
+        self.pre_processor = SpVoxelPreprocessor(args["preprocess"], train = True)
         self.post_processor = FpvrcnnPostprocessor(args['post_processer'],
                                                    train=True)
 
@@ -116,11 +120,68 @@ class PointPillarDiffusionDec(nn.Module):
 
         self.matcher = Matcher(args['matcher'], args['lidar_range'])
         self.roi_head = RoIHead(args['roi_head'])
+        # 解耦
+        self.roi_head.decoupling = True
         # self.cls_head = nn.Conv2d(self.out_channel, args['anchor_number'], # 384
         #                           kernel_size=1)
         # self.reg_head = nn.Conv2d(self.out_channel, 7 * args['anchor_number'], # 384
         #                           kernel_size=1)
         
+    def get_processed_lidar(self, batch_dict):
+        processed_lidar_batch = []
+        ori_lidar = batch_dict['origin_lidar_for_diff'][:, 1:]
+        batch_indices = batch_dict['origin_lidar_for_diff'][:, 0].long()
+        for batch_i in range(len(batch_dict['boxes_fused'])):
+            bs_mask = (batch_indices == batch_i)
+            batch_ori_lidar = ori_lidar[bs_mask].cpu().numpy()  # (N, 4)
+            pre_fused_boxes = batch_dict['boxes_fused'][batch_i].cpu().numpy() # (n, 7)
+            # pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+            # visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_pre_boxes.png")
+            # 将box扩展到相同大小 3:6 hwl
+            pre_fused_boxes[:, 3:6] = np.array(self.max_hwl)
+            # visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_pre_boxes.png")        
+            # 获取框中的点云  看一下boxhwl对不对应
+            point_indices = points_in_boxes_cpu(batch_ori_lidar[:, :3], pre_fused_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
+            gt_voxel_stack = []
+            gt_coords_stack = []
+            gt_num_points_stack = []
+            gt_masks = []
+            rotation_angles = -pre_fused_boxes[:, 6].astype(float)
+            for car_idx in range(len(pre_fused_boxes)):
+                # 获取当前box中的点并平移到以box中心为原点的坐标系 box里没有点怎么办？？特征全为0吗？
+                gt_point = batch_ori_lidar[point_indices[car_idx] > 0]
+                gt_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
+                # gt_boxes[car_idx][0:3] = [0, 0, 0]
+                # pc_range = [-15, -15, -1, 15, 15, 1]
+                # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
+                # 旋转点云 
+                gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
+                # pre_fused_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(pre_fused_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(pre_fused_boxes[car_idx][6])]))[0,0]
+                # pre_fused_boxes[car_idx][6] -= float(pre_fused_boxes[car_idx][6])
+                # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
+                # 体素化 不能并行！！
+                processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
+                
+                gt_voxel_stack.append(processed_lidar_car['voxel_features'])
+                gt_coords_stack.append(processed_lidar_car['voxel_coords'])
+                gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])
+                # 用unique找到所有值，没有的那个id再对应的boxes_fused里面pop掉
+                gt_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
+            processed_lidar = {
+                'voxel_features': np.concatenate(gt_voxel_stack, axis=0),
+                'voxel_coords': np.concatenate(gt_coords_stack, axis=0),
+                'voxel_num_points': np.concatenate(gt_num_points_stack, axis=0),
+                'gt_masks': np.concatenate(gt_masks, axis=0),
+                }
+            processed_lidar_batch.append(processed_lidar)
+        processed_lidar_dict = merge_features_to_dict(processed_lidar_batch)
+        processed_lidar_torch_dict = \
+                        self.pre_processor.collate_batch(processed_lidar_dict)
+        processed_lidar_torch_dict = train_utils.to_device(processed_lidar_torch_dict, device = batch_dict['dec_voxel_features'].device)
+        batch_dict.update({'processed_lidar': processed_lidar_torch_dict})
+        
+        return batch_dict
+    
     
     def forward(self, batch_dict):
         # decople
@@ -128,26 +189,21 @@ class PointPillarDiffusionDec(nn.Module):
         dec_voxel_coords = batch_dict['dec_processed_lidar']['voxel_coords']
         dec_voxel_num_points = batch_dict['dec_processed_lidar']['voxel_num_points']
         record_len = batch_dict['record_len']
-        
-        voxel_features = batch_dict['processed_lidar']['voxel_features']
-        voxel_coords = batch_dict['processed_lidar']['voxel_coords']
-        voxel_num_points = batch_dict['processed_lidar']['voxel_num_points']
-        voxel_gt_mask = batch_dict['processed_lidar']['gt_masks']
-        batch_dict.pop('processed_lidar')
+    
         batch_dict.pop('dec_processed_lidar')
-        batch_dict.update({'voxel_features': voxel_features,
-                           'voxel_coords': voxel_coords,
-                           'voxel_num_points': voxel_num_points,
+        batch_dict.update({
                            'dec_voxel_features': dec_voxel_features,
                            'dec_voxel_coords': dec_voxel_coords,
                            'dec_voxel_num_points': dec_voxel_num_points,
                            'batch_size': int(batch_dict['record_len'].sum()),
                            'record_len': record_len,
-                           'voxel_gt_mask': voxel_gt_mask})
+                           })
         # dec n, 4 -> n, c
         batch_dict = self.pillar_vfe(batch_dict, stage='dec')
         # dec n, c -> N, C, H, W
         batch_dict = self.scatter_dec(batch_dict)
+        # 标注一下以后都不要投影
+        batch_dict["rmpa_project_lidar"] = False
         # calculate pairwise affine transformation matrix
         _, _, H0, W0 = batch_dict['dec_spatial_features'].shape  # original feature map shape H0, W0
         normalized_affine_matrix = normalize_pairwise_tfm(batch_dict['pairwise_t_matrix'], H0, W0, self.voxel_size[0])
@@ -164,13 +220,21 @@ class PointPillarDiffusionDec(nn.Module):
 
         # print("特征列表尺度：",[t.shape for t in feature_list])
         mv_feature = self.backbone.decode_multiscale_feature(feature_list)
+        # for i, t in enumerate(feature_list):
+
+        #     out = normalized_affine_bev(t, normalized_affine_matrix, record_len)
+        #     batch_dict["dec_spatial_features_%dx" % 2 ** (i + 1)] = out
+
+        # batch_dict['dec_spatial_features'] = normalized_affine_bev(batch_dict['dec_spatial_features'],
+        #                                                            normalized_affine_matrix, record_len)
+        # 不涉及任何投影
         for i, t in enumerate(feature_list):
+            #  对特征投影 ，但是当下，没有对框投影，但是又对点和特征投影了，所以精度有问题，
+            #  真实情况应该是，第一阶段不应该涉及任何投影，在第二阶段才能投影
+            batch_dict["dec_spatial_features_%dx" % 2 ** (i + 1)] = t
 
-            out = normalized_affine_bev(t, normalized_affine_matrix, record_len)
-            batch_dict["dec_spatial_features_%dx" % 2 ** (i + 1)] = out
-
-        batch_dict['dec_spatial_features'] = normalized_affine_bev(batch_dict['dec_spatial_features'],
-                                                                   normalized_affine_matrix, record_len)
+        batch_dict['dec_spatial_features'] = batch_dict['dec_spatial_features']
+        
         if self.shrink_flag:
             # fused_feature = self.shrink_conv(fused_feature)
             mv_feature = self.shrink_conv(mv_feature)
@@ -194,7 +258,19 @@ class PointPillarDiffusionDec(nn.Module):
             batch_dict = self.matcher(batch_dict)
             batch_dict = self.roi_head(batch_dict)
             
-        # diff     
+        # diff       
+        self.get_processed_lidar(batch_dict)
+        voxel_features = batch_dict['processed_lidar']['voxel_features']
+        voxel_coords = batch_dict['processed_lidar']['voxel_coords']
+        voxel_num_points = batch_dict['processed_lidar']['voxel_num_points']
+        voxel_gt_mask = batch_dict['processed_lidar']['gt_masks']
+        batch_dict.pop('processed_lidar')
+        batch_dict.update({
+                            'voxel_features': voxel_features,
+                           'voxel_coords': voxel_coords,
+                           'voxel_num_points': voxel_num_points,
+                           'voxel_gt_mask': voxel_gt_mask
+                           })
         # 得到低层BEV特征 [B,C,H,W] 
         batch_dict = self.pillar_vfe(batch_dict, stage='diff')
         batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       

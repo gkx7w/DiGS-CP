@@ -32,25 +32,28 @@ class SpVoxelPreprocessor(BasePreprocessor):
         self.lidar_range = self.params['cav_lidar_range']
         self.voxel_size = self.params['args']['voxel_size']
         self.max_points_per_voxel = self.params['args']['max_points_per_voxel']
-        self.max_hwl = self.params['args']['max_hwl']
-        self.use_hwl = self.params['args']['use_hwl']
-        max_h, max_w, max_l = self.max_hwl
-        self.gt_range = [-max_l/2, -max_w/2, -1, max_l/2, max_w/2, 1] #z轴不能为0
+        
+        if 'max_hwl' in self.params['args']:
+            self.max_hwl = self.params['args']['max_hwl']
+            self.voxel_size_car = self.params['args']['voxel_size_car']
+            max_h, max_w, max_l = self.max_hwl
+            self.gt_range = [-max_l/2, -max_w/2, -1, max_l/2, max_w/2, 1] #z轴不能为0
+            grid_size = (np.array(self.gt_range[3:6]) -
+                     np.array(self.gt_range[0:3])) / np.array(self.voxel_size_car)
+        else:
+            grid_size = (np.array(self.lidar_range[3:6]) -
+                     np.array(self.lidar_range[0:3])) / np.array(self.voxel_size)
+    
         if train:
             self.max_voxels = self.params['args']['max_voxel_train']
         else:
             self.max_voxels = self.params['args']['max_voxel_test']
-        if self.use_hwl:
-            grid_size = (np.array(self.gt_range[3:6]) -
-                     np.array(self.gt_range[0:3])) / np.array(self.voxel_size)
-        else:
-            grid_size = (np.array(self.lidar_range[3:6]) -
-                     np.array(self.lidar_range[0:3])) / np.array(self.voxel_size)
+        
         self.grid_size = np.maximum(np.round(grid_size).astype(np.int64), 1)
 
         # use sparse conv library to generate voxel
         if self.spconv == 1:
-            if self.use_hwl:
+            if 'max_hwl' in self.params['args']:
                 self.voxel_generator_car = VoxelGenerator(
                     voxel_size=self.voxel_size,
                     point_cloud_range=self.gt_range,
@@ -64,7 +67,7 @@ class SpVoxelPreprocessor(BasePreprocessor):
                 max_num_points=self.max_points_per_voxel,
                 max_voxels=self.max_voxels)
         else:
-            if self.use_hwl:
+            if 'max_hwl' in self.params['args']:
                 self.voxel_generator_car = VoxelGenerator(
                     vsize_xyz=self.voxel_size,
                     coors_range_xyz=self.gt_range,

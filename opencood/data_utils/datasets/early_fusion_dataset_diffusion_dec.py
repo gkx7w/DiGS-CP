@@ -101,30 +101,11 @@ def getDecdiffusionFusionDataset(cls):
                 if distance > self.params['comm_range']:
                     too_far.append(cav_id)
                     continue
-                # 3. 处理单个车辆的点云数据
-                selected_cav_processed = self.get_item_single_car(
-                    selected_cav_base,
-                    ego_cav_base)
-                # all these lidar and object coordinates are projected to ego
-                # already. 
-                projected_lidar_stack.append(
-                    selected_cav_processed['projected_lidar'])
-                object_stack.append(selected_cav_processed['object_bbx_center'])
-                object_id_stack += selected_cav_processed['object_ids']
-                single_label_list.append(selected_cav_processed['single_label_dict'])
+                
                 cav_id_list.append(cav_id)
-                lidar_pose_clean_list.append(selected_cav_base['params']['lidar_pose_clean'])
                 lidar_pose_list.append(selected_cav_base['params']['lidar_pose']) # 6dof pose
-                dec_processed_features.append(
-                    selected_cav_processed['processed_features'])
-                if self.proj_first:
-                    vsa_lidar_stack.append(selected_cav_processed['projected_lidar'])
-                else:
-                    vsa_lidar_stack.append(selected_cav_processed['no_projected_lidar'])
-
-                vsa_lidar_stack_project.append(selected_cav_processed['projected_vsa_lidar'])
-                vsa_lidar_stack_noproject.append(selected_cav_processed['no_projected_lidar'])
-
+                lidar_pose_clean_list.append(selected_cav_base['params']['lidar_pose_clean'])
+                
             for cav_id in too_far:
                 base_data_dict.pop(cav_id)
             
@@ -138,6 +119,31 @@ def getDecdiffusionFusionDataset(cls):
             
             # merge preprocessed features from different cavs into the same dict
             cav_num = len(cav_id_list)
+            
+            for _i, cav_id in enumerate(cav_id_list):
+                # 3. 处理单个车辆的点云数据
+                selected_cav_base = base_data_dict[cav_id]
+                selected_cav_processed = self.get_item_single_car(
+                    selected_cav_base,
+                    ego_cav_base)
+
+                projected_lidar_stack.append(
+                    selected_cav_processed['lidar_np_diff'])
+                object_stack.append(selected_cav_processed['object_bbx_center'])
+                object_id_stack += selected_cav_processed['object_ids']
+                single_label_list.append(selected_cav_processed['single_label_dict'])
+                
+                dec_processed_features.append(
+                    selected_cav_processed['processed_features'])
+                if self.proj_first:
+                    vsa_lidar_stack.append(selected_cav_processed['projected_lidar'])
+                else:
+                    vsa_lidar_stack.append(selected_cav_processed['no_projected_lidar'])
+
+                vsa_lidar_stack_project.append(selected_cav_processed['projected_vsa_lidar'])
+                vsa_lidar_stack_noproject.append(selected_cav_processed['no_projected_lidar'])
+
+           
             
             # generate single view label (no coop) label
             label_dict_no_coop = single_label_list # [{cav1_label}, {cav2_label}...]
@@ -166,8 +172,8 @@ def getDecdiffusionFusionDataset(cls):
             projected_lidar_stack = np.vstack(projected_lidar_stack)
 
             # data augmentation 我应该不能要数据增强，不然对点云有影响，不过gt也一起增强，应该就对了
-            projected_lidar_stack, object_bbx_center, mask = \
-                self.augment(projected_lidar_stack, object_bbx_center, mask)
+            # projected_lidar_stack, object_bbx_center, mask = \
+            #     self.augment(projected_lidar_stack, object_bbx_center, mask)
 
             # we do lidar filtering in the stacked lidar
             projected_lidar_stack = mask_points_by_range(projected_lidar_stack,
@@ -189,58 +195,56 @@ def getDecdiffusionFusionDataset(cls):
             object_bbx_center[object_bbx_center_valid.shape[0]:] = 0
             unique_indices = list(np.array(unique_indices)[range_mask])
 
-            if mask.sum() == 0:
-                print("no object!!!")
-                processed_lidar = None
-            else:    
-                # 5. 将点云数据转换为体素/BEV/降采样点云
-                gt_boxes = object_bbx_center[mask.astype(bool)]
-                # pc_range = [-140.8, -40, -3, 140.8, 40, 1]
-                # visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_gt_boxes.png")
-                # 将gt扩展到相同大小 3:6 hwl
-                gt_boxes[:, 3:6] = np.array(self.max_hwl)
-                # visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_gt_boxes.png")        
-                # 获取gt框中的点云  不能使用gpu版与dataloader多线程有关
-                point_indices = points_in_boxes_cpu(projected_lidar_stack[:, :3], gt_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
-                gt_voxel_stack = []
-                gt_coords_stack = []
-                gt_num_points_stack = []
-                gt_masks = []
-                rotation_angles = -gt_boxes[:, 6].astype(float)
-                for car_idx in range(len(gt_boxes)):
-                    # 获取当前box中的点并平移到以box中心为原点的坐标系
-                    gt_point = projected_lidar_stack[point_indices[car_idx] > 0]
-                    gt_point[:, :3] -= gt_boxes[car_idx][0:3]
-                    # gt_boxes[car_idx][0:3] = [0, 0, 0]
-                    # pc_range = [-15, -15, -1, 15, 15, 1]
-                    # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
-                    # 旋转点云 
-                    gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
-                    gt_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(gt_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(gt_boxes[car_idx][6])]))[0,0]
-                    gt_boxes[car_idx][6] -= float(gt_boxes[car_idx][6])
-                    # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
-                    # 体素化 不能并行！！
-                    processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
-                    gt_voxel_stack.append(processed_lidar_car['voxel_features'])
-                    gt_coords_stack.append(processed_lidar_car['voxel_coords'])
-                    gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])
-                    gt_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
-                processed_lidar = {
-                    'voxel_features': np.concatenate(gt_voxel_stack, axis=0),
-                    'voxel_coords': np.concatenate(gt_coords_stack, axis=0),
-                    'voxel_num_points': np.concatenate(gt_num_points_stack, axis=0),
-                    'gt_masks': np.concatenate(gt_masks, axis=0),
-                    }
+            # if mask.sum() == 0:
+            #     print("no object!!!")
+            #     processed_lidar = None
+            # else:    
+            #     # 5. 将点云数据转换为体素/BEV/降采样点云
+            #     gt_boxes = object_bbx_center[mask.astype(bool)]
+            #     pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+            #     visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_gt_boxes_project.png")
+            #     # 将gt扩展到相同大小 3:6 hwl
+            #     gt_boxes[:, 3:6] = np.array(self.max_hwl)
+            #     visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_gt_boxes_project.png")        
+            #     # 获取gt框中的点云  不能使用gpu版与dataloader多线程有关
+            #     point_indices = points_in_boxes_cpu(projected_lidar_stack[:, :3], gt_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
+            #     gt_voxel_stack = []
+            #     gt_coords_stack = []
+            #     gt_num_points_stack = []
+            #     gt_masks = []
+            #     rotation_angles = -gt_boxes[:, 6].astype(float)
+            #     for car_idx in range(len(gt_boxes)):
+            #         # 获取当前box中的点并平移到以box中心为原点的坐标系
+            #         gt_point = projected_lidar_stack[point_indices[car_idx] > 0]
+            #         gt_point[:, :3] -= gt_boxes[car_idx][0:3]
+            #         # gt_boxes[car_idx][0:3] = [0, 0, 0]
+            #         # pc_range = [-15, -15, -1, 15, 15, 1]
+            #         # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
+            #         # 旋转点云 
+            #         gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
+            #         gt_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(gt_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(gt_boxes[car_idx][6])]))[0,0]
+            #         gt_boxes[car_idx][6] -= float(gt_boxes[car_idx][6])
+            #         # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
+            #         # 体素化 不能并行！！
+            #         processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
+            #         gt_voxel_stack.append(processed_lidar_car['voxel_features'])
+            #         gt_coords_stack.append(processed_lidar_car['voxel_coords'])
+            #         gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])
+            #         gt_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
+            #     processed_lidar = {
+            #         'voxel_features': np.concatenate(gt_voxel_stack, axis=0),
+            #         'voxel_coords': np.concatenate(gt_coords_stack, axis=0),
+            #         'voxel_num_points': np.concatenate(gt_num_points_stack, axis=0),
+            #         'gt_masks': np.concatenate(gt_masks, axis=0),
+            #         }
                 
-            # generate the anchor boxes
-            anchor_box = self.post_processor.generate_anchor_box()
 
             # generate targets label
             # 有点奇怪，怎么获得的标签
             label_dict_coop = \
                 self.post_processor.generate_label(
                     gt_box_center=object_bbx_center,
-                    anchors=anchor_box,
+                    anchors=self.anchor_box,
                     mask=mask)
             label_dict = {
                 'stage1': label_dict_no_coop, # list 
@@ -251,16 +255,16 @@ def getDecdiffusionFusionDataset(cls):
                 {'object_bbx_center': object_bbx_center,
                 'object_bbx_mask': mask,
                 'object_ids': [object_id_stack[i] for i in unique_indices],
-                'anchor_box': anchor_box,
-                'processed_lidar': processed_lidar,
+                'anchor_box': self.anchor_box,
+                # 'processed_lidar': processed_lidar,
                 'label_dict': label_dict,
                 'cav_num': cav_num,
                 'pairwise_t_matrix': pairwise_t_matrix,
                 'lidar_poses_clean': lidar_poses_clean,
                 'lidar_poses': lidar_poses})
 
-            if self.visualize:
-                processed_data_dict['ego'].update({'origin_lidar':
+            # if self.visualize:
+            processed_data_dict['ego'].update({'origin_lidar':
                                                     projected_lidar_stack})
                 
             processed_data_dict['ego'].update({'sample_idx': idx,
@@ -295,11 +299,7 @@ def getDecdiffusionFusionDataset(cls):
                 x1_to_x2(selected_cav_base['params']['lidar_pose_clean'],
                         ego_pose_clean)
 
-            # retrieve objects under ego coordinates
-            object_bbx_center, object_bbx_mask, object_ids = \
-                self.generate_object_center([selected_cav_base],
-                                                        ego_pose)
-
+    
             # filter lidar
             lidar_np = selected_cav_base['lidar_np']
             lidar_np = shuffle_points(lidar_np)
@@ -319,6 +319,11 @@ def getDecdiffusionFusionDataset(cls):
 
             if self.proj_first: # 
                 lidar_np[:, :3] = projected_lidar
+            
+            #  diffusion输入应在pre_box在早期融合点云上扣取
+            lidar_np_diff = copy.deepcopy(lidar_np)
+            lidar_np_diff[:, :3] = projected_lidar
+            
             processed_lidar = self.pre_processor.preprocess(lidar_np, is_car=False)
             selected_cav_processed.update({'projected_lidar': projected_lidar,
                                             'projected_vsa_lidar': vsa_project_lidar,
@@ -335,11 +340,17 @@ def getDecdiffusionFusionDataset(cls):
             selected_cav_processed.update({"object_bbx_center_no_coop": object_bbx_center[object_bbx_mask==1],
                                            "single_label_dict": label_dict})
             
+            # anchor box
+            selected_cav_processed.update({"anchor_box": self.anchor_box})
+            
+            # note the reference pose ego
+            object_bbx_center, object_bbx_mask, object_ids = self.generate_object_center([selected_cav_base],
+                                                        ego_pose_clean)
             selected_cav_processed.update(
                 {'object_bbx_center': object_bbx_center[object_bbx_mask == 1],
                 'object_bbx_mask': object_bbx_mask,
                 'object_ids': object_ids,
-                'projected_lidar': lidar_np,
+                'lidar_np_diff': lidar_np_diff,
                 'transformation_matrix': transformation_matrix,
                 'transformation_matrix_clean': transformation_matrix_clean})
 
@@ -421,7 +432,7 @@ def getDecdiffusionFusionDataset(cls):
             object_bbx_center = []
             object_bbx_mask = []
             object_ids = []
-            processed_lidar_list = []
+            # processed_lidar_list = []
             dec_processed_lidar_list = []
             image_inputs_list = []
             # used to record different scenario
@@ -456,10 +467,10 @@ def getDecdiffusionFusionDataset(cls):
                 lidar_pose_list.append(ego_dict['lidar_poses']) # ego_dict['lidar_pose'] is np.ndarray [N,6]
                 lidar_pose_clean_list.append(ego_dict['lidar_poses_clean'])
                 if self.load_lidar_file:
-                    processed_lidar_list.append(ego_dict['processed_lidar'])
+                    # processed_lidar_list.append(ego_dict['processed_lidar'])
                     dec_processed_lidar_list.append(ego_dict['dec_processed_lidar'])
                     vsa_lidar.append(ego_dict['vsa_lidar'])
-
+                    origin_lidar.append(ego_dict['origin_lidar'])
                     vsa_lidar_project.append(ego_dict['vsa_lidar_project'])
                     vsa_lidar_noproject.append(ego_dict['vsa_lidar_noproject'])
                 
@@ -490,25 +501,25 @@ def getDecdiffusionFusionDataset(cls):
             object_bbx_mask = torch.from_numpy(np.array(object_bbx_mask))
 
             if self.load_lidar_file:
-                if processed_lidar_list[0] is None:
-                    processed_lidar_torch_dict = {}
-                    output_dict['ego'].update({'processed_lidar': processed_lidar_torch_dict})
-                else:
-                    merged_feature_dict = merge_features_to_dict(processed_lidar_list)
-                    dec_merged_feature_dict = merge_features_to_dict(dec_processed_lidar_list)
-                    if self.heterogeneous:
-                        lidar_agent = np.concatenate(lidar_agent_list)
-                        lidar_agent_idx = lidar_agent.nonzero()[0].tolist()
-                        for k, v in merged_feature_dict.items(): # 'voxel_features' 'voxel_num_points' 'voxel_coords'
-                            merged_feature_dict[k] = [v[index] for index in lidar_agent_idx]
+                # if processed_lidar_list[0] is None:
+                #     processed_lidar_torch_dict = {}
+                #     output_dict['ego'].update({'processed_lidar': processed_lidar_torch_dict})
+                # else:
+                # merged_feature_dict = merge_features_to_dict(processed_lidar_list)
+                dec_merged_feature_dict = merge_features_to_dict(dec_processed_lidar_list)
+                if self.heterogeneous:
+                    lidar_agent = np.concatenate(lidar_agent_list)
+                    lidar_agent_idx = lidar_agent.nonzero()[0].tolist()
+                    # for k, v in merged_feature_dict.items(): # 'voxel_features' 'voxel_num_points' 'voxel_coords'
+                    #     merged_feature_dict[k] = [v[index] for index in lidar_agent_idx]
 
-                    if not self.heterogeneous or (self.heterogeneous and sum(lidar_agent) != 0):
-                        processed_lidar_torch_dict = \
-                            self.pre_processor.collate_batch(merged_feature_dict)
-                        output_dict['ego'].update({'processed_lidar': processed_lidar_torch_dict})
-                        dec_processed_lidar_torch_dict = \
-                            self.pre_processor.collate_batch(dec_merged_feature_dict)
-                        output_dict['ego'].update({'dec_processed_lidar': dec_processed_lidar_torch_dict})
+                if not self.heterogeneous or (self.heterogeneous and sum(lidar_agent) != 0):
+                    # processed_lidar_torch_dict = \
+                    #     self.pre_processor.collate_batch(merged_feature_dict)
+                    # output_dict['ego'].update({'processed_lidar': processed_lidar_torch_dict})
+                    dec_processed_lidar_torch_dict = \
+                        self.pre_processor.collate_batch(dec_merged_feature_dict)
+                    output_dict['ego'].update({'dec_processed_lidar': dec_processed_lidar_torch_dict})
 
             if self.load_camera_file:
                 merged_image_inputs_dict = merge_features_to_dict(image_inputs_list, merge='cat')
@@ -562,18 +573,18 @@ def getDecdiffusionFusionDataset(cls):
                                     'anchor_box': self.anchor_box_torch})
 
             if self.load_lidar_file:
-                coords = []
-                idx = 0
-                for b in range(len(batch)):
-                    for points in vsa_lidar[b]:
-                        assert len(points) != 0
-                        coor_pad = np.pad(points, ((0, 0), (1, 0)),
-                                          mode="constant", constant_values=idx)
-                        coords.append(coor_pad)
-                        idx += 1
-                origin_lidar_for_vsa = np.concatenate(coords, axis=0)
-                origin_lidar_for_vsa = torch.from_numpy(origin_lidar_for_vsa)
-                output_dict['ego'].update({'origin_lidar_for_vsa': origin_lidar_for_vsa})
+                # coords = []
+                # idx = 0
+                # for b in range(len(batch)):
+                #     for points in vsa_lidar[b]:
+                #         assert len(points) != 0
+                #         coor_pad = np.pad(points, ((0, 0), (1, 0)),
+                #                           mode="constant", constant_values=idx)
+                #         coords.append(coor_pad)
+                #         idx += 1
+                # origin_lidar_for_vsa = np.concatenate(coords, axis=0)
+                # origin_lidar_for_vsa = torch.from_numpy(origin_lidar_for_vsa)
+                # output_dict['ego'].update({'origin_lidar_for_vsa': origin_lidar_for_vsa})
 
                 coords_project = []
                 idx = 0
@@ -604,6 +615,16 @@ def getDecdiffusionFusionDataset(cls):
                 origin_lidar_for_vsa_noproject = np.concatenate(coords, axis=0)
                 origin_lidar_for_vsa_noproject = torch.from_numpy(origin_lidar_for_vsa_noproject)
                 output_dict['ego'].update({'origin_lidar_for_vsa_noproject': origin_lidar_for_vsa_noproject})
+                
+                coords_ori = []
+                for batch_idx, points in enumerate(origin_lidar):
+                    batch_indices = np.full((points.shape[0], 1), batch_idx)
+                    points_with_indices = np.hstack((batch_indices, points))
+                    coords_ori.append(points_with_indices)
+
+                origin_lidar_for_diff = np.concatenate(coords_ori, axis=0)
+                origin_lidar_for_diff = torch.from_numpy(origin_lidar_for_diff)
+                output_dict['ego'].update({'origin_lidar_for_diff': origin_lidar_for_diff})
             
             
             if self.visualize:

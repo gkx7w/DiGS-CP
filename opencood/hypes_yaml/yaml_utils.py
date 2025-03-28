@@ -150,19 +150,29 @@ def load_point_pillar_params(param):
     """
     cav_lidar_range = param['preprocess']['cav_lidar_range']
     voxel_size = param['preprocess']['args']['voxel_size']
-    max_hwl = param['preprocess']['args']['max_hwl']
-    max_h, max_w, max_l = max_hwl
-    gt_range = [-max_l/2, -max_w/2, -1, max_l/2, max_w/2, 1] #z轴不能为0
-    use_hwl = param['preprocess']['args']['use_hwl']
-    grid_size_car = (np.array(gt_range[3:6]) -
-                np.array(gt_range[0:3])) / np.array(voxel_size)
-    grid_size_car = np.maximum(np.round(grid_size_car).astype(np.int64), 1)
-    grid_size_lidar = (np.array(cav_lidar_range[3:6]) -
-                    np.array(cav_lidar_range[0:3])) / np.array(voxel_size)
-    grid_size_lidar = np.maximum(np.round(grid_size_lidar).astype(np.int64), 1)
-    
-    param['model']['args']['point_pillar_scatter']['grid_size'] = grid_size_car
-    param['model']['args']['point_pillar_scatter']['grid_size_dec'] = grid_size_lidar
+    # 判断是否为dec——diff
+    if 'max_hwl' in param['preprocess']['args']:
+        max_hwl = param['preprocess']['args']['max_hwl']
+        voxel_size_car = param['preprocess']['args']['voxel_size_car']
+        max_h, max_w, max_l = max_hwl
+        gt_range = [-max_l/2, -max_w/2, -1, max_l/2, max_w/2, 1] #z轴不能为0
+        use_hwl = param['preprocess']['args']['use_hwl']
+        grid_size_car = (np.array(gt_range[3:6]) -
+                    np.array(gt_range[0:3])) / np.array(voxel_size_car)
+        grid_size_car = np.maximum(np.round(grid_size_car).astype(np.int64), 1)
+        grid_size_lidar = (np.array(cav_lidar_range[3:6]) -
+                        np.array(cav_lidar_range[0:3])) / np.array(voxel_size)
+        grid_size_lidar = np.maximum(np.round(grid_size_lidar).astype(np.int64), 1)
+        
+        param['model']['args']['point_pillar_scatter']['grid_size'] = grid_size_car
+        param['model']['args']['point_pillar_scatter']['grid_size_dec'] = grid_size_lidar
+    else:
+        grid_size = (np.array(cav_lidar_range[3:6]) - np.array(
+            cav_lidar_range[0:3])) / \
+                    np.array(voxel_size)
+        grid_size = np.round(grid_size).astype(np.int64)
+        param['model']['args']['point_pillar_scatter']['grid_size'] = grid_size
+
 
     anchor_args = param['postprocess']['anchor_args']
 
