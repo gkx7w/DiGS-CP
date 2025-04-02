@@ -136,11 +136,11 @@ def getEarlydiffusionFusionDataset(cls):
             else:    
                 # 5. 将点云数据转换为体素/BEV/降采样点云
                 gt_boxes = object_bbx_center[mask.astype(bool)]
-                pc_range = [-140.8, -40, -3, 140.8, 40, 1]
-                visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_gt_boxes_project.png")
+                # pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+                # visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_gt_boxes_project.png")
                 # 将gt扩展到相同大小 3:6 hwl
                 gt_boxes[:, 3:6] = np.array(self.max_hwl)
-                visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_gt_boxes_project.png")        
+                # visualize_gt_boxes(gt_boxes, projected_lidar_stack, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_gt_boxes_project.png")        
                 # 获取gt框中的点云  不能使用gpu版与dataloader多线程有关
                 point_indices = points_in_boxes_cpu(projected_lidar_stack[:, :3], gt_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
                 gt_voxel_stack = []

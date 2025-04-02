@@ -29,6 +29,7 @@ class PointPillarDiffusion(nn.Module):
                                     voxel_size=args['voxel_size'],
                                     point_cloud_range=args['lidar_range'])
         self.scatter = PointPillarScatter(args['point_pillar_scatter'])
+        self.batch_len = args['N']
         self.mdd = Cond_Diff_Denoise(args['mdd_block'], 32)
         self.max_hwl = args['max_hwl']
         self.voxel_preprocessor = build_preprocessor(args['preprocess'], train=True)
@@ -48,7 +49,8 @@ class PointPillarDiffusion(nn.Module):
         batch_dict = {'voxel_features': voxel_features,
                       'voxel_coords': voxel_coords,
                       'voxel_num_points': voxel_num_points,
-                      'voxel_gt_mask': voxel_gt_mask}
+                      'voxel_gt_mask': voxel_gt_mask,
+                      'batch_len': self.batch_len,}
         # 对每辆车进行处理
         # 得到低层BEV特征 [B,C,H,W] 每辆车的低层BEV特征维度一样吗？
         batch_dict = self.pillar_vfe(batch_dict, stage = 'diff')

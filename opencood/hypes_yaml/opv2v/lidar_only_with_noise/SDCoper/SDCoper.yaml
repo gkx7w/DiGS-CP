@@ -28,7 +28,7 @@ train_params:
   max_cav: &max_cav 5
 
 fusion:
-  core_method: 'intermediate2stagesdcoper2'
+  core_method: 'intermediate2stagesdcoper'
   dataset: 'opv2v'
   args:
     proj_first: &proj_first false
@@ -84,7 +84,7 @@ postprocess: &postprocess_params
 
 # model related
 model:
-  core_method: sdcoper2
+  core_method: sdcoper
   args:
 #    activate_stage2: False
     activate_stage2: True

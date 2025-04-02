@@ -236,8 +236,6 @@ class RoIHead(nn.Module):
                                                   output_channels=
                                                   self.model_cfg[
                                                       'num_cls'] * 7)
-        # 匹配物体特征代码
-        self.mv_boxes_feature = False
         
         # 解耦代码 
         self.decoupling = True
@@ -480,7 +478,7 @@ class RoIHead(nn.Module):
         return pooled_features
 
 
-    def first_stage_roi_grid_pool(self, batch_dict, rois):
+    def first_stage_roi_grid_pool(self, batch_dict, rois, empty_roi_mask):
         batch_size = len(rois)
 
         point_coords = batch_dict['point_coords']
@@ -503,9 +501,12 @@ class RoIHead(nn.Module):
         xyz = torch.cat(point_coords, dim=0)
         xyz_batch_cnt = xyz.new_zeros(batch_size).int()
 
-
-        for bs_idx in range(batch_size):
-            xyz_batch_cnt[bs_idx] = len(point_coords[bs_idx])
+        #point_coords不是batch维度的，要把空的box对应的point_coords也mask
+        xyz_batch_id = 0
+        for bs_idx in range(batch_dict['record_len']):
+            if empty_roi_mask[bs_idx]:
+                xyz_batch_cnt[xyz_batch_id] = len(point_coords[bs_idx])
+                xyz_batch_id += 1
         new_xyz = global_roi_grid_points.view(-1, 3)
         new_xyz_batch_cnt = xyz.new_zeros(batch_size).int()
         for bs_idx in range(batch_size):
@@ -794,103 +795,98 @@ class RoIHead(nn.Module):
 
         # 融合后的框 pool 融合后的点 
         # RoI aware pooling
-        pooled_features = self.roi_grid_pool(batch_dict)  # (BxN, 6x6x6, C)
-
-        batch_size_rcnn = pooled_features.shape[0]
-        pooled_features = pooled_features.permute(0, 2, 1). \
-            contiguous().view(batch_size_rcnn, -1, self.grid_size,
-                              self.grid_size,
-                              self.grid_size)  # (BxN, C, 6, 6, 6)
-        shared_features = self.shared_fc_layers(
-            pooled_features.view(batch_size_rcnn, -1, 1))
-
-        if self.test_use_convertor:
-            shared_features = self.convertor(shared_features)
-
-        rcnn_cls = self.cls_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
-            dim=1)  # (B, 1 or 2)
-        rcnn_iou = self.iou_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
-            dim=1)  # (B, 1)
-        rcnn_reg = self.reg_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
-            dim=1)  # (B, C)
-
-
-        batch_dict['stage2_out'] = {
-            'rcnn_cls': rcnn_cls,
-            'rcnn_iou': rcnn_iou,
-            'rcnn_reg': rcnn_reg,
-        }
-
-        # 解耦完成了，但是还有一个小任务，就是单车特征扔到匹配机制中，
-        # 我要拿到第一阶段的box+分数（已经有了）和这个box对应的特征
-        if self.decoupling or self.mv_boxes_feature:
-
-            if 'det_boxes' in batch_dict:
-                dets_list = batch_dict['det_boxes']
-                # max_len = max([len(dets) for dets in dets_list])
-                # boxes = torch.zeros((len(dets_list), max_len, 7), dtype=dets_list[0].dtype,
-                #                     device=dets_list[0].device)
-                boxes = []
-                for i, dets in enumerate(dets_list):
-                    # 这个是新增的部分
-                    dets = dets[:, [0, 1, 2, 5, 4, 3, 6]]  # hwl -> lwh
-                    if len(dets)==0:
-                        continue
-                    boxes.append(dets)
+        # pooled_features = self.roi_grid_pool(batch_dict)  # (BxN, 6x6x6, C)
+        # batch_size_rcnn = pooled_features.shape[0]
+        # pooled_features = pooled_features.permute(0, 2, 1). \
+        #     contiguous().view(batch_size_rcnn, -1, self.grid_size,
+        #                       self.grid_size,
+        #                       self.grid_size)  # (BxN, C, 6, 6, 6)
+        # shared_features = self.shared_fc_layers(
+        #     pooled_features.view(batch_size_rcnn, -1, 1))
+        # if self.test_use_convertor:
+        #     shared_features = self.convertor(shared_features)
+        # rcnn_cls = self.cls_layers(shared_features).transpose(1,
+        #                                                       2).contiguous().squeeze(
+        #     dim=1)  # (B, 1 or 2)
+        # rcnn_iou = self.iou_layers(shared_features).transpose(1,
+        #                                                       2).contiguous().squeeze(
+        #     dim=1)  # (B, 1)
+        # rcnn_reg = self.reg_layers(shared_features).transpose(1,
+        #                                                       2).contiguous().squeeze(
+        #     dim=1)  # (B, C)
+        # batch_dict['stage2_out'] = {
+        #     'rcnn_cls': rcnn_cls,
+        #     'rcnn_iou': rcnn_iou,
+        #     'rcnn_reg': rcnn_reg,
+        # }
 
 
-                # print("查看gt和第一阶段框区别：")
-                # print(batch_dict['gt_boxes'].shape)
-                # # print([ t.shape for t in batch_dict['gt_boxes']])
-                # print([ t.shape for t in boxes])
+        if 'det_boxes' in batch_dict:
+            dets_list = batch_dict['det_boxes']
+            # max_len = max([len(dets) for dets in dets_list])
+            # boxes = torch.zeros((len(dets_list), max_len, 7), dtype=dets_list[0].dtype,
+            #                     device=dets_list[0].device)
+            boxes = []
+            empty_box_mask = []
+            for i, dets in enumerate(dets_list):
+                # 这个是新增的部分
+                dets = dets[:, [0, 1, 2, 5, 4, 3, 6]]  # hwl -> lwh
+                if len(dets)==0: #这里直接continue的话，会导致first_stage_roi_grid_pool中batch_size的大小不对！！无法记录到对应point_coords的数据！！
+                    empty_box_mask.append(False)
+                    continue
+                empty_box_mask.append(True)
+                boxes.append(dets)
 
-            pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, boxes)
-            # pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, batch_dict['gt_boxes'])
 
-            batch_size_mv = pooled_features_mv.shape[0]
-            pooled_features_mv = pooled_features_mv.permute(0, 2, 1). \
-                contiguous().view(batch_size_mv, -1, self.grid_size,
-                                  self.grid_size,
-                                  self.grid_size)  # (BxN, C, 6, 6, 6)
-            # 共享特征提取
-            shared_features_mv = self.shared_fc_layers(
-                pooled_features_mv.view(batch_size_mv, -1, 1))
+            # print("查看gt和第一阶段框区别：")
+            # print(batch_dict['gt_boxes'].shape)
+            # # print([ t.shape for t in batch_dict['gt_boxes']])
+            # print([ t.shape for t in boxes])
+        # 这个box数量不对？？
+        pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, boxes, empty_box_mask)
+        # pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, batch_dict['gt_boxes'])
 
-            if self.mv_boxes_feature:
-                batch_dict["mv_boxes_feature"] = shared_features_mv
-            # 下一步才是解耦，但是这里有一个问题就是需要找到公共物体，
-            # 公共物体的寻找是基于投影+iou找到的，理论上要经过一次matcher_new，
-            # 不然这个融合框问题的 ，这个特征能拼到box+分数，送入融合
-            if self.decoupling:
-                boxes_factors = []
-                for i in range(self.factor_num):
-                    boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
-                # print([t.shape for t in boxes_factors])
-                # all box , 32 *8
-                boxes_factors = torch.cat(boxes_factors,dim=1)
-                # 需要用iou来寻找公共物体再融合，当前box没有投影，点也没有投影，先投影再运算
-                # 这些代码，已经存在在matcher 的结果上了，问题就在于找到最终索引就能合并框了
-                cluster_indices,cur_cluster_id =  batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
-                # 寻找公共物体
-                object_factors_batch = []
-                # 可以直接融合，取平均值，因子内融合
-                record_len = [int(l) for l in batch_dict['record_len']]
-                for i, l in enumerate(record_len):
-                    object_factors = [] 
-                    for j in range(1, cur_cluster_id[i]):
-                        object_factors.append(boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
-                    object_factors = torch.cat(object_factors,dim=0)
-                object_factors_batch.append(object_factors)
-                # print([t.shape for t in object_factors])
-                
-                # 这是物体级的feature
-                # 区分，区分每个场景下，特征属于哪个场景
-                # object_factors = torch.cat(object_factors,dim=0)
-                # print("解耦后并融合的物体级因子： 物体数量 ， 8 * 32 ：",[t.shape for t in object_factors_batch])
-                batch_dict["fused_object_factors"] = object_factors_batch
+        batch_size_mv = pooled_features_mv.shape[0]
+        pooled_features_mv = pooled_features_mv.permute(0, 2, 1). \
+            contiguous().view(batch_size_mv, -1, self.grid_size,
+                                self.grid_size,
+                                self.grid_size)  # (BxN, C, 6, 6, 6)
+        # 共享特征提取
+        shared_features_mv = self.shared_fc_layers(
+            pooled_features_mv.view(batch_size_mv, -1, 1))
+
+
+        # 下一步才是解耦，但是这里有一个问题就是需要找到公共物体，
+        # 公共物体的寻找是基于投影+iou找到的，理论上要经过一次matcher_new，
+        # 不然这个融合框问题的 ，这个特征能拼到box+分数，送入融合
+        boxes_factors = []
+        for i in range(self.factor_num):
+            boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
+        # print([t.shape for t in boxes_factors])
+        processed_boxes_factors = [factor.unsqueeze(0) if factor.dim() == 1 else factor for factor in boxes_factors]
+        # all box , 32 *8
+        boxes_factors = torch.cat(processed_boxes_factors,dim=1)
+        # 需要用iou来寻找公共物体再融合，当前box没有投影，点也没有投影，先投影再运算
+        # 这些代码，已经存在在matcher 的结果上了，问题就在于找到最终索引就能合并框了
+        cluster_indices,cur_cluster_id =  batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
+        # 寻找公共物体
+        object_factors_batch = []
+        # 可以直接融合，取平均值，因子内融合
+        record_len = [int(l) for l in batch_dict['record_len']]
+        for i, l in enumerate(record_len):
+            object_factors = [] 
+            for j in range(1, cur_cluster_id[i]):
+                object_factors.append(boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
+            object_factors = torch.cat(object_factors,dim=0)
+        object_factors_batch.append(object_factors)
+        # print([t.shape for t in object_factors])
+        
+        # 这是物体级的feature
+        # 区分，区分每个场景下，特征属于哪个场景
+        # object_factors = torch.cat(object_factors,dim=0)
+        # print("解耦后并融合的物体级因子： 物体数量 ， 8 * 32 ：",[t.shape for t in object_factors_batch])
+        batch_dict["fused_object_factors"] = object_factors_batch
         
         
         return batch_dict
+    

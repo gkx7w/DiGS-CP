@@ -5,6 +5,7 @@ from torch import optim
 import torch.nn as nn
 import numpy as np
 import math
+import scipy
 
 from inspect import isfunction
 from PIL import Image, ImageDraw, ImageFont
@@ -367,3 +368,28 @@ class CheckpointFunction(torch.autograd.Function):
 def detach(dict):
     for key, val in dict.items():
         val.detach()
+
+# 评估diffusion重建效果，使用att_bev_backbone作为特征提取网络？？     
+def calculate_fid(real_features, gen_features):
+    # 计算均值和协方差
+    mu_real = np.mean(real_features, axis=0)
+    mu_gen = np.mean(gen_features, axis=0)
+
+    sigma_real = np.cov(real_features, rowvar=False)
+    sigma_gen = np.cov(gen_features, rowvar=False)
+
+    # 计算均值差的平方
+    mean_diff_squared = np.sum((mu_real - mu_gen) ** 2)
+
+    # 计算协方差项
+    # 首先计算协方差矩阵的平方根乘积
+    sqrt_product = scipy.linalg.sqrtm(sigma_real @ sigma_gen)
+
+    # 确保结果是实数
+    if np.iscomplexobj(sqrt_product):
+        sqrt_product = sqrt_product.real
+
+    # 完整的FID公式
+    fid = mean_diff_squared + np.trace(sigma_real + sigma_gen - 2 * sqrt_product)
+
+    return fid

@@ -36,6 +36,7 @@ class SpVoxelPreprocessor(BasePreprocessor):
         if 'max_hwl' in self.params['args']:
             self.max_hwl = self.params['args']['max_hwl']
             self.voxel_size_car = self.params['args']['voxel_size_car']
+            self.max_points_per_voxel_car = self.params['args']['max_points_per_voxel_car']
             max_h, max_w, max_l = self.max_hwl
             self.gt_range = [-max_l/2, -max_w/2, -1, max_l/2, max_w/2, 1] #z轴不能为0
             grid_size = (np.array(self.gt_range[3:6]) -
@@ -55,9 +56,9 @@ class SpVoxelPreprocessor(BasePreprocessor):
         if self.spconv == 1:
             if 'max_hwl' in self.params['args']:
                 self.voxel_generator_car = VoxelGenerator(
-                    voxel_size=self.voxel_size,
+                    voxel_size=self.voxel_size_car,
                     point_cloud_range=self.gt_range,
-                    max_num_points=self.max_points_per_voxel,
+                    max_num_points=self.max_points_per_voxel_car,
                     max_voxels=self.max_voxels
                 )
             
@@ -69,9 +70,9 @@ class SpVoxelPreprocessor(BasePreprocessor):
         else:
             if 'max_hwl' in self.params['args']:
                 self.voxel_generator_car = VoxelGenerator(
-                    vsize_xyz=self.voxel_size,
+                    vsize_xyz=self.voxel_size_car,
                     coors_range_xyz=self.gt_range,
-                    max_num_points_per_voxel=self.max_points_per_voxel,
+                    max_num_points_per_voxel=self.max_points_per_voxel_car,
                     num_point_features=4,
                     max_num_voxels=self.max_voxels
                     )

@@ -27,8 +27,10 @@ preprocess: &preprocess
   # options: BasePreprocessor, VoxelPreprocessor, BevPreprocessor
   core_method: 'SpVoxelPreprocessor'
   args:
-    voxel_size: &voxel_size [0.2, 0.1, 4] #粒度可以变小一点
-    max_points_per_voxel: 16
+    voxel_size: &voxel_size [0.4, 0.4, 4] #粒度可以变小一点
+    max_points_per_voxel: &T 32
+    voxel_size_car: &voxel_size_car [0.2, 0.1, 4] #粒度可以变小一点
+    max_points_per_voxel_car: &T_car 16
     max_voxel_train: 32000
     max_voxel_test: 70000
     max_hwl: &max_hwl [1.98,2.36,5.63]
@@ -75,6 +77,7 @@ postprocess: &postprocess_params
 model:
   core_method: point_pillar_diffusion
   args:
+    N: *batch_size
     voxel_size: *voxel_size
     lidar_range: *cav_lidar
     anchor_number: *achor_num

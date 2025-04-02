@@ -280,6 +280,7 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
         batch_size, num_keypoints, _ = keypoints.shape
 
         new_xyz = keypoints[kpt_mask]
+        # 这里会没有点？
         new_xyz_batch_cnt = torch.tensor([(mask).sum() for mask in kpt_mask], device=new_xyz.device).int()
 
         if self.msa_points_fusion:

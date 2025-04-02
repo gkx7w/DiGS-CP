@@ -72,7 +72,8 @@ class PointPillarScatter(nn.Module):
         pillar_features, coords = batch_dict['pillar_features'], batch_dict['voxel_coords']
         gt_mask = batch_dict['voxel_gt_mask']
         
-        batch_size = coords[:, 0].max().int().item() + 1
+        batch_size = batch_dict['batch_len']
+        # batch_size = coords[:, 0].max().int().item() + 1
         
         # 为每个batch创建一个字典，用于存储该batch中每个gt box的spatial features
         batch_gt_spatial_features = []

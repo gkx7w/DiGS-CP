@@ -74,6 +74,8 @@ class Matcher(nn.Module):
             pred_boxes_cat[:, -1] = limit_period(pred_boxes_cat[:, -1])
             pred_scores_cat = torch.cat(cur_scores_list, dim=0)
 
+             # 在调用boxes_iou3d_gpu前确保数据类型是float32
+            pred_boxes_cat = pred_boxes_cat.float()  # 显式转换为Float类型
             ious = boxes_iou3d_gpu(pred_boxes_cat, pred_boxes_cat)
             cluster_indices = torch.zeros(len(ious)).int() # gt assignments of preds
             cur_cluster_id = 1

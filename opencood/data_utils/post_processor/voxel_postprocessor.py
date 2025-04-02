@@ -93,7 +93,6 @@ class VoxelPostprocessor(BasePostprocessor):
         label_dict : dict
             Dictionary that contains all target related info.
         """
-        #3D box怎么转为2D box，并且于特征图大小有什么关系？？直接使用roi align？？
         assert self.params['order'] == 'hwl', 'Currently Voxel only support' \
                                               'hwl bbx order.'
         # (max_num, 7)

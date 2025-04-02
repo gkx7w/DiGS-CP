@@ -31,6 +31,12 @@ def seed_everything(seed):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     os.environ['PYTHONHASHSEED'] = str(seed)
+
+def worker_init_fn(worker_id):
+    # 为每个worker设置不同但确定的种子
+    worker_seed = torch.initial_seed() % 2**32 + worker_id
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
     
 seed_everything(42)  # 固定种子
 
@@ -80,7 +86,8 @@ def main():
                               shuffle=False,
                               pin_memory=True,
                               drop_last=True,
-                              prefetch_factor=2
+                              prefetch_factor=2,
+                              worker_init_fn=worker_init_fn
                               )
     val_loader = DataLoader(opencood_validate_dataset,
                             batch_size=hypes['train_params']['batch_size'],
@@ -106,7 +113,6 @@ def main():
 
     # optimizer setup
     optimizer = train_utils.setup_optimizer(hypes, model)
-    # lr scheduler setup
     
 
     # if we want to train from last checkpoint.
@@ -137,6 +143,20 @@ def main():
         init_epoch = 78 if opt.model_dir != '' else 10
         saved_path = opt.model_dir if opt.model_dir != '' else opt.diff_model_dir
         model = train_utils.load_saved_model_new(saved_path, model)
+        for param in model.parameters():
+            param.requires_grad = False
+        trainable_layers = [
+            # 'roi_head.factor_encoder',
+            'mdd',
+            'attention_2',
+            'layernorm_2'
+        ]
+        for name, param in model.named_parameters():
+            if any(layer_name in name for layer_name in trainable_layers):
+                param.requires_grad = True
+                print(f"解冻层: {name}") 
+        for name, param in model.named_parameters():
+            print(f"Layer: {name}, Trainable: {param.requires_grad}")
         scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch)
         saved_path = train_utils.setup_train(hypes)
         print(f"resume from {init_epoch} epoch.")
@@ -164,13 +184,14 @@ def main():
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
         for i, batch_data in enumerate(train_loader):
+            # if i < 5744:#3156 5645
+            #     print(i)
+            #     continue
+            
             if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or ('processed_lidar' in batch_data['ego'] and batch_data['ego']['processed_lidar'] == {}):
                 continue
             # the model will be evaluation mode during validation
             model.train()
-            # opencood.models.disconet_compare.DiscoNetCompare
-            # opencood.models.point_pillar_baseline_compare.PointPillarBaselineCompare
-            # print("model name: ",type(model))
 
             if (str(type(model))[8:-2].split(".")[-1] == "PointPillarSDCoper" or str(type(model))[8:-2].split(".")[
                 -1] == "DiscoNetSDCoper" or str(type(model))[8:-2].split(".")[-1] == "SDCoper") and \
@@ -195,7 +216,8 @@ def main():
             #     # 可视化预测bev
             #     visualize_averaged_channels_individual(pre_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/pre_bev_{i}")
             
-            
+            if ouput_dict is None:
+                continue
             final_loss = criterion(ouput_dict, batch_data['ego']['label_dict'])
             criterion.logging(epoch, i, len(train_loader), writer)
 
@@ -222,7 +244,7 @@ def main():
                        os.path.join(saved_path,
                                     'net_epoch%d.pth' % (epoch + 1)))
         scheduler.step(epoch)
-
+        
         opencood_train_dataset.reinitialize()
 
     print('Training Finished, checkpoints saved to %s' % saved_path)

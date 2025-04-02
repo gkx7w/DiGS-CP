@@ -68,6 +68,7 @@ class PointPillarDiffusionDec(nn.Module):
         lidar_range = np.array(args['lidar_range'])
         grid_size = np.round((lidar_range[3:6] - lidar_range[:3]) /
                              np.array(args['voxel_size'])).astype(np.int64)
+        self.batch_len = args['N']
         self.train_stage2 = args['activate_stage2']
         # PIllar VFE
         self.pillar_vfe = PillarVFE(args['pillar_vfe'],
@@ -150,37 +151,50 @@ class PointPillarDiffusionDec(nn.Module):
             for car_idx in range(len(pre_fused_boxes)):
                 # 获取当前box中的点并平移到以box中心为原点的坐标系 box里没有点怎么办？？特征全为0吗？
                 gt_point = batch_ori_lidar[point_indices[car_idx] > 0]
+                if len(gt_point) == 0:
+                    print("此bxo中没有点云！！")
+                    # pc_range = [-15, -15, -1, 15, 15, 1]
+                    # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
+                    continue
                 gt_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
-                # gt_boxes[car_idx][0:3] = [0, 0, 0]
+                # pre_fused_boxes[car_idx][0:3] = [0, 0, 0]
                 # pc_range = [-15, -15, -1, 15, 15, 1]
-                # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
+                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
                 # 旋转点云 
                 gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
                 # pre_fused_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(pre_fused_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(pre_fused_boxes[car_idx][6])]))[0,0]
                 # pre_fused_boxes[car_idx][6] -= float(pre_fused_boxes[car_idx][6])
-                # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
+                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_rotate_{car_idx}.png",scale_bev=10)
                 # 体素化 不能并行！！
                 processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
-                
                 gt_voxel_stack.append(processed_lidar_car['voxel_features'])
                 gt_coords_stack.append(processed_lidar_car['voxel_coords'])
                 gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])
                 # 用unique找到所有值，没有的那个id再对应的boxes_fused里面pop掉
                 gt_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
-            processed_lidar = {
-                'voxel_features': np.concatenate(gt_voxel_stack, axis=0),
-                'voxel_coords': np.concatenate(gt_coords_stack, axis=0),
-                'voxel_num_points': np.concatenate(gt_num_points_stack, axis=0),
-                'gt_masks': np.concatenate(gt_masks, axis=0),
-                }
+            if len(gt_coords_stack) == 0:
+                print(batch_dict['path'])
+                print("所有box都没有点云？？")
+                pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+                visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "./opencood/vis_output/origin_pre_boxes.png")
+                processed_lidar = None # 此处只能设置batch_size为1
+            else:
+                processed_lidar = {
+                    'voxel_features': np.concatenate(gt_voxel_stack, axis=0),
+                    'voxel_coords': np.concatenate(gt_coords_stack, axis=0),
+                    'voxel_num_points': np.concatenate(gt_num_points_stack, axis=0),
+                    'gt_masks': np.concatenate(gt_masks, axis=0),
+                    }
             processed_lidar_batch.append(processed_lidar)
-        processed_lidar_dict = merge_features_to_dict(processed_lidar_batch)
-        processed_lidar_torch_dict = \
-                        self.pre_processor.collate_batch(processed_lidar_dict)
-        processed_lidar_torch_dict = train_utils.to_device(processed_lidar_torch_dict, device = batch_dict['dec_voxel_features'].device)
-        batch_dict.update({'processed_lidar': processed_lidar_torch_dict})
-        
-        return batch_dict
+        if processed_lidar_batch[0] is None:
+            return batch_dict
+        else:
+            processed_lidar_dict = merge_features_to_dict(processed_lidar_batch)
+            processed_lidar_torch_dict = \
+                            self.pre_processor.collate_batch(processed_lidar_dict)
+            processed_lidar_torch_dict = train_utils.to_device(processed_lidar_torch_dict, device = batch_dict['dec_voxel_features'].device)
+            batch_dict.update({'processed_lidar': processed_lidar_torch_dict})
+            return batch_dict
     
     
     def forward(self, batch_dict):
@@ -196,6 +210,7 @@ class PointPillarDiffusionDec(nn.Module):
                            'dec_voxel_coords': dec_voxel_coords,
                            'dec_voxel_num_points': dec_voxel_num_points,
                            'batch_size': int(batch_dict['record_len'].sum()),
+                           'batch_len': self.batch_len,
                            'record_len': record_len,
                            })
         # dec n, 4 -> n, c
@@ -250,7 +265,7 @@ class PointPillarDiffusionDec(nn.Module):
         # 返回nms后每个batch融合后的框
         pred_box3d_list, scores_list = \
             self.post_processor.post_process(data_dict, output_dict,
-                                             stage1=True)
+                                            stage1=True)
         batch_dict['det_boxes'] = pred_box3d_list
         batch_dict['det_scores'] = scores_list
         if pred_box3d_list is not None and self.train_stage2:
@@ -260,43 +275,47 @@ class PointPillarDiffusionDec(nn.Module):
             
         # diff       
         self.get_processed_lidar(batch_dict)
-        voxel_features = batch_dict['processed_lidar']['voxel_features']
-        voxel_coords = batch_dict['processed_lidar']['voxel_coords']
-        voxel_num_points = batch_dict['processed_lidar']['voxel_num_points']
-        voxel_gt_mask = batch_dict['processed_lidar']['gt_masks']
-        batch_dict.pop('processed_lidar')
-        batch_dict.update({
+        if 'processed_lidar' not in batch_dict:
+            output_dict = None
+            return output_dict
+        else:
+            voxel_features = batch_dict['processed_lidar']['voxel_features']
+            voxel_coords = batch_dict['processed_lidar']['voxel_coords']
+            voxel_num_points = batch_dict['processed_lidar']['voxel_num_points']
+            voxel_gt_mask = batch_dict['processed_lidar']['gt_masks']
+            batch_dict.pop('processed_lidar')
+            batch_dict.update({
                             'voxel_features': voxel_features,
-                           'voxel_coords': voxel_coords,
-                           'voxel_num_points': voxel_num_points,
-                           'voxel_gt_mask': voxel_gt_mask
-                           })
-        # 得到低层BEV特征 [B,C,H,W] 
-        batch_dict = self.pillar_vfe(batch_dict, stage='diff')
-        batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       
-        # 将gt抠出来的bev特征输入到mdd中
-        # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
-        batch_dict = self.mdd(batch_dict)
-        # ！！V2X-R没有单独训练diffusion，是整体一起训的
-        output_dict = {'pred_feature' : batch_dict['pred_feature'], 
-                       'gt_feature' : batch_dict['batch_gt_spatial_features']}
-        
-        # batch_dict = self.scatter(batch_dict)
-        # batch_dict = self.backbone(batch_dict)
+                            'voxel_coords': voxel_coords,
+                            'voxel_num_points': voxel_num_points,
+                            'voxel_gt_mask': voxel_gt_mask
+                            })
+            # 得到低层BEV特征 [B,C,H,W] 
+            batch_dict = self.pillar_vfe(batch_dict, stage='diff')
+            batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       
+            # 将gt抠出来的bev特征输入到mdd中
+            # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
+            batch_dict = self.mdd(batch_dict)
+            # ！！V2X-R没有单独训练diffusion，是整体一起训的
+            output_dict = {'pred_feature' : batch_dict['pred_feature'], 
+                        'gt_feature' : batch_dict['batch_gt_spatial_features']}
+            
+            # batch_dict = self.scatter(batch_dict)
+            # batch_dict = self.backbone(batch_dict)
 
-        # spatial_features_2d = batch_dict['spatial_features_2d']
+            # spatial_features_2d = batch_dict['spatial_features_2d']
 
-        # if self.shrink_flag:
-        #     spatial_features_2d = self.shrink_conv(spatial_features_2d)
+            # if self.shrink_flag:
+            #     spatial_features_2d = self.shrink_conv(spatial_features_2d)
 
-        # psm = self.cls_head(spatial_features_2d)
-        # rm = self.reg_head(spatial_features_2d)
+            # psm = self.cls_head(spatial_features_2d)
+            # rm = self.reg_head(spatial_features_2d)
 
-        # output_dict = {'cls_preds': psm,
-        #                'reg_preds': rm}
-                       
-        # if self.use_dir:
-        #     dm = self.dir_head(spatial_features_2d)
-        #     output_dict.update({'dir_preds': dm})
+            # output_dict = {'cls_preds': psm,
+            #                'reg_preds': rm}
+                        
+            # if self.use_dir:
+            #     dm = self.dir_head(spatial_features_2d)
+            #     output_dict.update({'dir_preds': dm})
 
-        return output_dict
+            return output_dict

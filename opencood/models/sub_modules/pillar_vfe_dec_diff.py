@@ -243,15 +243,31 @@ class PillarVFE(nn.Module):
             # 3. 计算最大点间距离 Diameter [M, 1]
             # 使用广播计算所有点对之间的距离
             # reshape以便使用cdist
-            points_expanded = valid_points.view(-1, voxel_features.shape[1], 3)  # [M, 16, 3]
-            # 计算每个柱体内所有点对的距离
-            distances = torch.cdist(points_expanded, points_expanded)  # [M, 16, 16]
-            # 创建mask来处理无效点对
-            mask_matrix = points_mask.squeeze(-1).unsqueeze(-1) * points_mask.squeeze(-1).unsqueeze(1)  # [M, 16, 16]
-            # 将无效点对的距离设为0
-            distances = distances * mask_matrix
-            # 获取每个柱体内的最大距离
-            max_distances = torch.max(distances.view(distances.shape[0], -1), dim=1)[0].unsqueeze(-1)  # [M, 1]
+            # 检查是否有有效点
+            if points_mask.any():
+                # reshape以便使用cdist
+                points_expanded = valid_points.view(-1, voxel_features.shape[1], 3)  # [M, 16, 3]
+                # 计算每个柱体内所有点对的距离
+                distances = torch.cdist(points_expanded, points_expanded) # [M, 16, 16]
+                # 创建mask来处理无效点对
+                mask_matrix = points_mask.squeeze(-1).unsqueeze(-1) * points_mask.squeeze(-1).unsqueeze(1) # [M, 16, 16]
+                # 将无效点对的距离设为0
+                distances = distances * mask_matrix
+                
+                # 检查每个柱体是否有点
+                valid_voxels = mask_matrix.sum(dim=(1,2)) > 0
+                if valid_voxels.any():
+                    # 只对有效柱体计算最大距离
+                    valid_distances = distances[valid_voxels]
+                    max_dists = torch.max(valid_distances.view(valid_distances.shape[0], -1), dim=1)[0]
+                    # 初始化全零张量
+                    max_distances = torch.zeros((distances.shape[0], 1), device=distances.device)
+                    max_distances[valid_voxels] = max_dists.unsqueeze(-1) # [M, 1]
+                else:
+                    max_distances = torch.zeros((distances.shape[0], 1), device=distances.device) # [M, 1]
+            else:
+                # 如果没有有效点，返回零张量
+                max_distances = torch.zeros((valid_points.shape[0], 1), device=valid_points.device) # [M, 1]
             
             # 将voxel_num_points转换为浮点数并增加维度 [M, 1]
             points_count = voxel_num_points.float().unsqueeze(-1)

@@ -197,6 +197,7 @@ class OPV2VBaseDataset(Dataset):
         # load files for all CAVs
         for cav_id, cav_content in scenario_database.items():
             data[cav_id] = OrderedDict()
+            data[cav_id]['path'] = scenario_database[cav_id][timestamp_key]['yaml']
             data[cav_id]['ego'] = cav_content['ego']
 
             # load param file: json is faster than yaml
@@ -245,6 +246,7 @@ class OPV2VBaseDataset(Dataset):
                     data[cav_id][file_extension] = \
                         cv2.imread(cav_content[timestamp_key][file_extension])
 
+            
 
         return data
 

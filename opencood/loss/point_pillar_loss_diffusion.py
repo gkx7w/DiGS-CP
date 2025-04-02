@@ -64,7 +64,45 @@ class WeightedSmoothL1Loss(nn.Module):
 
         return loss
 
+def weighted_sigmoid_binary_cross_entropy(preds, tgts, weights=None,
+                                          class_indices=None):
+    if weights is not None:
+        weights = weights.unsqueeze(-1)
+    if class_indices is not None:
+        weights *= (
+            indices_to_dense_vector(class_indices, preds.shape[2])
+                .view(1, 1, -1)
+                .type_as(preds)
+        )
+    per_entry_cross_ent = nn.functional.binary_cross_entropy_with_logits(preds,
+                                                                         tgts,
+                                                                         weights)
+    return per_entry_cross_ent
 
+
+def indices_to_dense_vector(
+        indices, size, indices_value=1.0, default_value=0, dtype=np.float32
+):
+    """Creates dense vector with indices set to specific value and rest to zeros.
+    This function exists because it is unclear if it is safe to use
+        tf.sparse_to_dense(indices, [size], 1, validate_indices=False)
+    with indices which are not ordered.
+    This function accepts a dynamic size (e.g. tf.shape(tensor)[0])
+    Args:
+        indices: 1d Tensor with integer indices which are to be set to
+            indices_values.
+        size: scalar with size (integer) of output Tensor.
+        indices_value: values of elements specified by indices in the output vector
+        default_value: values of other elements in the output vector.
+        dtype: data type.
+    Returns:
+        dense 1D Tensor of shape [size] with indices set to indices_values and the
+            rest set to default_value.
+    """
+    dense = torch.zeros(size).fill_(default_value)
+    dense[indices] = indices_value
+
+    return dense
 
 class PointPillarLossDiffusion(nn.Module):
     def __init__(self, args):
@@ -72,11 +110,12 @@ class PointPillarLossDiffusion(nn.Module):
         self.reg_loss_func = WeightedSmoothL1Loss()
         self.alpha = 0.25
         self.gamma = 2.0
-        self.diff_loss = 0
         self.total_loss = 0
-        self.conf_loss = 0
+        self.diff_loss = 0
+        self.rcnn_loss = 0
+        self.cls_loss = 0
         self.reg_loss = 0
-        self.loss_cnt = 0
+        self.iou_loss = 0
         self.cls_weight = args['cls_weight']
         self.reg_coe = args['reg']
         self.loss_dict = {}
@@ -85,6 +124,88 @@ class PointPillarLossDiffusion(nn.Module):
     def sigmoid_weight(self, max_weight, epoch):
         return max_weight / 2 * (- (np.tanh(epoch / 4 - 5)) + 1)
 
+    def stage2_loss(self, rcnn_cls,rcnn_iou,rcnn_reg,tgt_cls,tgt_iou,tgt_reg):
+        rcnn_cls = rcnn_cls.view(1, -1, 1)
+        rcnn_iou = rcnn_iou.view(1, -1, 1)
+        rcnn_reg = rcnn_reg.view(1, -1, 7)
+
+        tgt_cls = tgt_cls.view(1, -1, 1)
+        tgt_iou = tgt_iou.view(1, -1, 1)
+        tgt_reg = tgt_reg.view(1, -1, 7)
+
+        pos_norm = tgt_cls.sum()
+        # cls loss
+        loss_cls = weighted_sigmoid_binary_cross_entropy(rcnn_cls, tgt_cls)
+
+        # regression loss
+        # [deprecated by Yifan Lu] Target resampling : Generate a weights mask to force the regressor concentrate on low iou predictions
+        # sample 50% with iou>0.7 and 50% < 0.7
+        weights = torch.ones(tgt_iou.shape, device=tgt_iou.device)
+        weights[tgt_cls == 0] = 0
+        # coalign 这边是直接设置为0，没有后续过程
+        if self.use_reg_loss_focal:
+            neg = torch.logical_and(tgt_iou < 0.7, tgt_cls != 0)
+            pos = torch.logical_and(tgt_iou >= 0.7, tgt_cls != 0)
+            # # 这里不仅仅删除一些正样本，并且对于负样本加量学习！先来个五倍吧
+            num_neg = int(neg.sum(dim=1))
+            num_pos = int(pos.sum(dim=1))
+            num_pos_smps = max(num_neg, 5)
+            pos_indices = torch.where(pos)[1]
+            not_selsected = torch.randperm(num_pos)[:num_pos - num_pos_smps]
+            # not_selsected_indices = pos_indices[not_selsected]
+            weights[:, pos_indices[not_selsected]] = 0
+            # print("正样本，负样本数量", num_neg, num_pos, weights[weights != 0].shape)
+        loss_reg = self.reg_loss_func(rcnn_reg, tgt_reg,
+                                        weights=weights / max(weights.sum(),
+                                                                1)).sum()
+
+        # iou loss
+        weights_iou = torch.ones(tgt_iou.shape, device=tgt_iou.device)
+        # TODO: also count the negative samples
+        tgt_iou = 2 * (tgt_iou - 0.5)  # normalize to -1, 1
+        if self.use_iou_loss == "naive":
+            # print("use naive iou loss")
+            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+                                            weights=tgt_cls).mean()
+        elif self.use_iou_loss == "naive+":
+            # print("use naive+ iou loss")
+            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+                                            weights=weights_iou).mean()
+        elif self.use_iou_loss == "naive+W3":
+            # print("use naive+W3 iou loss")
+            # 这个操作有点问题捏，这里不是0.7，而是0.4，这组实验需要重新跑
+            weights_iou[tgt_iou < 0.4] = 3
+            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+                                            weights=weights_iou).mean()
+        else:
+            print("else use naive iou loss")
+            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+                                            weights=tgt_cls).mean()
+
+        loss_cls_reduced = loss_cls * self.cls['weight']
+        loss_iou_reduced = loss_iou * self.iou['weight']
+        loss_reg_reduced = loss_reg * self.reg['weight']
+        
+        return loss_cls_reduced,loss_iou_reduced,loss_reg_reduced
+        
+    def cal_diff_loss(self, p_e_batch, g_e_batch,weights):
+        # 初始化总损失
+        diff_loss = 0.0
+        # 对每个批次中的每个特征计算损失并累加
+        for batch_idx in range(len(p_e_batch)):
+            p_features = p_e_batch[batch_idx]
+            g_features = g_e_batch[batch_idx]
+            # 计算当前批次的损失
+            batch_diff_loss = self.diff_loss_func(
+                p_features,
+                g_features,
+                weights=weights
+            )
+            # 累加总损失
+            diff_loss += batch_diff_loss
+        # 计算平均损失（如果有特征）
+        diff_loss = diff_loss / len(p_e_batch)
+        return diff_loss
         
     def forward(self, output_dict, target_dict, epoch = 1, train = True):
         """
@@ -94,123 +215,59 @@ class PointPillarLossDiffusion(nn.Module):
         target_dict : dict
         """
         
-        if 'rm' in output_dict.keys():
-            rm = output_dict['rm']
-            psm = output_dict['psm']
+        if 'rcnn_label_dict' in output_dict.keys():
+            rcnn_cls = output_dict['rcnn_cls']
+            rcnn_iou = output_dict['rcnn_iou']
+            rcnn_reg = output_dict['rcnn_reg']
 
-            targets = target_dict['targets']
+            tgt_cls = output_dict['rcnn_label_dict']['cls_tgt']
+            tgt_iou = output_dict['rcnn_label_dict']['iou_tgt']
+            tgt_reg = output_dict['rcnn_label_dict']['reg_tgt']
 
-            cls_preds = psm.permute(0, 2, 3, 1).contiguous()
-            box_cls_labels = target_dict['pos_equal_one']
-            box_cls_labels = box_cls_labels.view(psm.shape[0], -1).contiguous()
+            loss_cls_reduced, loss_iou_reduced, loss_reg_reduced = self.stage2_loss(rcnn_cls,rcnn_iou,rcnn_reg,tgt_cls,tgt_iou,tgt_reg)
+            rcnn_loss = loss_cls_reduced + loss_iou_reduced + loss_reg_reduced
+            total_loss = rcnn_loss
+            
+            self.loss_cls_reduced = loss_cls_reduced.item()
+            self.loss_iou_reduced = loss_iou_reduced.item()
+            self.loss_reg_reduced = loss_reg_reduced.item()
+            self.rcnn_loss = rcnn_loss.item()
+            self.total_loss = total_loss.item()   
+            self.loss_dict.update({
+                'total_loss': self.total_loss,
+                'rcnn_loss': self.rcnn_loss,
+                'cls_loss': self.loss_cls_reduced,
+                'iou_loss': self.loss_iou_reduced,
+                'reg_loss': self.loss_reg_reduced,
+            })
 
-            positives = box_cls_labels > 0
-            negatives = box_cls_labels == 0
-            negative_cls_weights = negatives * 1.0
-            cls_weights = (negative_cls_weights + 1.0 * positives).float()
-            reg_weights = positives.float()
+        if 'pred_feature' in output_dict.keys() and 'rcnn_label_dict' in output_dict.keys():
+            p_e_batch = output_dict['pred_feature'] 
+            g_e_batch = output_dict['gt_feature']
+            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,weights=self.sigmoid_weight(3, epoch) if train else 0) #self.sigmoid_weight(4, epoch)
+            total_loss = rcnn_loss + diff_loss
 
-            pos_normalizer = positives.sum(1, keepdim=True).float()
-            reg_weights /= torch.clamp(pos_normalizer, min=1.0)
-            cls_weights /= torch.clamp(pos_normalizer, min=1.0)
-            cls_targets = box_cls_labels
-            cls_targets = cls_targets.unsqueeze(dim=-1)
-
-            cls_targets = cls_targets.squeeze(dim=-1)
-            one_hot_targets = torch.zeros(
-                *list(cls_targets.shape), 2,
-                dtype=cls_preds.dtype, device=cls_targets.device
-            )
-            one_hot_targets.scatter_(-1, cls_targets.unsqueeze(dim=-1).long(), 1.0)
-            cls_preds = cls_preds.view(psm.shape[0], -1, 1)
-            one_hot_targets = one_hot_targets[..., 1:]
-
-            cls_loss_src = self.cls_loss_func(cls_preds,
-                                            one_hot_targets,
-                                            weights=cls_weights)  # [N, M]
-            cls_loss = cls_loss_src.sum() / psm.shape[0]
-            conf_loss = cls_loss * self.cls_weight
-
-            # regression
-            rm = rm.permute(0, 2, 3, 1).contiguous()
-            rm = rm.view(rm.size(0), -1, 7)
-            targets = targets.view(targets.size(0), -1, 7)
-            box_preds_sin, reg_targets_sin = self.add_sin_difference(rm,
-                                                                    targets)
-            loc_loss_src =\
-                self.reg_loss_func(box_preds_sin,
-                                reg_targets_sin,
-                                weights=reg_weights)
-            reg_loss = loc_loss_src.sum() / rm.shape[0]
-            reg_loss *= self.reg_coe
-
-        if 'pred_feature' in output_dict.keys() and 'rm' in output_dict.keys():
-            p_e = output_dict['pred_feature']
-            g_e = output_dict['gt_feature']
-            diff_loss = self.diff_loss_func(p_e,
-                                g_e,
-                                weights=self.sigmoid_weight(3, epoch) if train else 0)#self.sigmoid_weight(4, epoch)
-            total_loss = reg_loss + conf_loss + diff_loss
-            if self.loss_cnt >=500:
-                self.diff_loss = 0
-                self.total_loss = 0
-                self.conf_loss = 0
-                self.reg_loss = 0
-                self.loss_cnt = 0
-            self.total_loss += total_loss.item()
-            self.reg_loss += reg_loss.item()
-            self.conf_loss += conf_loss.item()
-            self.diff_loss += diff_loss.item()
-            self.loss_cnt += 1
-            self.loss_dict.update({'total_loss': self.total_loss / self.loss_cnt,
-                            'reg_loss': self.reg_loss / self.loss_cnt,
-                            'conf_loss': self.conf_loss / self.loss_cnt,
-                            'diff_loss': self.diff_loss / self.loss_cnt
-                            })
+            self.total_loss = total_loss.item()
+            self.diff_loss = diff_loss.item()
+            self.loss_dict.update({'total_loss': self.total_loss,
+                                    'diff_loss': self.diff_loss
+                                    })
         elif 'pred_feature' in output_dict.keys():
             p_e_batch = output_dict['pred_feature']  # 批量列表
             g_e_batch = output_dict['gt_feature']  # 批量列表
-            # 初始化总损失
-            diff_loss = 0.0
-            # 对每个批次中的每个特征计算损失并累加
-            for batch_idx in range(len(p_e_batch)):
-                p_features = p_e_batch[batch_idx]
-                g_features = g_e_batch[batch_idx]
-                # 计算当前批次的损失
-                batch_diff_loss = self.diff_loss_func(
-                    p_features,
-                    g_features,
-                    weights=1
-                )
-                # 累加总损失
-                diff_loss += batch_diff_loss
-            # 计算平均损失（如果有特征）
-            diff_loss = diff_loss / len(p_e_batch) 
-                
+            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,weights=1)
             total_loss = diff_loss
 
             self.total_loss = total_loss.item()
             self.diff_loss = diff_loss.item()
             self.loss_dict.update({'total_loss': self.total_loss,
-                            'reg_loss': self.reg_loss,
-                            'conf_loss': self.conf_loss ,
-                            'diff_loss': self.diff_loss 
-                            })
-        else:
-            total_loss = reg_loss + conf_loss
-            if self.loss_cnt >=500:
-                self.total_loss = 0
-                self.conf_loss = 0
-                self.reg_loss = 0
-                self.loss_cnt = 0
-            self.total_loss += total_loss.item()
-            self.reg_loss += reg_loss.item()
-            self.conf_loss += conf_loss.item()
-            self.loss_cnt += 1
-            self.loss_dict.update({'total_loss': self.total_loss / self.loss_cnt,
-                            'reg_loss': self.reg_loss / self.loss_cnt,
-                            'conf_loss': self.conf_loss / self.loss_cnt,
-                            })
+                                   'rcnn_loss': self.rcnn_loss,
+                                   'reg_loss': self.reg_loss,
+                                   'cls_loss': self.cls_loss,
+                                   'iou_loss': self.iou_loss,
+                                   'diff_loss': self.diff_loss 
+                                    })
+    
         return total_loss
 
     def cls_loss_func(self, input: torch.Tensor,
@@ -301,35 +358,41 @@ class PointPillarLossDiffusion(nn.Module):
         """
         total_loss = self.loss_dict['total_loss'] if 'total_loss' in self.loss_dict.keys() else torch.tensor(0)
         reg_loss = self.loss_dict['reg_loss'] if 'reg_loss' in self.loss_dict.keys() else torch.tensor(0)
-        conf_loss = self.loss_dict['conf_loss'] if 'conf_loss' in self.loss_dict.keys() else torch.tensor(0)
+        cls_loss = self.loss_dict['cls_loss'] if 'cls_loss' in self.loss_dict.keys() else torch.tensor(0)
+        iou_loss = self.loss_dict['iou_loss'] if 'iou_loss' in self.loss_dict.keys() else torch.tensor(0)
+        rcnn_loss = self.loss_dict['rcnn_loss'] if 'rcnn_loss' in self.loss_dict.keys() else torch.tensor(0)
         if pbar is None:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                print("[epoch %d][%d/%d], || Loss: %.3f || Conf: %.3f"
-                " || Loc: %.3f || Diff: %.3f" % (
+                print("[epoch %d][%d/%d], || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
+                " || Loc: %.3f || Iou: %.3f || Diff: %.3f" % (
                     epoch, batch_id + 1, batch_len,
-                    total_loss, conf_loss, reg_loss, diff_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss))
             else:
-                print("[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
-                " || Loc Loss: %.4f" % (
+                print("[epoch %d][%d/%d], || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
+                " || Loc Loss: %.4f|| Iou: %.3f" % (
                     epoch, batch_id + 1, batch_len,
-                    total_loss, conf_loss, reg_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss))
         else:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                pbar.set_description("[epoch %d][%d/%d], || Loss: %.3f || Conf: %.3f"
-                " || Loc: %.3f || Diff: %.3f" % (
+                pbar.set_description("[epoch %d][%d/%d], || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
+                " || Loc: %.3f || Iou: %.3f || Diff: %.3f" % (
                     epoch, batch_id + 1, batch_len,
-                    total_loss, conf_loss, reg_loss, diff_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss))
             else:
-                pbar.set_description("[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
-                  " || Loc Loss: %.4f" % (
-                      epoch, batch_id + 1, batch_len,
-                      total_loss, conf_loss, reg_loss))
+                pbar.set_description("[epoch %d][%d/%d], || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
+                " || Loc Loss: %.4f|| Iou: %.3f" % (
+                    epoch, batch_id + 1, batch_len,
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss))
 
         writer.add_scalar('Reconstruction_loss', diff_loss,
                           epoch*batch_len + batch_id)
         writer.add_scalar('Regression_loss', reg_loss,
                           epoch*batch_len + batch_id)
-        writer.add_scalar('Confidence_loss', conf_loss,
+        writer.add_scalar('Cls_loss', cls_loss,
+                          epoch*batch_len + batch_id)
+        writer.add_scalar('Iou_loss', iou_loss,
+                          epoch*batch_len + batch_id)
+        writer.add_scalar('Rcnn_loss', rcnn_loss,
                           epoch*batch_len + batch_id)

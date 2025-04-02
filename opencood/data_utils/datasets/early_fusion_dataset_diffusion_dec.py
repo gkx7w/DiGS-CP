@@ -90,6 +90,7 @@ def getDecdiffusionFusionDataset(cls):
             # 1. 收集所有车辆的点云数据
             # loop over all CAVs to process information
             for cav_id, selected_cav_base in base_data_dict.items():
+                path = base_data_dict[cav_id]['path']
                 # 2. 检查车辆是否在通信范围内
                 # check if the cav is within the communication range with ego
                 distance = \
@@ -269,6 +270,8 @@ def getDecdiffusionFusionDataset(cls):
                 
             processed_data_dict['ego'].update({'sample_idx': idx,
                                                 'cav_id_list': cav_id_list})
+            
+            processed_data_dict['ego'].update({'path': path})
 
             return processed_data_dict
 
@@ -646,6 +649,7 @@ def getDecdiffusionFusionDataset(cls):
                     "lidar_agent_record": torch.from_numpy(np.concatenate(lidar_agent_list)) # [0,1,1,0,1...]
                 })
 
+            output_dict['ego'].update({'path': ego_dict['path']})
             return output_dict
 
         def post_process(self, data_dict, output_dict):
