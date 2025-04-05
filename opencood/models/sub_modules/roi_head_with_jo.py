@@ -205,15 +205,15 @@ class RoIHead(nn.Module):
         pre_channel1 = grid_size * grid_size * grid_size * c_out
         self.fake_shared_fc_layers, pre_channel1 = self._make_fc_layers(pre_channel1,
                                                                         fc_layers)
-        self.fake_cls_head, pre_channel1 = self._make_fc_layers(pre_channel1,
-                                                                fc_layers,
-                                                                output_channels=
-                                                                self.model_cfg[
-                                                                    'num_cls'])
-        self.fake_reg_layers, _ = self._make_fc_layers(pre_channel1, fc_layers,
-                                                       output_channels=
-                                                       self.model_cfg[
-                                                           'num_cls'] * 7)
+        # self.fake_cls_head, pre_channel1 = self._make_fc_layers(pre_channel1,
+        #                                                         fc_layers,
+        #                                                         output_channels=
+        #                                                         self.model_cfg[
+        #                                                             'num_cls'])
+        # self.fake_reg_layers, _ = self._make_fc_layers(pre_channel1, fc_layers,
+        #                                                output_channels=
+        #                                                self.model_cfg[
+        #                                                    'num_cls'] * 7)
 
         pre_channel = grid_size * grid_size * grid_size * c_out
 
@@ -224,18 +224,18 @@ class RoIHead(nn.Module):
         # self.convertor = None
         self.convertor, pre_channel = self._make_fc_layers(pre_channel, fc_layers)
 
-        self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
-                                                            fc_layers,
-                                                            output_channels=
-                                                            self.model_cfg[
-                                                                'num_cls'])
-        self.iou_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=
-                                                  self.model_cfg['num_cls'])
-        self.reg_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=
-                                                  self.model_cfg[
-                                                      'num_cls'] * 7)
+        # self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
+        #                                                     fc_layers,
+        #                                                     output_channels=
+        #                                                     self.model_cfg[
+        #                                                         'num_cls'])
+        # self.iou_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
+        #                                           output_channels=
+        #                                           self.model_cfg['num_cls'])
+        # self.reg_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
+        #                                           output_channels=
+        #                                           self.model_cfg[
+        #                                               'num_cls'] * 7)
         
         # 解耦代码 
         self.decoupling = True
@@ -243,13 +243,12 @@ class RoIHead(nn.Module):
         self.factor_dim = 32
         self.factor_encoder = nn.modules.ModuleList()
         fc_layers = [128,64]
-        print(fc_layers)
         for i in range(self.factor_num):
             self.factor_encoder.append(self._make_fc_layers(pre_channel, fc_layers,
                                                   output_channels=
                                                    self.factor_dim)[0])
 
-        self._init_weights(weight_init='xavier')
+        # self._init_weights(weight_init='xavier')
 
     def _init_weights(self, weight_init='xavier'):
         if weight_init == 'kaiming':
@@ -499,13 +498,19 @@ class RoIHead(nn.Module):
             self.get_global_grid_points_of_roi(rois)
 
         xyz = torch.cat(point_coords, dim=0)
-        xyz_batch_cnt = xyz.new_zeros(batch_size).int()
+        kpt_mask_flag = batch_dict['kpt_mask_flag']
+        if kpt_mask_flag:
+            xyz_batch_cnt = xyz.new_zeros(batch_size + 1).int()
+        else:
+            xyz_batch_cnt = xyz.new_zeros(batch_size).int()
 
         #point_coords不是batch维度的，要把空的box对应的point_coords也mask
         xyz_batch_id = 0
+        
         for bs_idx in range(batch_dict['record_len']):
-            if empty_roi_mask[bs_idx]:
+            if empty_roi_mask[bs_idx] or kpt_mask_flag:
                 xyz_batch_cnt[xyz_batch_id] = len(point_coords[bs_idx])
+                kpt_mask_flag = False
                 xyz_batch_id += 1
         new_xyz = global_roi_grid_points.view(-1, 3)
         new_xyz_batch_cnt = xyz.new_zeros(batch_size).int()
@@ -877,8 +882,13 @@ class RoIHead(nn.Module):
             object_factors = [] 
             for j in range(1, cur_cluster_id[i]):
                 object_factors.append(boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
-            object_factors = torch.cat(object_factors,dim=0)
-        object_factors_batch.append(object_factors)
+            if len(object_factors) > 0:  # 如果有非背景聚类
+                object_factors = torch.cat(object_factors,dim=0)
+            else:
+                print("没有非背景聚类???预测的box被过滤了")
+                object_factors = None
+        if object_factors is not None:
+            object_factors_batch.append(object_factors)
         # print([t.shape for t in object_factors])
         
         # 这是物体级的feature

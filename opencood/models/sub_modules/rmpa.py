@@ -263,9 +263,14 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
         # Ensure there are more than 2 points are selected to satisfy the
         # condition of batch norm in the FC layers of feature fusion module
 
+        kpt_mask_flag = False
         if (kpt_mask).sum() < 2:
+            # 此处可能在原本没有框的视角中选中两个点，后续我会对没有框的视角进行mask，导致最终点数不一致
             kpt_mask[0, torch.randint(0, 1024, (2,))] = True
-
+            # 加个flag吧，后面如果flag成立，默认加入第一个视角中的点？？
+            kpt_mask_flag = True
+        batch_dict.update({'kpt_mask_flag': kpt_mask_flag})
+        
         point_features_list = []
 
         for k in self.model_cfg['features_source'].keys():

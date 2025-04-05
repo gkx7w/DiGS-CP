@@ -133,7 +133,7 @@ class SDCoper2(nn.Module):
             self.naive_compressor = NaiveCompressor(64, args['compression'])
 
         self.head = Head(**args['head'])
-        self.pre_processor = SpVoxelPreprocessor(args["preprocess"], train = True)
+        # self.pre_processor = SpVoxelPreprocessor(args["preprocess"], train = True)
         self.post_processor = FpvrcnnPostprocessor(args['post_processer'],
                                                    train=True)
 
@@ -371,6 +371,6 @@ class SDCoper2(nn.Module):
             batch_dict = self.matcher(batch_dict)
             batch_dict = self.roi_head(batch_dict)
             
-        self.get_processed_lidar(batch_dict)
+        # self.get_processed_lidar(batch_dict)
 
         return batch_dict

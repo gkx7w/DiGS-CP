@@ -218,14 +218,14 @@ def getDecdiffusionFusionDataset(cls):
             #         # 获取当前box中的点并平移到以box中心为原点的坐标系
             #         gt_point = projected_lidar_stack[point_indices[car_idx] > 0]
             #         gt_point[:, :3] -= gt_boxes[car_idx][0:3]
-            #         # gt_boxes[car_idx][0:3] = [0, 0, 0]
-            #         # pc_range = [-15, -15, -1, 15, 15, 1]
-            #         # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
+            #         gt_boxes[car_idx][0:3] = [0, 0, 0]
+            #         pc_range = [-15, -15, -1, 15, 15, 1]
+            #         visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_expand_{car_idx}.png",scale_bev=10)
             #         # 旋转点云 
             #         gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
             #         gt_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(gt_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(gt_boxes[car_idx][6])]))[0,0]
             #         gt_boxes[car_idx][6] -= float(gt_boxes[car_idx][6])
-            #         # visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
+            #         visualize_gt_boxes(gt_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/gt_rotate_{car_idx}.png",scale_bev=10)
             #         # 体素化 不能并行！！
             #         processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
             #         gt_voxel_stack.append(processed_lidar_car['voxel_features'])
@@ -375,57 +375,24 @@ def getDecdiffusionFusionDataset(cls):
             """
             # currently, we only support batch size of 1 during testing
             assert len(batch) <= 1, "Batch size 1 is required during testing!"
-            batch = batch[0] # only ego
+            output_dict = self.collate_batch_train(batch)
+            if output_dict is None:
+                return None
 
-            output_dict = {}
+            # check if anchor box in the batch
+            output_dict['ego'].update({'anchor_box': self.anchor_box_torch})
 
-            for cav_id, cav_content in batch.items():
-                output_dict.update({cav_id: {}})
-                # shape: (1, max_num, 7)
-                object_bbx_center = \
-                    torch.from_numpy(np.array([cav_content['object_bbx_center']]))
-                object_bbx_mask = \
-                    torch.from_numpy(np.array([cav_content['object_bbx_mask']]))
-                object_ids = cav_content['object_ids']
 
-                # the anchor box is the same for all bounding boxes usually, thus
-                # we don't need the batch dimension.
-                if cav_content['anchor_box'] is not None:
-                    output_dict[cav_id].update({'anchor_box':
-                        torch.from_numpy(np.array(
-                            cav_content[
-                                'anchor_box']))})
-                if self.visualize:
-                    origin_lidar = [cav_content['origin_lidar']]
+            # save the transformation matrix (4, 4) to ego vehicle
+            transformation_matrix_torch = \
+                torch.from_numpy(np.identity(4)).float()
+            transformation_matrix_clean_torch = \
+                torch.from_numpy(np.identity(4)).float()
 
-                # processed lidar dictionary
-                processed_lidar_torch_dict = \
-                    self.pre_processor.collate_batch(
-                        [cav_content['processed_lidar']])
-                # label dictionary
-                label_torch_dict = \
-                    self.post_processor.collate_batch([cav_content['label_dict']])
-
-                # save the transformation matrix (4, 4) to ego vehicle
-                transformation_matrix_torch = \
-                    torch.from_numpy(np.identity(4)).float()
-                transformation_matrix_clean_torch = \
-                    torch.from_numpy(np.identity(4)).float()
-
-                output_dict[cav_id].update({'object_bbx_center': object_bbx_center,
-                                            'object_bbx_mask': object_bbx_mask,
-                                            'processed_lidar': processed_lidar_torch_dict,
-                                            'label_dict': label_torch_dict,
-                                            'object_ids': object_ids,
-                                            'transformation_matrix': transformation_matrix_torch,
-                                            'transformation_matrix_clean': transformation_matrix_clean_torch})
-
-                if self.visualize:
-                    origin_lidar = \
-                        np.array(
-                            downsample_lidar_minimum(pcd_np_list=origin_lidar))
-                    origin_lidar = torch.from_numpy(origin_lidar)
-                    output_dict[cav_id].update({'origin_lidar': origin_lidar})
+            output_dict['ego'].update({ 'sample_idx': batch[0]['ego']['sample_idx'],
+                                        'cav_id_list': batch[0]['ego']['cav_id_list'],
+                                        'transformation_matrix': transformation_matrix_torch,
+                                        'transformation_matrix_clean': transformation_matrix_clean_torch})
 
             return output_dict
         

@@ -332,7 +332,7 @@ def getIntermediate2stageFusionDataset(cls):
                     agents_image_inputs.append(
                         selected_cav_processed['image_inputs'])
 
-                if self.visualize:
+                if self.visualize and len(projected_lidar_stack) == 0:
                     projected_lidar_stack.append(
                         selected_cav_processed['projected_lidar'])
                 

@@ -601,7 +601,7 @@ class RoIHead(nn.Module):
             ious = boxes_iou3d_gpu(rois, gts)
             max_ious = torch.diag(ious)
 
-            mask = torch.logical_not(rcnn_labels.bool())
+            mask = torch.logical_not(batch_dict['rcnn_labels'].bool())
 
             # set negative samples back to rois, no correction in stage2 for them
             gt_of_rois = gts
@@ -651,7 +651,7 @@ class RoIHead(nn.Module):
 
             batch_dict['rcnn_label_dict_fv_more']['rois'].append(rois)
             batch_dict['rcnn_label_dict_fv_more']['gt_of_rois'].append(gt_of_rois)
-            batch_dict['rcnn_label_dict_fv_more']['cls_tgt'].append(rcnn_labels)
+            batch_dict['rcnn_label_dict_fv_more']['cls_tgt'].append(batch_dict['rcnn_labels'])
             batch_dict['rcnn_label_dict_fv_more']['reg_tgt'].append(reg_targets)
             batch_dict['rcnn_label_dict_fv_more']['iou_tgt'].append(max_ious)
 
@@ -1164,12 +1164,12 @@ def weighted_sigmoid_binary_cross_entropy(preds, tgts, weights=None,
                                           class_indices=None):
     if weights is not None:
         weights = weights.unsqueeze(-1)
-    if class_indices is not None:
-        weights *= (
-            indices_to_dense_vector(class_indices, preds.shape[2])
-                .view(1, 1, -1)
-                .type_as(preds)
-        )
+    # if class_indices is not None:
+    #     weights *= (
+    #         indices_to_dense_vector(class_indices, preds.shape[2])
+    #             .view(1, 1, -1)
+    #             .type_as(preds)
+    #     ) 有问题
     per_entry_cross_ent = nn.functional.binary_cross_entropy_with_logits(preds,
                                                                          tgts,
                                                                          weights)

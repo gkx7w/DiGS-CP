@@ -58,10 +58,10 @@ data_augment:
 
 # anchor box related
 postprocess: &postprocess_params
-  core_method: 'VoxelPostprocessor' # VoxelPostprocessor, BevPostprocessor supported
+  core_method: 'FpvrcnnPostprocessor' # VoxelPostprocessor, BevPostprocessor supported
   gt_range: *cav_lidar
+  iou_stage1: False
   anchor_args:
-
     cav_lidar_range: *cav_lidar
     l: 3.9 # length (长度) x
     w: 1.6 # width  (宽度) y
@@ -70,8 +70,8 @@ postprocess: &postprocess_params
     feature_stride: 2
     num: &achor_num 2
   target_args:
-    pos_threshold: 0.6
     neg_threshold: 0.45
+    pos_threshold: 0.75
     score_threshold: 0.2
   order: 'hwl' # hwl or lwh
   max_num: 100 # maximum number of objects in a single frame. use this number to make sure different frames has the same dimension in the same batch
@@ -83,7 +83,7 @@ postprocess: &postprocess_params
 
 # model related
 model:
-  core_method: point_pillar_diffusion_dec #_det
+  core_method: point_pillar_diffusion_dec_det #_det
   args:
   #    activate_stage2: False
     activate_stage2: true
@@ -231,7 +231,6 @@ loss:
   core_method: point_pillar_loss_diffusion
   args:
     stage1:
-
       pos_cls_weight: 2.0
       encode_rad_error_by_sin: true
       cls:
@@ -267,8 +266,6 @@ loss:
         reduction: 'mean'
         code_weights: [20.0]
         weight: 1.0
-    cls_weight: 1.0
-    reg: 2.0
       
 optimizer:
   core_method: Adam

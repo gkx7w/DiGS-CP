@@ -116,8 +116,13 @@ class PointPillarLossDiffusion(nn.Module):
         self.cls_loss = 0
         self.reg_loss = 0
         self.iou_loss = 0
-        self.cls_weight = args['cls_weight']
-        self.reg_coe = args['reg']
+        self.cls = args['stage2']['cls']
+        self.reg = args['stage2']['reg']
+        self.iou = args['stage2']['iou']
+        # 三种类型：naive,naive+,naive+W3
+        self.use_iou_loss = "naive"
+        # 两种类型：True,Flase
+        self.use_reg_loss_focal = True
         self.loss_dict = {}
 
     
@@ -125,9 +130,9 @@ class PointPillarLossDiffusion(nn.Module):
         return max_weight / 2 * (- (np.tanh(epoch / 4 - 5)) + 1)
 
     def stage2_loss(self, rcnn_cls,rcnn_iou,rcnn_reg,tgt_cls,tgt_iou,tgt_reg):
-        rcnn_cls = rcnn_cls.view(1, -1, 1)
-        rcnn_iou = rcnn_iou.view(1, -1, 1)
-        rcnn_reg = rcnn_reg.view(1, -1, 7)
+        rcnn_cls = rcnn_cls[0].view(1, -1, 1)
+        rcnn_iou = rcnn_iou[0].view(1, -1, 1)
+        rcnn_reg = rcnn_reg[0].view(1, -1, 7)
 
         tgt_cls = tgt_cls.view(1, -1, 1)
         tgt_iou = tgt_iou.view(1, -1, 1)
@@ -216,9 +221,9 @@ class PointPillarLossDiffusion(nn.Module):
         """
         
         if 'rcnn_label_dict' in output_dict.keys():
-            rcnn_cls = output_dict['rcnn_cls']
-            rcnn_iou = output_dict['rcnn_iou']
-            rcnn_reg = output_dict['rcnn_reg']
+            rcnn_cls = output_dict['stage2_out']['rcnn_cls']
+            rcnn_iou = output_dict['stage2_out']['rcnn_iou']
+            rcnn_reg = output_dict['stage2_out']['rcnn_reg']
 
             tgt_cls = output_dict['rcnn_label_dict']['cls_tgt']
             tgt_iou = output_dict['rcnn_label_dict']['iou_tgt']

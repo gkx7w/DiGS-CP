@@ -466,9 +466,10 @@ def getEarlydiffusionFusionDataset(cls):
     return EarlydiffusionFusionDataset
 
 def visualize_gt_boxes(gt_boxes, pcd_array, pc_range, save_path, scale_3d=40, scale_bev=10):
-    pcd_tensor = torch.from_numpy(pcd_array)
+    pcd_tensor = torch.from_numpy(pcd_array) if isinstance(pcd_array, np.ndarray) else pcd_array
+
     if gt_boxes is not None:
-        ex_gt_box_corners = boxes_to_corners_3d(gt_boxes,'hwl')
+        ex_gt_box_corners = boxes_to_corners_3d(gt_boxes, 'hwl')
         ex_gt_box_tensor = torch.from_numpy(ex_gt_box_corners).float() if isinstance(ex_gt_box_corners, np.ndarray) else ex_gt_box_corners
         infer_result = {
             "gt_box_tensor": ex_gt_box_tensor,

@@ -161,11 +161,30 @@ def load_saved_model_new(saved_path, model):
     checkpoint = torch.load(
         saved_path,
         map_location='cpu')
-
+    
     model_dict = model.state_dict()
 
-
+    # 打印checkpoint中的所有键和形状
+    # print("==== Checkpoint Parameters ====")
+    # for k, v in checkpoint.items():
+    #     print(f"Checkpoint Parameter: {k}, Shape: {v.shape if hasattr(v, 'shape') else 'No shape'}")
+    # # 打印model_dict中的所有键和形状
+    # print("\n==== Model State Dict Parameters ====")
+    # for k, v in model_dict.items():
+    #     print(f"Model Parameter: {k}, Shape: {v.shape}")
+    # # 找出checkpoint中存在但model_dict中不存在的键
+    # print("\n==== Parameters in Checkpoint but not in Model ====")
+    # for k in checkpoint.keys():
+    #     if k not in model_dict.keys():
+    #         print(f"Missing in model: {k}")
+    # 找出model_dict中存在但checkpoint中不存在的键
+    print("\n==== Parameters in Model but not in Checkpoint ====")
+    for k in model_dict.keys():
+        if k not in checkpoint.keys():
+            print(f"Missing in checkpoint: {k}")
+    
     state_dict = {k: v for k, v in checkpoint.items() if k in model_dict.keys()}
+    print(f"\nNumber of parameters successfully loaded: {len(state_dict)}/{len(model_dict)}")
 
     # old code may has problem, its name can't match
     # for k, v in checkpoint.items():

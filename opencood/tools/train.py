@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import sys
-sys.path.append("/home/ubuntu/Code2")
-
+sys.path.append("/data/gkx/Code")
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 import argparse
 import os
 import statistics
@@ -114,59 +116,52 @@ def main():
     # optimizer setup
     optimizer = train_utils.setup_optimizer(hypes, model)
     
-
-    # if we want to train from last checkpoint.
-    if opt.model_dir and opt.diff_model_dir:
-        init_epoch = 78
-        diff_saved_path = opt.diff_model_dir
-        model = train_utils.load_saved_model_new(diff_saved_path, model)
-        saved_path = opt.model_dir
-        model = train_utils.load_saved_model_new(saved_path, model)
-
-        for param in model.parameters():
-            param.requires_grad = False
+    # 根据不同条件设置需要解冻的层
+    if opt.model_dir and opt.diff_model_dir: # 两个模型路径都给定的情况
         trainable_layers = [
             'roi_head.factor_encoder',
             'attention_2',
-            'layernorm_2'
-        ]
-        for name, param in model.named_parameters():
-            if any(layer_name in name for layer_name in trainable_layers):
-                param.requires_grad = True
-                print(f"解冻层: {name}")     
+            'layernorm_2']
+        init_epoch = 78
+        model = train_utils.load_saved_model_new(opt.diff_model_dir, model)
+        model = train_utils.load_saved_model_new(opt.model_dir, model)
+        
+    elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
+        trainable_layers = [
+            'mdd',
+            'roi_head.factor_encoder',
+            'cls_layers',
+            'iou_layers',
+            'reg_layers']
+        init_epoch = 78
+        model = train_utils.load_saved_model_new(opt.model_dir, model)
+        
+    else: # 从头开始训练的情况
+        trainable_layers = []  # 不需要特别解冻任何层
+        init_epoch = 0
 
-        scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch)
-        saved_path = train_utils.setup_train(hypes)
-        print(f"resume from {init_epoch} epoch.")
-    
-    elif opt.model_dir or opt.diff_model_dir:
-        init_epoch = 78 if opt.model_dir != '' else 10
-        saved_path = opt.model_dir if opt.model_dir != '' else opt.diff_model_dir
-        model = train_utils.load_saved_model_new(saved_path, model)
+    if trainable_layers:
         for param in model.parameters():
             param.requires_grad = False
-        trainable_layers = [
-            # 'roi_head.factor_encoder',
-            'mdd',
-            'attention_2',
-            'layernorm_2'
-        ]
+        
+        # 解冻指定层
+        unfrozen_count = 0
         for name, param in model.named_parameters():
             if any(layer_name in name for layer_name in trainable_layers):
                 param.requires_grad = True
-                print(f"解冻层: {name}") 
-        for name, param in model.named_parameters():
-            print(f"Layer: {name}, Trainable: {param.requires_grad}")
-        scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch)
-        saved_path = train_utils.setup_train(hypes)
-        print(f"resume from {init_epoch} epoch.")
+                unfrozen_count += 1
+                print(f"解冻层: {name}")
+        
+        print(f"总共解冻 {unfrozen_count} 个参数组")
 
+    # 设置学习率调度器
+    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch if init_epoch > 0 else None)
+    saved_path = train_utils.setup_train(hypes)
+
+    if init_epoch > 0:
+        print(f"从第 {init_epoch} 个epoch恢复训练")
     else:
-        init_epoch = 0
-        # if we train the model from scratch, we need to create a folder
-        # to save the model,
-        saved_path = train_utils.setup_train(hypes)
-        scheduler = train_utils.setup_lr_schedular(hypes, optimizer)
+        print("从头开始训练")
 
     # we assume gpu is necessary
     if torch.cuda.is_available():
@@ -246,6 +241,7 @@ def main():
         scheduler.step(epoch)
         
         opencood_train_dataset.reinitialize()
+        torch.cuda.empty_cache()
 
     print('Training Finished, checkpoints saved to %s' % saved_path)
 

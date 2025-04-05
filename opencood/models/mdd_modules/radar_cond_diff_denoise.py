@@ -339,6 +339,8 @@ class Cond_Diff_Denoise(nn.Module):
         gt_masks = data_dict['voxel_gt_mask']
         # 解耦后的融合特征为条件，无则为none
         cond = data_dict.get('fused_object_factors', None)
+        if len(cond) == 0:
+            cond = None
         combined_pred = cond
         # 最终结果存储 - 保持与输入相同的嵌套结构
         batch_pred_features = []
@@ -389,29 +391,47 @@ class Cond_Diff_Denoise(nn.Module):
                 batch_pred_features.append(x_noisy)
             data_dict['pred_feature'] = batch_pred_features
         else:
-            batch_pred_dict = []
             # 对每个batch处理
             for batch_idx, gt_features in enumerate(batch_gt_spatial_features):
-
-                t1 = time.time()
+                batch_mask = coords[:, 0] == batch_idx
+                this_coords = coords[batch_mask, :]  # (batch_idx_voxel, 4)
+                # 获取该batch中的gt_mask
+                this_gt_mask = gt_masks[batch_mask]  # (batch_idx_voxel, )
+                unique_values_in_mask = torch.unique(this_gt_mask)
+                
                 # 获取相应的条件
                 gt_cond = None
                 if cond is not None:
-                    if isinstance(cond, dict) and batch_idx in cond:
+                    if isinstance(cond, list) and batch_idx < len(cond):
                         gt_cond = cond[batch_idx]
                     else:
                         gt_cond = combined_pred
-                x_start = gt_features * self.signal_scaling_rate
+                    
+                    # 创建一个布尔掩码，指示哪些元素要保留
+                    keep_indices = []
+                    for i in range(len(gt_cond)):
+                        # 检查索引是否在mask的唯一值中
+                        if i in unique_values_in_mask:
+                            keep_indices.append(i)
+                    # 如果有要保留的索引，则过滤gt_cond
+                    if keep_indices:
+                        # 使用索引选择器保留需要的元素
+                        gt_cond = gt_cond[keep_indices]
+                    else:
+                        # 如果没有要保留的元素，创建一个空tensor保持原始维度结构
+                        gt_cond = torch.zeros((0,) + gt_cond.shape[1:], device=gt_cond.device, dtype=gt_cond.dtype)
+                
+                x_start = gt_features  # 当前GT框的特征
                 latent_shape = x_start.shape
                 noise = default(None, lambda: torch.randn_like(x_start))
-                t = torch.ones(x_start.shape[0], device=x_start.device).long() * (self.num_timesteps - 1)
+                t = torch.full((x_start.shape[0],), self.num_timesteps-1, device=x_start.device, dtype=torch.long)
                 x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
-                t2 = time.time()
+                
+                # 逆扩散过程
                 x_noisy = self.p_sample_loop(x_noisy, gt_cond, x_start.shape)
-                t3 = time.time()
-                #print(t2-t1,t3-t2)
+                
                 # 存储当前GT框的预测结果
-                batch_pred_features.append(batch_pred_dict)
+                batch_pred_features.append(x_noisy)
             data_dict['pred_feature'] = batch_pred_features
         
         return data_dict

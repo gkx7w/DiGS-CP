@@ -10,7 +10,7 @@ from opencood.models.sub_modules.base_bev_backbone_resnet import ResNetBEVBackbo
 from opencood.models.sub_modules.base_bev_backbone import BaseBEVBackbone
 from opencood.models.sub_modules.downsample_conv import DownsampleConv
 from opencood.models.mdd_modules.radar_cond_diff_denoise import Cond_Diff_Denoise
-from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu
+from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu, points_in_boxes_gpu
 from opencood.utils import common_utils
 from opencood.tools import train_utils
 from opencood.data_utils.pre_processor import build_preprocessor
@@ -132,41 +132,97 @@ class PointPillarDiffusionDec(nn.Module):
         processed_lidar_batch = []
         ori_lidar = batch_dict['origin_lidar_for_diff'][:, 1:]
         batch_indices = batch_dict['origin_lidar_for_diff'][:, 0].long()
+        # for batch_i in range(len(batch_dict['boxes_fused'])):
+        #     bs_mask = (batch_indices == batch_i)
+        #     batch_ori_lidar = ori_lidar[bs_mask].cpu().numpy()  # (N, 4)
+        #     pre_fused_boxes = batch_dict['boxes_fused'][batch_i].cpu().numpy() # (n, 7)
+        #     pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+        #     visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_pre_boxes.png")
+        #     # 将box扩展到相同大小 3:6 hwl
+        #     pre_fused_boxes[:, 3:6] = np.array(self.max_hwl)
+        #     visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_pre_boxes.png")        
+        #     # 获取框中的点云  看一下boxhwl对不对应
+        #     point_indices = points_in_boxes_cpu(batch_ori_lidar[:, :3], pre_fused_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
+        #     gt_voxel_stack = []
+        #     gt_coords_stack = []
+        #     gt_num_points_stack = []
+        #     gt_masks = []
+        #     rotation_angles = -pre_fused_boxes[:, 6].astype(float)
+        #     for car_idx in range(len(pre_fused_boxes)):
+        #         # 获取当前box中的点并平移到以box中心为原点的坐标系 box里没有点怎么办？？特征全为0吗？
+        #         gt_point = batch_ori_lidar[point_indices[car_idx] > 0]
+        #         if len(gt_point) == 0:
+        #             print("此bxo中没有点云！！")
+        #             # pc_range = [-15, -15, -1, 15, 15, 1]
+        #             # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
+        #             continue
+        #         gt_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
+        #         pre_fused_boxes[car_idx][0:3] = [0, 0, 0]
+        #         pc_range = [-15, -15, -1, 15, 15, 1]
+        #         visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
+        #         # 旋转点云 
+        #         gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
+        #         pre_fused_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(pre_fused_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(pre_fused_boxes[car_idx][6])]))[0,0]
+        #         pre_fused_boxes[car_idx][6] -= float(pre_fused_boxes[car_idx][6])
+        #         visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_rotate_{car_idx}.png",scale_bev=10)
+        #         # 体素化 不能并行！！
+        #         processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
+        #         gt_voxel_stack.append(processed_lidar_car['voxel_features'])
+        #         gt_coords_stack.append(processed_lidar_car['voxel_coords'])
+        #         gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])
+        #         # 用unique找到所有值，没有的那个id再对应的boxes_fused里面pop掉
+        #         gt_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
+        #     if len(gt_coords_stack) == 0:
+        #         print(batch_dict['path'])
+        #         print("所有box都没有点云？？")
+        #         pc_range = [-140.8, -40, -3, 140.8, 40, 1]
+        #         visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "./opencood/vis_output/origin_pre_boxes.png")
+        #         processed_lidar = None # 此处只能设置batch_size为1
+        #     else:
+        #         processed_lidar = {
+        #             'voxel_features': np.concatenate(gt_voxel_stack, axis=0),
+        #             'voxel_coords': np.concatenate(gt_coords_stack, axis=0),
+        #             'voxel_num_points': np.concatenate(gt_num_points_stack, axis=0),
+        #             'gt_masks': np.concatenate(gt_masks, axis=0),
+        #             }
+        #     processed_lidar_batch.append(processed_lidar)
         for batch_i in range(len(batch_dict['boxes_fused'])):
-            bs_mask = (batch_indices == batch_i)
-            batch_ori_lidar = ori_lidar[bs_mask].cpu().numpy()  # (N, 4)
-            pre_fused_boxes = batch_dict['boxes_fused'][batch_i].cpu().numpy() # (n, 7)
+            bs_mask = (batch_indices == batch_i)      
+            # 获取框中的点云  看一下boxhwl对不对应
+            batch_ori_lidar = ori_lidar[bs_mask] 
+            pre_fused_boxes = batch_dict['boxes_fused'][batch_i] 
             # pc_range = [-140.8, -40, -3, 140.8, 40, 1]
             # visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/origin_pre_boxes.png")
             # 将box扩展到相同大小 3:6 hwl
-            pre_fused_boxes[:, 3:6] = np.array(self.max_hwl)
+            pre_fused_boxes[:, 3:6] = torch.tensor(self.max_hwl, device=pre_fused_boxes.device)
             # visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_pre_boxes.png")        
-            # 获取框中的点云  看一下boxhwl对不对应
-            point_indices = points_in_boxes_cpu(batch_ori_lidar[:, :3], pre_fused_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
+            point_indices = points_in_boxes_gpu(batch_ori_lidar[:, :3].unsqueeze(dim = 0).float(), pre_fused_boxes[:,[0, 1, 2, 5, 4, 3, 6]].unsqueeze(dim = 0)) 
             gt_voxel_stack = []
             gt_coords_stack = []
             gt_num_points_stack = []
             gt_masks = []
-            rotation_angles = -pre_fused_boxes[:, 6].astype(float)
+            rotation_angles = -pre_fused_boxes[:, 6].float()
             for car_idx in range(len(pre_fused_boxes)):
                 # 获取当前box中的点并平移到以box中心为原点的坐标系 box里没有点怎么办？？特征全为0吗？
-                gt_point = batch_ori_lidar[point_indices[car_idx] > 0]
+                mask = (point_indices[batch_i] == car_idx)
+                gt_point = batch_ori_lidar[mask]
+                gt_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
                 if len(gt_point) == 0:
                     print("此bxo中没有点云！！")
                     # pc_range = [-15, -15, -1, 15, 15, 1]
+                    # pre_fused_boxes[car_idx][0:3] = torch.zeros(3, device=pre_fused_boxes.device, dtype=pre_fused_boxes.dtype)
                     # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
                     continue
-                gt_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
-                # pre_fused_boxes[car_idx][0:3] = [0, 0, 0]
+                # pre_fused_boxes[car_idx][0:3] = torch.zeros(3, device=pre_fused_boxes.device, dtype=pre_fused_boxes.dtype)
                 # pc_range = [-15, -15, -1, 15, 15, 1]
-                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
+                # visualize_gt_boxes(pre_fused_boxes[car_idx].unsqueeze(dim = 0), gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
                 # 旋转点云 
-                gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
-                # pre_fused_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(pre_fused_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(pre_fused_boxes[car_idx][6])]))[0,0]
+                gt_point = common_utils.rotate_points_along_z(gt_point.unsqueeze(dim = 0), rotation_angles[car_idx].unsqueeze(dim = 0))[0]
+                # pre_fused_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(pre_fused_boxes[car_idx][0:3].unsqueeze(0).unsqueeze(0), torch.tensor([-pre_fused_boxes[car_idx][6].item()], device=pre_fused_boxes.device))[0, 0]
                 # pre_fused_boxes[car_idx][6] -= float(pre_fused_boxes[car_idx][6])
-                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_rotate_{car_idx}.png",scale_bev=10)
+                # visualize_gt_boxes(pre_fused_boxes[car_idx].unsqueeze(dim = 0), gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_rotate_{car_idx}.png",scale_bev=10)
                 # 体素化 不能并行！！
-                processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
+                processed_lidar_car = self.pre_processor.preprocess(gt_point.cpu().numpy(), is_car=True)
                 gt_voxel_stack.append(processed_lidar_car['voxel_features'])
                 gt_coords_stack.append(processed_lidar_car['voxel_coords'])
                 gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])

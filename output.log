@@ -1,5 +1,0 @@
-nohup: ignoring input
-Traceback (most recent call last):
-  File "/home/ubuntu/Code2/opencood/tools/train.py", line 13, in <module>
-    from tensorboardX import SummaryWriter
-ModuleNotFoundError: No module named 'tensorboardX'

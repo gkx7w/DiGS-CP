@@ -138,6 +138,27 @@ class PointPillarDiffusionDecDet(nn.Module):
                                                   output_channels=
                                                   args['roi_head'][
                                                       'num_cls'] * 7)
+        self._init_weights(weight_init='xavier')
+
+    def _init_weights(self, weight_init='xavier'):
+        if weight_init == 'kaiming':
+            init_func = nn.init.kaiming_normal_
+        elif weight_init == 'xavier':
+            init_func = nn.init.xavier_normal_
+        elif weight_init == 'normal':
+            init_func = nn.init.normal_
+        else:
+            raise NotImplementedError
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Conv1d):
+                if weight_init == 'normal':
+                    init_func(m.weight, mean=0, std=0.001)
+                else:
+                    init_func(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+        nn.init.normal_(self.reg_layers[-1].weight, mean=0, std=0.001)
     
     def _make_fc_layers(self, input_channels, fc_list, output_channels=None):
         fc_layers = []
@@ -218,6 +239,7 @@ class PointPillarDiffusionDecDet(nn.Module):
                     }
             processed_lidar_batch.append(processed_lidar)
         if processed_lidar_batch[0] is None:
+            batch_dict.update({'processed_lidar': None})
             return batch_dict
         else:
             processed_lidar_dict = merge_features_to_dict(processed_lidar_batch)
@@ -299,6 +321,9 @@ class PointPillarDiffusionDecDet(nn.Module):
                                              stage1=True)
         batch_dict['det_boxes'] = pred_box3d_list
         batch_dict['det_scores'] = scores_list
+        if batch_dict['det_boxes'] is None:
+            output_dict = None
+            return output_dict
         if pred_box3d_list is not None and self.train_stage2:
             batch_dict = self.rmpa(batch_dict)
             batch_dict = self.matcher(batch_dict)
@@ -335,9 +360,12 @@ class PointPillarDiffusionDecDet(nn.Module):
             rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
             rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
             rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-            output_dict['rcnn_cls'] = rcnn_cls
-            output_dict['rcnn_iou'] = rcnn_iou
-            output_dict['rcnn_reg'] = rcnn_reg
+            output_dict['stage2_out'] = {
+                                    'rcnn_cls': rcnn_cls,
+                                    'rcnn_iou': rcnn_iou,
+                                    'rcnn_reg': rcnn_reg,
+                                    }
+            batch_dict['stage2_out'] = output_dict['stage2_out']
             output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
                         
             # if self.use_dir:

@@ -5,12 +5,12 @@
             "name": "pointpillar_early_diffusion",
             "type": "debugpy",
             "request": "launch",
-            "program": "/home/ubuntu/Code2/opencood/tools/train.py",
+            "program": "/data/gkx/Code/opencood/tools/train.py",
             "args": [
                 "--hypes_yaml",
-                "/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diffusion.yaml"
+                "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diffusion.yaml"
             ],
-            "cwd": "/home/ubuntu/Code2",
+            "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件
             "env": {
                 "CUDA_VISIBLE_DEVICES": "0"
@@ -20,16 +20,16 @@
             "name": "pointpillar_early_diffusion_dec",
             "type": "debugpy",
             "request": "launch",
-            "program": "/home/ubuntu/Code2/opencood/tools/train.py",
+            "program": "/data/gkx/Code/opencood/tools/train.py",
             "args": [
                 "--hypes_yaml",
-                "/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
+                "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
                 "--model_dir",
-                "/home/ubuntu/Code2/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
-                "--diff_model_dir",
-                "/home/ubuntu/Code2/checkpoints/10_epoch_diff/net_epoch10.pth"
+                "/data/gkx/Code/checkpoints/10_with_diff_ckpt/net_epoch89.pth",
+                // "--diff_model_dir",
+                // "/data/gkx/Code/checkpoints/10_epoch_diff/net_epoch10.pth"
             ],
-            "cwd": "/home/ubuntu/Code2",
+            "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件
             "env": {
                 "CUDA_VISIBLE_DEVICES": "1"
@@ -39,14 +39,14 @@
             "name": "sdcoper2",
             "type": "debugpy",
             "request": "launch",
-            "program": "/home/ubuntu/Code2/opencood/tools/train.py",
+            "program": "/data/gkx/Code/opencood/tools/train.py",
             "args": [
                 "--hypes_yaml",
-                "/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/SDCoper/SDCoper.yaml",
+                "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/SDCoper/SDCoper.yaml",
                 "--model_dir",
-                "/home/ubuntu/Code2/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
+                "/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
             ],
-            "cwd": "/home/ubuntu/Code2",
+            "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件
             "env": {
                 "CUDA_VISIBLE_DEVICES": "0"

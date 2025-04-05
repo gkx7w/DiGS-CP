@@ -147,6 +147,9 @@ def inference_early_fusion(batch_data, model, dataset):
     return_dict = {"pred_box_tensor" : pred_box_tensor, \
                     "pred_score" : pred_score, \
                     "gt_box_tensor" : gt_box_tensor}
+    # 没有预测框的情况？？
+    if output_dict['ego'] is None:
+        return None
     if "depth_items" in output_dict['ego']:
         return_dict.update({"depth_items" : output_dict['ego']['depth_items']})
     return return_dict

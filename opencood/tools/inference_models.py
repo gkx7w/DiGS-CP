@@ -2,13 +2,15 @@
 # Author: ypy
 
 import sys
+sys.path.append("/data/gkx/Code")
 
-sys.path.append("/home/ubuntu/Code2")
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  
 import argparse
 import os
 import time
 from typing import OrderedDict
-
+import re
 import torch
 import open3d as o3d
 from torch.utils.data import DataLoader
@@ -31,12 +33,16 @@ def test_parser():
     parser.add_argument('--qkv', default='',
                         help='mark this process')
 
-    parser.add_argument('--model_dir', type=str,
-                        default="/home/ubuntu/Code2/checkpoints/moreloss_convert_bsa_best",
+    # parser.add_argument('--model_dir', type=str,
+    #                     default="/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
+    #                     help='Continued training path')
+    
+    parser.add_argument('--diff_model_dir', type=str,
+                        default="/data/gkx/Code/checkpoints/no_diff_ckp/net_epoch89.pth",
                         help='Continued training path')
 
-    # parser.add_argument("--hypes_yaml", "-y", type=str, default="/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/SDCoper/SDCoper.yaml",
-    #                     help='data generation yaml file needed ')
+    parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
+                        help='data generation yaml file needed ')
     
     parser.add_argument('--also_laplace', action='store_true',
                         help="whether to use laplace to simulate noise. Otherwise Gaussian")
@@ -73,166 +79,164 @@ def main():
     model = train_utils.create_model(hypes)
     # we assume gpu is necessary
 
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    torch.cuda.set_device("cuda:1")
-    device = torch.device('cuda:1')
+   
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # torch.cuda.set_device("cuda:1")
+    # device = torch.device('cuda:1')
 
     if torch.cuda.is_available():
         model.to(device)
 
     print('Loading Model from checkpoint')
-    saved_path = opt.model_dir
+    # model_path = opt.model_dir
+    diff_model_path = opt.diff_model_dir
+    
+    # 构建模型文件路径
+    directory = os.path.dirname(diff_model_path)
+    model_name = os.path.splitext(os.path.basename(diff_model_path))[0]
+    yaml_save_path = directory + "/" + "".join(model_name) + "_AP030507_.yaml"
+    
+    print(f"评估结果将保存至: {yaml_save_path}")
 
-    model_name = ["/net_epoch", "", ".pth"]
-    start, end = 0,100
-    for i in range(start, end):
-        model_name[1] = str(i)
-        model_path = saved_path+"".join(model_name)
+    # model = train_utils.load_saved_model_new(model_path, model)
+    model = train_utils.load_saved_model_new(diff_model_path, model)
+    
+    # _,model = train_utils.load_saved_model(model_path, model)
 
-        if not os.path.exists(model_path):
-            # print("跳过一次测试")
-            # break
-            continue
-        yaml_save_path = saved_path + "".join(model_name[:2]) + '_AP030507_.yaml'
+    model.eval()
+    print(type(model))
+            
+    if (str(type(model))[8:-2].split(".")[-1] == "PointPillarSDCoper" or str(type(model))[8:-2].split(".")[
+        -1] == "DiscoNetSDCoper" or str(type(model))[8:-2].split(".")[-1] == "SDCoper") and hypes['model']['args']['activate_stage2']:
+        model.isTrain = False
+    
+    # add noise to pose.
 
-        print(model_path)
-        print(yaml_save_path)
-        model = train_utils.load_saved_model_new(model_path, model)
-        # _,model = train_utils.load_saved_model(model_path, model)
+    pos_std_list = [0]
+    rot_std_list = [0]
+    pos_mean_list = [0]
+    rot_mean_list = [0]
 
-        model.eval()
-        print(type(model))
-             
-        if (str(type(model))[8:-2].split(".")[-1] == "PointPillarSDCoper" or str(type(model))[8:-2].split(".")[
-            -1] == "DiscoNetSDCoper" or str(type(model))[8:-2].split(".")[-1] == "SDCoper") and hypes['model']['args']['activate_stage2']:
-            model.isTrain = False
-        
-        # add noise to pose.
+    if opt.also_laplace:
+        use_laplace_options = [False, True]
+    else:
+        use_laplace_options = [False]
 
-        pos_std_list = [0]
-        rot_std_list = [0]
-        pos_mean_list = [0]
-        rot_mean_list = [0]
+    for use_laplace in use_laplace_options:
+        AP30 = []
+        AP50 = []
+        AP70 = []
+        for (pos_mean, pos_std, rot_mean, rot_std) in zip(pos_mean_list, pos_std_list, rot_mean_list, rot_std_list):
+            # setting noise
+            np.random.seed(303)
+            noise_setting = OrderedDict()
+            noise_args = {'pos_std': pos_std,
+                            'rot_std': rot_std,
+                            'pos_mean': pos_mean,
+                            'rot_mean': rot_mean}
 
-        if opt.also_laplace:
-            use_laplace_options = [False, True]
-        else:
-            use_laplace_options = [False]
+            noise_setting['add_noise'] = True
+            noise_setting['args'] = noise_args
 
-        for use_laplace in use_laplace_options:
-            AP30 = []
-            AP50 = []
-            AP70 = []
-            for (pos_mean, pos_std, rot_mean, rot_std) in zip(pos_mean_list, pos_std_list, rot_mean_list, rot_std_list):
-                # setting noise
-                np.random.seed(303)
-                noise_setting = OrderedDict()
-                noise_args = {'pos_std': pos_std,
-                              'rot_std': rot_std,
-                              'pos_mean': pos_mean,
-                              'rot_mean': rot_mean}
+            suffix = ""
+            if use_laplace:
+                noise_setting['args']['laplace'] = True
+                suffix = "_laplace"
 
-                noise_setting['add_noise'] = True
-                noise_setting['args'] = noise_args
+            # build dataset for each noise setting
+            print('Dataset Building')
+            print(f"Noise Added: {pos_std}/{rot_std}/{pos_mean}/{rot_mean}.")
+            hypes.update({"noise_setting": noise_setting})
+            opencood_dataset = build_dataset(hypes, visualize=True, train=False)
+            data_loader = DataLoader(opencood_dataset,
+                                        batch_size=1,
+                                        num_workers=0,
+                                        collate_fn=opencood_dataset.collate_batch_test,
+                                        shuffle=False,
+                                        # shuffle=True,
+                                        pin_memory=False,
+                                        drop_last=False)
 
-                suffix = ""
-                if use_laplace:
-                    noise_setting['args']['laplace'] = True
-                    suffix = "_laplace"
+            # Create the dictionary for evaluation
+            result_stat = {0.3: {'tp': [], 'fp': [], 'gt': 0, 'score': []},
+                            0.5: {'tp': [], 'fp': [], 'gt': 0, 'score': []},
+                            0.7: {'tp': [], 'fp': [], 'gt': 0, 'score': []}}
 
-                # build dataset for each noise setting
-                print('Dataset Building')
-                print(f"Noise Added: {pos_std}/{rot_std}/{pos_mean}/{rot_mean}.")
-                hypes.update({"noise_setting": noise_setting})
-                opencood_dataset = build_dataset(hypes, visualize=True, train=False)
-                data_loader = DataLoader(opencood_dataset,
-                                         batch_size=1,
-                                         num_workers=0,
-                                         collate_fn=opencood_dataset.collate_batch_test,
-                                         shuffle=False,
-                                         # shuffle=True,
-                                         pin_memory=False,
-                                         drop_last=False)
+            noise_level = f"{pos_std}_{rot_std}_{pos_mean}_{rot_mean}_" + opt.fusion_method + suffix + opt.note
 
-                # Create the dictionary for evaluation
-                result_stat = {0.3: {'tp': [], 'fp': [], 'gt': 0, 'score': []},
-                               0.5: {'tp': [], 'fp': [], 'gt': 0, 'score': []},
-                               0.7: {'tp': [], 'fp': [], 'gt': 0, 'score': []}}
+            for i, batch_data in enumerate(data_loader):
+                print(f"{noise_level}_{i}")
+                if batch_data is None:
+                    continue
+                with torch.no_grad():
+                    batch_data = train_utils.to_device(batch_data, device)
 
-                noise_level = f"{pos_std}_{rot_std}_{pos_mean}_{rot_mean}_" + opt.fusion_method + suffix + opt.note
+                    if opt.fusion_method == 'late':
+                        infer_result = inference_utils.inference_late_fusion(batch_data,
+                                                                                model,
+                                                                                opencood_dataset)
+                    elif opt.fusion_method == 'early':
+                        print("early")
+                        infer_result = inference_utils.inference_early_fusion(batch_data,
+                                                                                model,
+                                                                                opencood_dataset)
+                    elif opt.fusion_method == 'intermediate':
+                        # print("mid")
+                        infer_result = inference_utils.inference_intermediate_fusion(batch_data,
+                                                                                        model,
+                                                                                        opencood_dataset)
+                    elif opt.fusion_method == 'no':
+                        infer_result = inference_utils.inference_no_fusion(batch_data,
+                                                                            model,
+                                                                            opencood_dataset)
+                    elif opt.fusion_method == 'no_w_uncertainty':
+                        infer_result = inference_utils.inference_no_fusion_w_uncertainty(batch_data,
+                                                                                            model,
+                                                                                            opencood_dataset)
+                    elif opt.fusion_method == 'single':
+                        infer_result = inference_utils.inference_no_fusion(batch_data,
+                                                                            model,
+                                                                            opencood_dataset,
+                                                                            single_gt=True)
+                    else:
+                        raise NotImplementedError('Only single, no, no_w_uncertainty, early, late and intermediate'
+                                                    'fusion is supported.')
 
-                for i, batch_data in enumerate(data_loader):
-                    print(f"{noise_level}_{i}")
-                    if batch_data is None:
+                    if infer_result is None:
                         continue
-                    with torch.no_grad():
-                        batch_data = train_utils.to_device(batch_data, device)
+                    pred_box_tensor = infer_result['pred_box_tensor']
+                    gt_box_tensor = infer_result['gt_box_tensor']
+                    pred_score = infer_result['pred_score']
 
-                        if opt.fusion_method == 'late':
-                            infer_result = inference_utils.inference_late_fusion(batch_data,
-                                                                                 model,
-                                                                                 opencood_dataset)
-                        elif opt.fusion_method == 'early':
-                            print("early")
-                            infer_result = inference_utils.inference_early_fusion(batch_data,
-                                                                                  model,
-                                                                                  opencood_dataset)
-                        elif opt.fusion_method == 'intermediate':
-                            # print("mid")
-                            infer_result = inference_utils.inference_intermediate_fusion(batch_data,
-                                                                                         model,
-                                                                                         opencood_dataset)
-                        elif opt.fusion_method == 'no':
-                            infer_result = inference_utils.inference_no_fusion(batch_data,
-                                                                               model,
-                                                                               opencood_dataset)
-                        elif opt.fusion_method == 'no_w_uncertainty':
-                            infer_result = inference_utils.inference_no_fusion_w_uncertainty(batch_data,
-                                                                                             model,
-                                                                                             opencood_dataset)
-                        elif opt.fusion_method == 'single':
-                            infer_result = inference_utils.inference_no_fusion(batch_data,
-                                                                               model,
-                                                                               opencood_dataset,
-                                                                               single_gt=True)
-                        else:
-                            raise NotImplementedError('Only single, no, no_w_uncertainty, early, late and intermediate'
-                                                      'fusion is supported.')
+                    eval_utils.caluclate_tp_fp(pred_box_tensor,
+                                                pred_score,
+                                                gt_box_tensor,
+                                                result_stat,
+                                                0.3)
+                    eval_utils.caluclate_tp_fp(pred_box_tensor,
+                                                pred_score,
+                                                gt_box_tensor,
+                                                result_stat,
+                                                0.5)
+                    eval_utils.caluclate_tp_fp(pred_box_tensor,
+                                                pred_score,
+                                                gt_box_tensor,
+                                                result_stat,
+                                                0.7)
 
-                        pred_box_tensor = infer_result['pred_box_tensor']
-                        gt_box_tensor = infer_result['gt_box_tensor']
-                        pred_score = infer_result['pred_score']
+                torch.cuda.empty_cache()
 
-                        eval_utils.caluclate_tp_fp(pred_box_tensor,
-                                                   pred_score,
-                                                   gt_box_tensor,
-                                                   result_stat,
-                                                   0.3)
-                        eval_utils.caluclate_tp_fp(pred_box_tensor,
-                                                   pred_score,
-                                                   gt_box_tensor,
-                                                   result_stat,
-                                                   0.5)
-                        eval_utils.caluclate_tp_fp(pred_box_tensor,
-                                                   pred_score,
-                                                   gt_box_tensor,
-                                                   result_stat,
-                                                   0.7)
+            ap30, ap50, ap70 = eval_utils.eval_final_results(result_stat,
+                                                                directory, noise_level)
+            AP30.append(ap30)
+            AP50.append(ap50)
+            AP70.append(ap70)
 
-                    torch.cuda.empty_cache()
-
-                ap30, ap50, ap70 = eval_utils.eval_final_results(result_stat,
-                                                                 opt.model_dir, noise_level)
-                AP30.append(ap30)
-                AP50.append(ap50)
-                AP70.append(ap70)
-
-                dump_dict = {'ap30': AP30, 'ap50': AP50, 'ap70': AP70}
-                # 这个也要改,每个model一个
-
-                yaml_save_path =  saved_path+"".join(model_name[:2]) + '_AP030507_emm_pro.yaml'
-                yaml_utils.save_yaml(dump_dict, os.path.join(opt.model_dir, yaml_save_path))
+            dump_dict = {'ap30': AP30, 'ap50': AP50, 'ap70': AP70}
+            # 这个也要改,每个model一个
+        
+            # yaml_save_path =  directory + "/" + "".join(model_name) + '_AP030507_emm_pro.yaml'
+            yaml_utils.save_yaml(dump_dict,  yaml_save_path)
 
 
 if __name__ == '__main__':
