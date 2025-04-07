@@ -123,8 +123,42 @@ model:
 loss:
   core_method: point_pillar_loss_diffusion
   args:
-    cls_weight: 1.0
-    reg: 2.0
+    stage1:
+      pos_cls_weight: 2.0
+      encode_rad_error_by_sin: true
+      cls:
+        type: 'SigmoidFocalLoss'
+        alpha: 0.25
+        gamma: 2.0
+        weight: 2.0
+      reg:
+        type: 'WeightedSmoothL1Loss'
+        sigma: 3.0
+        codewise: true
+        weight: 2.0
+      dir:
+        type: 'WeightedSoftmaxClassificationLoss'
+        weight: 0.2
+        args: *dir_args
+      iou: &iou
+        type: 'WeightedSmoothL1Loss'
+        sigma: 3.0
+        codewise: true
+        weight: 1.0
+
+      use_iou: False
+
+    stage2:
+      cls:
+        type: 'WeightedSigmoidBinaryCELoss'
+        weight: 1.0
+      iou: *iou
+      reg:
+        type: 'WeightedSmoothL1Loss'
+        sigma: 3.0
+        reduction: 'mean'
+        code_weights: [20.0]
+        weight: 1.0
       
 optimizer:
   core_method: Adam

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from opencood.loss.ciassd_loss import CiassdLoss, weighted_smooth_l1_loss
 
 
 class WeightedSmoothL1Loss(nn.Module):
@@ -160,7 +161,7 @@ class PointPillarLossDiffusion(nn.Module):
             # not_selsected_indices = pos_indices[not_selsected]
             weights[:, pos_indices[not_selsected]] = 0
             # print("正样本，负样本数量", num_neg, num_pos, weights[weights != 0].shape)
-        loss_reg = self.reg_loss_func(rcnn_reg, tgt_reg,
+        loss_reg = weighted_smooth_l1_loss(rcnn_reg, tgt_reg,
                                         weights=weights / max(weights.sum(),
                                                                 1)).sum()
 
@@ -170,21 +171,21 @@ class PointPillarLossDiffusion(nn.Module):
         tgt_iou = 2 * (tgt_iou - 0.5)  # normalize to -1, 1
         if self.use_iou_loss == "naive":
             # print("use naive iou loss")
-            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
                                             weights=tgt_cls).mean()
         elif self.use_iou_loss == "naive+":
             # print("use naive+ iou loss")
-            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
                                             weights=weights_iou).mean()
         elif self.use_iou_loss == "naive+W3":
             # print("use naive+W3 iou loss")
             # 这个操作有点问题捏，这里不是0.7，而是0.4，这组实验需要重新跑
             weights_iou[tgt_iou < 0.4] = 3
-            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
                                             weights=weights_iou).mean()
         else:
             print("else use naive iou loss")
-            loss_iou = self.reg_loss_func(rcnn_iou, tgt_iou,
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
                                             weights=tgt_cls).mean()
 
         loss_cls_reduced = loss_cls * self.cls['weight']

@@ -1,0 +1,277 @@
+Left hand visualizing: True
+Creating Model
+/home/ubuntu/anaconda3/envs/ldm/lib/python3.10/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+is_resnet
+Postprocessor Stage2 ReDetect:  False
+Loading Model from checkpoint
+评估结果将保存至: /data/gkx/Code/checkpoints/right_no_diff_ckpt/net_epoch89_AP030507_.yaml
+
+==== Parameters in Model but not in Checkpoint ====
+Missing in checkpoint: cls_layers.0.weight
+Missing in checkpoint: cls_layers.3.weight
+Missing in checkpoint: cls_layers.6.weight
+Missing in checkpoint: cls_layers.6.bias
+Missing in checkpoint: iou_layers.0.weight
+Missing in checkpoint: iou_layers.3.weight
+Missing in checkpoint: iou_layers.6.weight
+Missing in checkpoint: iou_layers.6.bias
+Missing in checkpoint: reg_layers.0.weight
+Missing in checkpoint: reg_layers.3.weight
+Missing in checkpoint: reg_layers.6.weight
+Missing in checkpoint: reg_layers.6.bias
+
+Number of parameters successfully loaded: 819/831
+model data =  tensor(14691259., device='cuda:0')
+<class 'opencood.models.point_pillar_diffusion_dec_det.PointPillarDiffusionDecDet'>
+Dataset Building
+Noise Added: 0/0/0/0.
+Postprocessor Stage2 ReDetect:  False
+Dataset dir: /datasets/OPV2V/test
+0_0_0_0_intermediate_0
+/data/gkx/Code/opencood/pcdet_utils/iou3d_nms/iou3d_nms_utils.py:166: UserWarning: The torch.cuda.*DtypeTensor constructors are no longer recommended. It's best to use methods such as torch.tensor(data, dtype=*, device='cuda') to create tensors. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:83.)
+  overlaps_bev = torch.cuda.FloatTensor(torch.Size((boxes_a.shape[0], boxes_b.shape[0]))).zero_().to(boxes_a.device)  # (N, M)
+0_0_0_0_intermediate_1
+0_0_0_0_intermediate_2
+0_0_0_0_intermediate_3
+0_0_0_0_intermediate_4
+0_0_0_0_intermediate_5
+0_0_0_0_intermediate_6
+0_0_0_0_intermediate_7
+0_0_0_0_intermediate_8
+0_0_0_0_intermediate_9
+0_0_0_0_intermediate_10
+0_0_0_0_intermediate_11
+0_0_0_0_intermediate_12
+0_0_0_0_intermediate_13
+0_0_0_0_intermediate_14
+0_0_0_0_intermediate_15
+0_0_0_0_intermediate_16
+0_0_0_0_intermediate_17
+0_0_0_0_intermediate_18
+0_0_0_0_intermediate_19
+0_0_0_0_intermediate_20
+0_0_0_0_intermediate_21
+0_0_0_0_intermediate_22
+0_0_0_0_intermediate_23
+0_0_0_0_intermediate_24
+0_0_0_0_intermediate_25
+0_0_0_0_intermediate_26
+0_0_0_0_intermediate_27
+0_0_0_0_intermediate_28
+0_0_0_0_intermediate_29
+0_0_0_0_intermediate_30
+0_0_0_0_intermediate_31
+0_0_0_0_intermediate_32
+0_0_0_0_intermediate_33
+0_0_0_0_intermediate_34
+0_0_0_0_intermediate_35
+0_0_0_0_intermediate_36
+此bxo中没有点云！！
+此bxo中没有点云！！
+此bxo中没有点云！！
+此bxo中没有点云！！
+此bxo中没有点云！！
+0_0_0_0_intermediate_37
+此bxo中没有点云！！
+此bxo中没有点云！！
+此bxo中没有点云！！
+此bxo中没有点云！！
+此bxo中没有点云！！
+0_0_0_0_intermediate_38
+0_0_0_0_intermediate_39
+0_0_0_0_intermediate_40
+0_0_0_0_intermediate_41
+0_0_0_0_intermediate_42
+0_0_0_0_intermediate_43
+0_0_0_0_intermediate_44
+0_0_0_0_intermediate_45
+0_0_0_0_intermediate_46
+0_0_0_0_intermediate_47
+0_0_0_0_intermediate_48
+0_0_0_0_intermediate_49
+0_0_0_0_intermediate_50
+0_0_0_0_intermediate_51
+0_0_0_0_intermediate_52
+0_0_0_0_intermediate_53
+0_0_0_0_intermediate_54
+0_0_0_0_intermediate_55
+0_0_0_0_intermediate_56
+0_0_0_0_intermediate_57
+0_0_0_0_intermediate_58
+0_0_0_0_intermediate_59
+0_0_0_0_intermediate_60
+0_0_0_0_intermediate_61
+0_0_0_0_intermediate_62
+0_0_0_0_intermediate_63
+0_0_0_0_intermediate_64
+0_0_0_0_intermediate_65
+0_0_0_0_intermediate_66
+0_0_0_0_intermediate_67
+0_0_0_0_intermediate_68
+0_0_0_0_intermediate_69
+0_0_0_0_intermediate_70
+0_0_0_0_intermediate_71
+0_0_0_0_intermediate_72
+0_0_0_0_intermediate_73
+0_0_0_0_intermediate_74
+0_0_0_0_intermediate_75
+0_0_0_0_intermediate_76
+0_0_0_0_intermediate_77
+0_0_0_0_intermediate_78
+0_0_0_0_intermediate_79
+0_0_0_0_intermediate_80
+0_0_0_0_intermediate_81
+0_0_0_0_intermediate_82
+0_0_0_0_intermediate_83
+0_0_0_0_intermediate_84
+0_0_0_0_intermediate_85
+0_0_0_0_intermediate_86
+0_0_0_0_intermediate_87
+0_0_0_0_intermediate_88
+0_0_0_0_intermediate_89
+0_0_0_0_intermediate_90
+0_0_0_0_intermediate_91
+0_0_0_0_intermediate_92
+0_0_0_0_intermediate_93
+0_0_0_0_intermediate_94
+0_0_0_0_intermediate_95
+0_0_0_0_intermediate_96
+0_0_0_0_intermediate_97
+0_0_0_0_intermediate_98
+0_0_0_0_intermediate_99
+0_0_0_0_intermediate_100
+0_0_0_0_intermediate_101
+0_0_0_0_intermediate_102
+0_0_0_0_intermediate_103
+0_0_0_0_intermediate_104
+0_0_0_0_intermediate_105
+0_0_0_0_intermediate_106
+0_0_0_0_intermediate_107
+0_0_0_0_intermediate_108
+0_0_0_0_intermediate_109
+0_0_0_0_intermediate_110
+0_0_0_0_intermediate_111
+0_0_0_0_intermediate_112
+0_0_0_0_intermediate_113
+0_0_0_0_intermediate_114
+0_0_0_0_intermediate_115
+0_0_0_0_intermediate_116
+0_0_0_0_intermediate_117
+0_0_0_0_intermediate_118
+0_0_0_0_intermediate_119
+0_0_0_0_intermediate_120
+0_0_0_0_intermediate_121
+0_0_0_0_intermediate_122
+0_0_0_0_intermediate_123
+0_0_0_0_intermediate_124
+0_0_0_0_intermediate_125
+0_0_0_0_intermediate_126
+0_0_0_0_intermediate_127
+0_0_0_0_intermediate_128
+0_0_0_0_intermediate_129
+0_0_0_0_intermediate_130
+0_0_0_0_intermediate_131
+0_0_0_0_intermediate_132
+0_0_0_0_intermediate_133
+0_0_0_0_intermediate_134
+0_0_0_0_intermediate_135
+0_0_0_0_intermediate_136
+0_0_0_0_intermediate_137
+0_0_0_0_intermediate_138
+0_0_0_0_intermediate_139
+0_0_0_0_intermediate_140
+0_0_0_0_intermediate_141
+0_0_0_0_intermediate_142
+0_0_0_0_intermediate_143
+0_0_0_0_intermediate_144
+0_0_0_0_intermediate_145
+0_0_0_0_intermediate_146
+0_0_0_0_intermediate_147
+0_0_0_0_intermediate_148
+0_0_0_0_intermediate_149
+0_0_0_0_intermediate_150
+0_0_0_0_intermediate_151
+0_0_0_0_intermediate_152
+0_0_0_0_intermediate_153
+0_0_0_0_intermediate_154
+0_0_0_0_intermediate_155
+0_0_0_0_intermediate_156
+0_0_0_0_intermediate_157
+0_0_0_0_intermediate_158
+0_0_0_0_intermediate_159
+0_0_0_0_intermediate_160
+0_0_0_0_intermediate_161
+0_0_0_0_intermediate_162
+0_0_0_0_intermediate_163
+0_0_0_0_intermediate_164
+0_0_0_0_intermediate_165
+0_0_0_0_intermediate_166
+0_0_0_0_intermediate_167
+0_0_0_0_intermediate_168
+0_0_0_0_intermediate_169
+0_0_0_0_intermediate_170
+0_0_0_0_intermediate_171
+0_0_0_0_intermediate_172
+0_0_0_0_intermediate_173
+0_0_0_0_intermediate_174
+0_0_0_0_intermediate_175
+0_0_0_0_intermediate_176
+0_0_0_0_intermediate_177
+0_0_0_0_intermediate_178
+0_0_0_0_intermediate_179
+0_0_0_0_intermediate_180
+0_0_0_0_intermediate_181
+0_0_0_0_intermediate_182
+0_0_0_0_intermediate_183
+0_0_0_0_intermediate_184
+0_0_0_0_intermediate_185
+0_0_0_0_intermediate_186
+0_0_0_0_intermediate_187
+0_0_0_0_intermediate_188
+0_0_0_0_intermediate_189
+0_0_0_0_intermediate_190
+0_0_0_0_intermediate_191
+此bxo中没有点云！！
+0_0_0_0_intermediate_192
+0_0_0_0_intermediate_193
+0_0_0_0_intermediate_194
+0_0_0_0_intermediate_195
+0_0_0_0_intermediate_196
+0_0_0_0_intermediate_197
+0_0_0_0_intermediate_198
+0_0_0_0_intermediate_199
+0_0_0_0_intermediate_200
+0_0_0_0_intermediate_201
+0_0_0_0_intermediate_202
+0_0_0_0_intermediate_203
+0_0_0_0_intermediate_204
+0_0_0_0_intermediate_205
+0_0_0_0_intermediate_206
+0_0_0_0_intermediate_207
+0_0_0_0_intermediate_208
+0_0_0_0_intermediate_209
+0_0_0_0_intermediate_210
+0_0_0_0_intermediate_211
+0_0_0_0_intermediate_212
+0_0_0_0_intermediate_213
+0_0_0_0_intermediate_214
+0_0_0_0_intermediate_215
+0_0_0_0_intermediate_216
+0_0_0_0_intermediate_217
+0_0_0_0_intermediate_218
+0_0_0_0_intermediate_219
+0_0_0_0_intermediate_220
+0_0_0_0_intermediate_221
+0_0_0_0_intermediate_222
+0_0_0_0_intermediate_223
+0_0_0_0_intermediate_224
+0_0_0_0_intermediate_225
+0_0_0_0_intermediate_226
+0_0_0_0_intermediate_227
+0_0_0_0_intermediate_228
+0_0_0_0_intermediate_229
+0_0_0_0_intermediate_230
+0_0_0_0_intermediate_231
+0_0_0_0_intermediate_232
+0_0_0_0_intermediate_233

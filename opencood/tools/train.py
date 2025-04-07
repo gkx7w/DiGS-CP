@@ -125,6 +125,8 @@ def main():
         init_epoch = 78
         model = train_utils.load_saved_model_new(opt.diff_model_dir, model)
         model = train_utils.load_saved_model_new(opt.model_dir, model)
+        print("loading model from", opt.model_dir)
+        print("loading diffusion model from", opt.diff_model_dir)
         
     elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
         trainable_layers = [
@@ -132,8 +134,10 @@ def main():
             'roi_head.factor_encoder',
             'cls_layers',
             'iou_layers',
-            'reg_layers']
+            'reg_layers'
+                            ]
         init_epoch = 78
+        print("loading model from", opt.model_dir)
         model = train_utils.load_saved_model_new(opt.model_dir, model)
         
     else: # 从头开始训练的情况

@@ -339,7 +339,7 @@ class Cond_Diff_Denoise(nn.Module):
         gt_masks = data_dict['voxel_gt_mask']
         # 解耦后的融合特征为条件，无则为none
         cond = data_dict.get('fused_object_factors', None)
-        if len(cond) == 0:
+        if cond is not None and len(cond) == 0:
             cond = None
         combined_pred = cond
         # 最终结果存储 - 保持与输入相同的嵌套结构
@@ -354,7 +354,6 @@ class Cond_Diff_Denoise(nn.Module):
                 unique_values_in_mask = torch.unique(this_gt_mask)
                 # 获取相应的条件
                 gt_cond = None
-                # cond = None
                 if cond is not None:
                     if isinstance(cond, list) and batch_idx < len(cond):
                         gt_cond = cond[batch_idx]

@@ -25,9 +25,9 @@
                 "--hypes_yaml",
                 "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
                 "--model_dir",
-                "/data/gkx/Code/checkpoints/10_with_diff_ckpt/net_epoch89.pth",
-                // "--diff_model_dir",
-                // "/data/gkx/Code/checkpoints/10_epoch_diff/net_epoch10.pth"
+                "/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
+                "--diff_model_dir",
+                "/data/gkx/Code/checkpoints/10_epoch_diff/net_epoch10.pth"
             ],
             "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件
