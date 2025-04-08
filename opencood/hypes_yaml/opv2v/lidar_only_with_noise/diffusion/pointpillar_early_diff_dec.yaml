@@ -58,7 +58,7 @@ data_augment:
 
 # anchor box related
 postprocess: &postprocess_params
-  core_method: 'FpvrcnnPostprocessor' # VoxelPostprocessor, BevPostprocessor supported
+  core_method: 'FpvrcnnPostprocessor' # VoxelPostprocessor, BevPostprocessor, FpvrcnnPostprocessor supported
   gt_range: *cav_lidar
   iou_stage1: False
   anchor_args:
@@ -87,6 +87,8 @@ model:
   args:
   #    activate_stage2: False
     activate_stage2: true
+    is_inference: false
+    # is_inference: true
     N: *batch_size
     T: *T
     voxel_size: *voxel_size
@@ -99,6 +101,7 @@ model:
     supervise_single: false
 
     preprocess: *preprocess
+    post_processer: *postprocess_params
 
     mean_vfe:
       num_point_features: 4
@@ -116,7 +119,7 @@ model:
       num_iou: 2
       use_dir: True
       num_dir: 4
-    post_processer: *postprocess_params
+    
     vsa:
       enlarge_selection_boxes: true
       point_source: 'raw_points'

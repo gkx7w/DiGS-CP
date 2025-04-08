@@ -392,7 +392,8 @@ class PointPillarLossDiffusion(nn.Module):
                     epoch, batch_id + 1, batch_len,
                     total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss))
 
-        writer.add_scalar('Reconstruction_loss', diff_loss,
+        if 'diff_loss' in self.loss_dict:
+            writer.add_scalar('Reconstruction_loss', diff_loss,
                           epoch*batch_len + batch_id)
         writer.add_scalar('Regression_loss', reg_loss,
                           epoch*batch_len + batch_id)

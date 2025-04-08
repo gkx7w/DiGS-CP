@@ -73,6 +73,9 @@ def main():
 
     #  start
     hypes = yaml_utils.load_resume_yaml(opt.hypes_yaml, opt)
+    # 添加梯度累积参数，如果hypes中没有定义，则默认为1
+    accumulation_steps = hypes['train_params'].get('accumulation_steps', 4)  # 默认累积4个批次
+    print(f'Using gradient accumulation with {accumulation_steps} steps')
 
     print('Dataset Building')
     opencood_train_dataset = build_dataset(hypes, visualize=False, train=True)
@@ -130,8 +133,8 @@ def main():
         
     elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
         trainable_layers = [
-            'mdd',
-            'roi_head.factor_encoder',
+            # 'mdd',
+            # 'roi_head.factor_encoder',
             'cls_layers',
             'iou_layers',
             'reg_layers'
@@ -182,6 +185,11 @@ def main():
     for epoch in range(init_epoch, max(epoches, init_epoch)):
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
+            
+        # 添加梯度累积相关的计数器
+        accumulated_samples = 0
+        optimizer.zero_grad()  # 在每个epoch开始时清空梯度
+        
         for i, batch_data in enumerate(train_loader):
             # if i < 5744:#3156 5645
             #     print(i)
@@ -199,8 +207,8 @@ def main():
                 # fixed some param
                 # model.stage1_fix()
 
-            model.zero_grad()
-            optimizer.zero_grad()
+            # model.zero_grad()
+            # optimizer.zero_grad()
             batch_data = train_utils.to_device(batch_data, device)
             batch_data['ego']['epoch'] = epoch
             
@@ -218,6 +226,8 @@ def main():
             if ouput_dict is None:
                 continue
             final_loss = criterion(ouput_dict, batch_data['ego']['label_dict'])
+            # 根据累积步数缩放损失
+            final_loss = final_loss / accumulation_steps
             criterion.logging(epoch, i, len(train_loader), writer)
 
             if supervise_single_flag:
@@ -227,7 +237,11 @@ def main():
             # back-propagation
             # without enough data, should'n pass gd_fn
             should_backward = True
-            if (str(type(model))[8:-2].split(".")[-1] == "PointPillarBaselineCompare" or str(type(model))[8:-2].split(".")[-1] == "DiscoNetCompare" or str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt2" or str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt256" or str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevtCompare") and hypes['model']['args']['activate_stage2']:
+            if (str(type(model))[8:-2].split(".")[-1] == "PointPillarBaselineCompare" or 
+                str(type(model))[8:-2].split(".")[-1] == "DiscoNetCompare" or 
+                str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt2" or 
+                str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt256" or 
+                str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevtCompare") and hypes['model']['args']['activate_stage2']:
                 if ouput_dict["det_scores_fused"] is None or sum([t.shape[0] for t in ouput_dict["det_scores_fused"]]) == 0:
                     should_backward = False
 
@@ -235,7 +249,12 @@ def main():
                 # print("现有的框的数量：",sum([t.shape[0] for t in ouput_dict["det_scores_fused"]]))
             if should_backward:
                 final_loss.backward()
-                optimizer.step()
+                accumulated_samples += 1
+                
+                # 当累积的样本数达到设定值或是最后一个批次时，更新参数
+                if accumulated_samples % accumulation_steps == 0 or i == len(train_loader) - 1:
+                    optimizer.step()
+                    optimizer.zero_grad()  # 清空梯度以准备下一轮累积
 
 
         if epoch % hypes['train_params']['save_freq'] == 0:

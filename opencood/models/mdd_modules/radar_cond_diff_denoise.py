@@ -11,6 +11,7 @@ from functools import partial
 import time
 from opencood.utils.MDD_utils import log_txt_as_img, exists, default, ismap, isimage, mean_flat, count_params, instantiate_from_config, extract_into_tensor, make_beta_schedule, noise_like, detach
 import os
+from scipy import linalg
 from opencood.models.attresnet_modules.self_attn import AttFusion
 from opencood.models.attresnet_modules.auto_encoder import AutoEncoder
 from opencood.models.mdd_modules.unet import DiffusionUNet
@@ -333,10 +334,10 @@ class Cond_Diff_Denoise(nn.Module):
         return x_noisy
 
     def forward(self, data_dict):
-        # 获取batch中每个GT框的特征
+        # 获取batch中每个box框的特征
         batch_gt_spatial_features = data_dict['batch_gt_spatial_features']
         coords = data_dict['voxel_coords']
-        gt_masks = data_dict['voxel_gt_mask']
+        box_masks = data_dict['voxel_gt_mask']
         # 解耦后的融合特征为条件，无则为none
         cond = data_dict.get('fused_object_factors', None)
         if cond is not None and len(cond) == 0:
@@ -349,32 +350,32 @@ class Cond_Diff_Denoise(nn.Module):
             for batch_idx, gt_features in enumerate(batch_gt_spatial_features):
                 batch_mask = coords[:, 0] == batch_idx
                 this_coords = coords[batch_mask, :]  # (batch_idx_voxel, 4)
-                # 获取该batch中的gt_mask
-                this_gt_mask = gt_masks[batch_mask]  # (batch_idx_voxel, )
-                unique_values_in_mask = torch.unique(this_gt_mask)
+                # 获取该batch中的box_mask
+                this_box_mask = box_masks[batch_mask]  # (batch_idx_voxel, )
+                unique_values_in_mask = torch.unique(this_box_mask)
                 # 获取相应的条件
-                gt_cond = None
+                box_cond = None
                 if cond is not None:
                     if isinstance(cond, list) and batch_idx < len(cond):
-                        gt_cond = cond[batch_idx]
+                        box_cond = cond[batch_idx]
                     else:
-                        gt_cond = combined_pred
+                        box_cond = combined_pred
                     # 创建一个布尔掩码，指示哪些元素要保留
-                    # 假设gt_cond的长度与可能的mask值对应
+                    # 假设box_cond的长度与可能的mask值对应
                     keep_indices = []
-                    for i in range(len(gt_cond)):
+                    for i in range(len(box_cond)):
                         # 检查索引+1是否在mask的唯一值中
                         if i in unique_values_in_mask:
                             keep_indices.append(i)
-                    # 如果有要保留的索引，则过滤gt_cond
+                    # 如果有要保留的索引，则过滤box_cond
                     if keep_indices:
                         # 使用索引选择器保留需要的元素
-                        gt_cond = gt_cond[keep_indices]
+                        box_cond = box_cond[keep_indices]
                     else:
                         # 如果没有要保留的元素，创建一个空tensor保持原始维度结构
-                        gt_cond = torch.zeros((0,) + gt_cond.shape[1:], device=gt_cond.device, dtype=gt_cond.dtype)
+                        box_cond = torch.zeros((0,) + box_cond.shape[1:], device=box_cond.device, dtype=box_cond.dtype)
                 
-                x_start = gt_features  # 当前GT框的特征
+                x_start = gt_features  # 当前box框的特征
                 latent_shape = x_start.shape
                 t = torch.full((x_start.shape[0],), self.num_timesteps-1, device=x_start.device, dtype=torch.long)
                 noise = default(None, lambda: torch.randn_like(x_start))
@@ -382,58 +383,129 @@ class Cond_Diff_Denoise(nn.Module):
                 # 逆扩散过程
                 for _t in reversed(range(1, self.num_timesteps)):
                     _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
-                    x_noisy = self.p_sample(x_noisy, gt_cond, _t, upsam=False)
+                    x_noisy = self.p_sample(x_noisy, box_cond, _t, upsam=False)
                 _t = 0
                 _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
-                x_noisy = self.p_sample(x_noisy, gt_cond, _t, upsam=True)
-                # 存储当前GT框的预测结果
+                x_noisy = self.p_sample(x_noisy, box_cond, _t, upsam=True)
+                # 存储当前box框的预测结果
                 batch_pred_features.append(x_noisy)
             data_dict['pred_feature'] = batch_pred_features
+            # 计算FID
+            fid_score = self.compute_channel_wise_frechet_distance(batch_pred_features[0], batch_gt_spatial_features[0])
+            fid_noise_score = self.compute_channel_wise_frechet_distance(x_noisy, batch_gt_spatial_features[0])
+            print("FID:", fid_score,"    noise FID:",fid_noise_score)
         else:
             # 对每个batch处理
             for batch_idx, gt_features in enumerate(batch_gt_spatial_features):
                 batch_mask = coords[:, 0] == batch_idx
                 this_coords = coords[batch_mask, :]  # (batch_idx_voxel, 4)
-                # 获取该batch中的gt_mask
-                this_gt_mask = gt_masks[batch_mask]  # (batch_idx_voxel, )
-                unique_values_in_mask = torch.unique(this_gt_mask)
+                # 获取该batch中的box_mask
+                this_box_mask = box_masks[batch_mask]  # (batch_idx_voxel, )
+                unique_values_in_mask = torch.unique(this_box_mask)
                 
                 # 获取相应的条件
-                gt_cond = None
+                box_cond = None
                 if cond is not None:
                     if isinstance(cond, list) and batch_idx < len(cond):
-                        gt_cond = cond[batch_idx]
+                        box_cond = cond[batch_idx]
                     else:
-                        gt_cond = combined_pred
+                        box_cond = combined_pred
                     
                     # 创建一个布尔掩码，指示哪些元素要保留
                     keep_indices = []
-                    for i in range(len(gt_cond)):
+                    for i in range(len(box_cond)):
                         # 检查索引是否在mask的唯一值中
                         if i in unique_values_in_mask:
                             keep_indices.append(i)
-                    # 如果有要保留的索引，则过滤gt_cond
+                    # 如果有要保留的索引，则过滤box_cond
                     if keep_indices:
                         # 使用索引选择器保留需要的元素
-                        gt_cond = gt_cond[keep_indices]
+                        box_cond = box_cond[keep_indices]
                     else:
                         # 如果没有要保留的元素，创建一个空tensor保持原始维度结构
-                        gt_cond = torch.zeros((0,) + gt_cond.shape[1:], device=gt_cond.device, dtype=gt_cond.dtype)
+                        box_cond = torch.zeros((0,) + box_cond.shape[1:], device=box_cond.device, dtype=box_cond.dtype)
                 
-                x_start = gt_features  # 当前GT框的特征
+                x_start = gt_features  # 当前box框的特征
                 latent_shape = x_start.shape
                 noise = default(None, lambda: torch.randn_like(x_start))
                 t = torch.full((x_start.shape[0],), self.num_timesteps-1, device=x_start.device, dtype=torch.long)
                 x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
                 
                 # 逆扩散过程
-                x_noisy = self.p_sample_loop(x_noisy, gt_cond, x_start.shape)
+                x_noisy = self.p_sample_loop(x_noisy, box_cond, x_start.shape)
                 
-                # 存储当前GT框的预测结果
+                # 存储当前box框的预测结果
                 batch_pred_features.append(x_noisy)
             data_dict['pred_feature'] = batch_pred_features
         
         return data_dict
+
+
+def compute_frechet_distance(tensor1, tensor2, channel_wise=True, eps=1e-6):
+    """计算两个张量之间的Fréchet距离
+    
+    参数：
+        tensor1: 形状为[B, C, H, W]的第一个张量或向量集合
+        tensor2: 形状为[B, C, H, W]的第二个张量或向量集合
+        channel_wise: 是否按通道计算距离，默认为True
+        eps: 数值稳定性参数，默认为1e-6
+    
+    返回:
+        frechet_distance: 计算得到的Fréchet距离
+    """
+    # 检查输入是否为4D张量，如果是则按通道处理
+    if len(tensor1.shape) == 4 and len(tensor2.shape) == 4 and channel_wise:
+        total_dist = 0
+        channels = tensor1.shape[1]  # 通道数
+        
+        for c in range(channels):
+            # 提取第c个通道并展平为[B, H*W]
+            channel1 = tensor1[:, c, :, :].reshape(tensor1.shape[0], -1)
+            channel2 = tensor2[:, c, :, :].reshape(tensor2.shape[0], -1)
+            
+            # 计算该通道的Fréchet距离
+            vectors1 = channel1
+            vectors2 = channel2
+            
+            # 转换为numpy数组以便使用scipy.linalg
+            if torch.is_tensor(vectors1):
+                vectors1 = vectors1.cpu().numpy()
+            if torch.is_tensor(vectors2):
+                vectors2 = vectors2.cpu().numpy()
+            
+            # 计算均值向量
+            mu1 = np.mean(vectors1, axis=0)
+            mu2 = np.mean(vectors2, axis=0)
+            
+            # 计算协方差矩阵
+            sigma1 = np.cov(vectors1, rowvar=False)
+            sigma2 = np.cov(vectors2, rowvar=False)
+            
+            # 计算均值差的平方范数
+            diff = mu1 - mu2
+            mean_diff_squared = np.sum(diff * diff)
+            
+            # 数值稳定性
+            sigma1 = sigma1 + np.eye(sigma1.shape[0]) * eps
+            sigma2 = sigma2 + np.eye(sigma2.shape[0]) * eps
+            
+            # 计算协方差矩阵乘积的平方根
+            covmean = linalg.sqrtm(sigma1.dot(sigma2))
+            
+            # 确保没有复数部分
+            if np.iscomplexobj(covmean):
+                covmean = covmean.real
+            
+            # 计算trace项
+            trace_term = np.trace(sigma1 + sigma2 - 2 * covmean)
+            
+            # 计算通道距离
+            dist = mean_diff_squared + trace_term
+            total_dist += dist
+        
+        # 返回平均距离
+        return total_dist / channels
+
 
 
 def main():

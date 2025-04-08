@@ -69,7 +69,13 @@ class PointPillarDiffusionDecDet(nn.Module):
         grid_size = np.round((lidar_range[3:6] - lidar_range[:3]) /
                              np.array(args['voxel_size'])).astype(np.int64)
         self.batch_len = args['N']
+        self.max_hwl = args['max_hwl']
+        self.voxel_size = args['voxel_size']
         self.train_stage2 = args['activate_stage2']
+        self.is_inference = args.get('is_inference', False)
+        
+        self.pre_processor = SpVoxelPreprocessor(args["preprocess"], train = True)
+        self.post_processor = FpvrcnnPostprocessor(args['post_processer'], train=True)
         # PIllar VFE
         self.pillar_vfe = PillarVFE(args['pillar_vfe'],
                                     num_point_features=4,
@@ -86,16 +92,14 @@ class PointPillarDiffusionDecDet(nn.Module):
             print("not_resnet")
             self.backbone = BaseBEVBackbone(args['base_bev_backbone'],
                                             64)  # or you can use ResNetBEVBackbone, which is stronger
-        self.voxel_size = args['voxel_size']
-        self.mdd = Cond_Diff_Denoise(args['mdd_block'], 32)
-        self.max_hwl = args['max_hwl']
-        self.voxel_preprocessor = build_preprocessor(args['preprocess'], train=True)
-        self.fusion_net = nn.ModuleList()
-        for i in range(len(args['base_bev_backbone']['layer_nums'])):
-            if args['fusion_method'] == "max":
-                self.fusion_net.append(MaxFusion())
-            if args['fusion_method'] == "att":
-                self.fusion_net.append(AttFusion(args['att']['feat_dim'][i]))
+        
+        # self.voxel_preprocessor = build_preprocessor(args['preprocess'], train=True)
+        # self.fusion_net = nn.ModuleList()
+        # for i in range(len(args['base_bev_backbone']['layer_nums'])):
+        #     if args['fusion_method'] == "max":
+        #         self.fusion_net.append(MaxFusion())
+        #     if args['fusion_method'] == "att":
+        #         self.fusion_net.append(AttFusion(args['att']['feat_dim'][i]))
         # self.out_channel = args['mdd_block']['model']['out_ch']
         self.out_channel = sum(args['base_bev_backbone']['num_upsample_filter'])
         self.shrink_flag = False
@@ -110,10 +114,6 @@ class PointPillarDiffusionDecDet(nn.Module):
             self.naive_compressor = NaiveCompressor(64, args['compression'])
 
         self.head = Head(**args['head'])
-        self.pre_processor = SpVoxelPreprocessor(args["preprocess"], train = True)
-        self.post_processor = FpvrcnnPostprocessor(args['post_processer'],
-                                                   train=True)
-
         self.rmpa = Resolutionaware_Multiscale_Progressive_Attention(args['vsa'], args['voxel_size'],
                                        args['lidar_range'],
                                        num_bev_features=128,
@@ -123,21 +123,17 @@ class PointPillarDiffusionDecDet(nn.Module):
         self.roi_head = RoIHead(args['roi_head'])
         self.roi_head.decoupling = True
         
+        self.mdd = Cond_Diff_Denoise(args['mdd_block'], 32)
+        
         fc_layers = [args['roi_head']['n_fc_neurons']] * 2
         pre_channel = 256 # 以融合后的解耦因子作为输入
         self.dp_ratio = args['roi_head']['dp_ratio']
-        self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
-                                                            fc_layers,
-                                                            output_channels=
-                                                            args['roi_head'][
-                                                                'num_cls'])
+        self.cls_layers, pre_channel = self._make_fc_layers(pre_channel, fc_layers,
+                                                            output_channels=args['roi_head']['num_cls'])
         self.iou_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=
-                                                  args['roi_head']['num_cls'])
+                                                  output_channels=args['roi_head']['num_cls'])
         self.reg_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=
-                                                  args['roi_head'][
-                                                      'num_cls'] * 7)
+                                                  output_channels=args['roi_head']['num_cls'] * 7)
         self._init_weights(weight_init='xavier')
 
     def _init_weights(self, weight_init='xavier'):
@@ -194,37 +190,37 @@ class PointPillarDiffusionDecDet(nn.Module):
             # visualize_gt_boxes(pre_fused_boxes, batch_ori_lidar, pc_range, "/home/ubuntu/Code2/opencood/vis_output/expend_pre_boxes.png")        
             # 获取框中的点云  看一下boxhwl对不对应
             point_indices = points_in_boxes_cpu(batch_ori_lidar[:, :3], pre_fused_boxes[:,[0, 1, 2, 5, 4, 3, 6]]) 
-            gt_voxel_stack = []
-            gt_coords_stack = []
-            gt_num_points_stack = []
-            gt_masks = []
+            box_voxel_stack = []
+            box_coords_stack = []
+            box_num_points_stack = []
+            box_masks = []
             rotation_angles = -pre_fused_boxes[:, 6].astype(float)
             for car_idx in range(len(pre_fused_boxes)):
                 # 获取当前box中的点并平移到以box中心为原点的坐标系 box里没有点怎么办？？特征全为0吗？
-                gt_point = batch_ori_lidar[point_indices[car_idx] > 0]
-                if len(gt_point) == 0:
+                box_point = batch_ori_lidar[point_indices[car_idx] > 0]
+                if len(box_point) == 0:
                     print("此bxo中没有点云！！")
                     # pc_range = [-15, -15, -1, 15, 15, 1]
-                    # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
+                    # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
                     continue
-                gt_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
+                box_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
                 # pre_fused_boxes[car_idx][0:3] = [0, 0, 0]
                 # pc_range = [-15, -15, -1, 15, 15, 1]
-                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
+                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
                 # 旋转点云 
-                gt_point = common_utils.rotate_points_along_z(gt_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
+                box_point = common_utils.rotate_points_along_z(box_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
                 # pre_fused_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(pre_fused_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(pre_fused_boxes[car_idx][6])]))[0,0]
                 # pre_fused_boxes[car_idx][6] -= float(pre_fused_boxes[car_idx][6])
-                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], gt_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_rotate_{car_idx}.png",scale_bev=10)
+                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_rotate_{car_idx}.png",scale_bev=10)
                 # 体素化 不能并行！！
-                processed_lidar_car = self.pre_processor.preprocess(gt_point, is_car=True)
-                gt_voxel_stack.append(processed_lidar_car['voxel_features'])
-                gt_coords_stack.append(processed_lidar_car['voxel_coords'])
-                gt_num_points_stack.append(processed_lidar_car['voxel_num_points'])
+                processed_lidar_car = self.pre_processor.preprocess(box_point, is_car=True)
+                box_voxel_stack.append(processed_lidar_car['voxel_features'])
+                box_coords_stack.append(processed_lidar_car['voxel_coords'])
+                box_num_points_stack.append(processed_lidar_car['voxel_num_points'])
                 # 用unique找到所有值，没有的那个id再对应的boxes_fused里面pop掉
-                gt_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
+                box_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
 
-            if len(gt_coords_stack) == 0:
+            if len(box_coords_stack) == 0:
                 print(batch_dict['path'])
                 print("所有box都没有点云？？")
                 pc_range = [-140.8, -40, -3, 140.8, 40, 1]
@@ -232,10 +228,10 @@ class PointPillarDiffusionDecDet(nn.Module):
                 processed_lidar = None # 此处只能设置batch_size为1
             else:
                 processed_lidar = {
-                    'voxel_features': np.concatenate(gt_voxel_stack, axis=0),
-                    'voxel_coords': np.concatenate(gt_coords_stack, axis=0),
-                    'voxel_num_points': np.concatenate(gt_num_points_stack, axis=0),
-                    'gt_masks': np.concatenate(gt_masks, axis=0),
+                    'voxel_features': np.concatenate(box_voxel_stack, axis=0),
+                    'voxel_coords': np.concatenate(box_coords_stack, axis=0),
+                    'voxel_num_points': np.concatenate(box_num_points_stack, axis=0),
+                    'gt_masks': np.concatenate(box_masks, axis=0),
                     }
             processed_lidar_batch.append(processed_lidar)
         if processed_lidar_batch[0] is None:
@@ -251,7 +247,7 @@ class PointPillarDiffusionDecDet(nn.Module):
     
     
     def forward(self, batch_dict):
-        # decople
+        # decouple
         dec_voxel_features = batch_dict['dec_processed_lidar']['voxel_features']
         dec_voxel_coords = batch_dict['dec_processed_lidar']['voxel_coords']
         dec_voxel_num_points = batch_dict['dec_processed_lidar']['voxel_num_points']
@@ -283,38 +279,23 @@ class PointPillarDiffusionDecDet(nn.Module):
         if self.compression:
             spatial_features = self.naive_compressor(spatial_features)
 
-        # multiscale fusion
+        # multiscale backbone
         feature_list = self.backbone.get_multiscale_feature(spatial_features)
 
-        # print("特征列表尺度：",[t.shape for t in feature_list])
         mv_feature = self.backbone.decode_multiscale_feature(feature_list)
-        # for i, t in enumerate(feature_list):
 
-        #     out = normalized_affine_bev(t, normalized_affine_matrix, record_len)
-        #     batch_dict["dec_spatial_features_%dx" % 2 ** (i + 1)] = out
-
-        # batch_dict['dec_spatial_features'] = normalized_affine_bev(batch_dict['dec_spatial_features'],
-        #                                                            normalized_affine_matrix, record_len)
         # 不涉及任何投影
         for i, t in enumerate(feature_list):
-            #  对特征投影 ，但是当下，没有对框投影，但是又对点和特征投影了，所以精度有问题，
-            #  真实情况应该是，第一阶段不应该涉及任何投影，在第二阶段才能投影
             batch_dict["dec_spatial_features_%dx" % 2 ** (i + 1)] = t
-
-        batch_dict['dec_spatial_features'] = batch_dict['dec_spatial_features']
         
         if self.shrink_flag:
-            # fused_feature = self.shrink_conv(fused_feature)
             mv_feature = self.shrink_conv(mv_feature)
-
 
         batch_dict['stage1_out'] = self.head(mv_feature)
 
         data_dict, output_dict = {}, {}
         data_dict['ego'], output_dict['ego'] = batch_dict, batch_dict
 
-
-        # choose output in sd
         # 返回nms后每个batch融合后的框
         pred_box3d_list, scores_list = \
             self.post_processor.post_process(data_dict, output_dict,
@@ -326,7 +307,9 @@ class PointPillarDiffusionDecDet(nn.Module):
             return output_dict
         if pred_box3d_list is not None and self.train_stage2:
             batch_dict = self.rmpa(batch_dict)
+            # 先投影再用iou来寻找公共物体
             batch_dict = self.matcher(batch_dict)
+            # 获取解耦因子
             batch_dict = self.roi_head(batch_dict)
             
         # diff       
@@ -334,7 +317,8 @@ class PointPillarDiffusionDecDet(nn.Module):
         if batch_dict['processed_lidar'] is None:
             output_dict = None
             return output_dict
-        else:
+        
+        if not self.is_inference:
             voxel_features = batch_dict['processed_lidar']['voxel_features']
             voxel_coords = batch_dict['processed_lidar']['voxel_coords']
             voxel_num_points = batch_dict['processed_lidar']['voxel_num_points']
@@ -349,27 +333,23 @@ class PointPillarDiffusionDecDet(nn.Module):
             # 得到低层BEV特征 [B,C,H,W] 
             batch_dict = self.pillar_vfe(batch_dict, stage='diff')
             batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       
-            # 将gt抠出来的bev特征输入到mdd中
+            # 将box抠出来的bev特征输入到mdd中
             # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
             batch_dict = self.mdd(batch_dict)
             # ！！V2X-R没有单独训练diffusion，是整体一起训的
             output_dict = {'pred_feature' : batch_dict['pred_feature'], 
-                        'gt_feature' : batch_dict['batch_gt_spatial_features']}
+                           'gt_feature' : batch_dict['batch_gt_spatial_features']}
 
-            # 第二阶段预测输出 [42,256]  --> [42,256,1]
-            rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-            rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
-            rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-            output_dict['stage2_out'] = {
-                                    'rcnn_cls': rcnn_cls,
-                                    'rcnn_iou': rcnn_iou,
-                                    'rcnn_reg': rcnn_reg,
-                                    }
-            batch_dict['stage2_out'] = output_dict['stage2_out']
-            output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
-                        
-            # if self.use_dir:
-            #     dm = self.dir_head(spatial_features_2d)
-            #     output_dict.update({'dir_preds': dm})
+        # 第二阶段预测输出 [42,256]  --> [42,256,1]
+        rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
+        rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        output_dict['stage2_out'] = {
+                                'rcnn_cls': rcnn_cls,
+                                'rcnn_iou': rcnn_iou,
+                                'rcnn_reg': rcnn_reg,
+                                }
+        batch_dict['stage2_out'] = output_dict['stage2_out']
+        output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
 
-            return output_dict
+        return output_dict
