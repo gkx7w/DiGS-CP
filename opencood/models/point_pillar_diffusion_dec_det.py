@@ -179,6 +179,9 @@ class PointPillarDiffusionDecDet(nn.Module):
         processed_lidar_batch = []
         ori_lidar = batch_dict['origin_lidar_for_diff'][:, 1:]
         batch_indices = batch_dict['origin_lidar_for_diff'][:, 0].long()
+        # 推理的时候没有早期融合的点云，获取每个视角已经投影到ego坐标系的点云，与已投影的boxes_fused对应，但我推理的时候也不用diff呀
+        # ori_lidar = batch_dict['origin_lidar_for_vsa_project'][:, 1:]
+        # batch_indices = batch_dict['origin_lidar_for_vsa_project'][:, 0].long()
         for batch_i in range(len(batch_dict['boxes_fused'])):
             bs_mask = (batch_indices == batch_i)
             batch_ori_lidar = ori_lidar[bs_mask].cpu().numpy()  # (N, 4)
@@ -306,8 +309,9 @@ class PointPillarDiffusionDecDet(nn.Module):
             output_dict = None
             return output_dict
         if pred_box3d_list is not None and self.train_stage2:
+            # 先投影
             batch_dict = self.rmpa(batch_dict)
-            # 先投影再用iou来寻找公共物体
+            # 用iou来寻找公共物体
             batch_dict = self.matcher(batch_dict)
             # 获取解耦因子
             batch_dict = self.roi_head(batch_dict)
@@ -341,15 +345,15 @@ class PointPillarDiffusionDecDet(nn.Module):
                            'gt_feature' : batch_dict['batch_gt_spatial_features']}
 
         # 第二阶段预测输出 [42,256]  --> [42,256,1]
-        rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-        rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
-        rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-        output_dict['stage2_out'] = {
-                                'rcnn_cls': rcnn_cls,
-                                'rcnn_iou': rcnn_iou,
-                                'rcnn_reg': rcnn_reg,
-                                }
-        batch_dict['stage2_out'] = output_dict['stage2_out']
-        output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
+        # rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        # rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
+        # rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        # output_dict['stage2_out'] = {
+        #                         'rcnn_cls': rcnn_cls,
+        #                         'rcnn_iou': rcnn_iou,
+        #                         'rcnn_reg': rcnn_reg,
+        #                         }
+        # batch_dict['stage2_out'] = output_dict['stage2_out']
+        # output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
 
         return output_dict

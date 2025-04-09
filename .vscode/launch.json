@@ -25,7 +25,7 @@
                 "--hypes_yaml",
                 "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
                 "--model_dir",
-                "/data/gkx/Code/checkpoints/train_all_with_ckpt/net_epoch89.pth",
+                "/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
                 // "--diff_model_dir",
                 // "/data/gkx/Code/checkpoints/10_epoch_diff/net_epoch10.pth"
             ],

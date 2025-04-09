@@ -133,11 +133,13 @@ def main():
         
     elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
         trainable_layers = [
-            # 'mdd',
+            'mdd',
             # 'roi_head.factor_encoder',
-            'cls_layers',
-            'iou_layers',
-            'reg_layers'
+            # 'cls_layers',
+            # 'iou_layers',
+            # 'reg_layers',
+            # 'attention_2',
+            # 'layernorm_2'
                             ]
         init_epoch = 78
         print("loading model from", opt.model_dir)
@@ -185,16 +187,7 @@ def main():
     for epoch in range(init_epoch, max(epoches, init_epoch)):
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
-            
-        # 添加梯度累积相关的计数器
-        accumulated_samples = 0
-        optimizer.zero_grad()  # 在每个epoch开始时清空梯度
-        
         for i, batch_data in enumerate(train_loader):
-            # if i < 5744:#3156 5645
-            #     print(i)
-            #     continue
-            
             if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or ('processed_lidar' in batch_data['ego'] and batch_data['ego']['processed_lidar'] == {}):
                 continue
             # the model will be evaluation mode during validation
@@ -207,8 +200,8 @@ def main():
                 # fixed some param
                 # model.stage1_fix()
 
-            # model.zero_grad()
-            # optimizer.zero_grad()
+            model.zero_grad()
+            optimizer.zero_grad()
             batch_data = train_utils.to_device(batch_data, device)
             batch_data['ego']['epoch'] = epoch
             
@@ -226,8 +219,6 @@ def main():
             if ouput_dict is None:
                 continue
             final_loss = criterion(ouput_dict, batch_data['ego']['label_dict'])
-            # 根据累积步数缩放损失
-            final_loss = final_loss / accumulation_steps
             criterion.logging(epoch, i, len(train_loader), writer)
 
             if supervise_single_flag:
@@ -249,12 +240,8 @@ def main():
                 # print("现有的框的数量：",sum([t.shape[0] for t in ouput_dict["det_scores_fused"]]))
             if should_backward:
                 final_loss.backward()
-                accumulated_samples += 1
-                
-                # 当累积的样本数达到设定值或是最后一个批次时，更新参数
-                if accumulated_samples % accumulation_steps == 0 or i == len(train_loader) - 1:
-                    optimizer.step()
-                    optimizer.zero_grad()  # 清空梯度以准备下一轮累积
+                optimizer.step()
+                torch.cuda.empty_cache()
 
 
         if epoch % hypes['train_params']['save_freq'] == 0:
@@ -264,7 +251,7 @@ def main():
         scheduler.step(epoch)
         
         opencood_train_dataset.reinitialize()
-        torch.cuda.empty_cache()
+        
 
     print('Training Finished, checkpoints saved to %s' % saved_path)
 

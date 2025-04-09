@@ -38,7 +38,7 @@ def test_parser():
     #                     help='Continued training path')
     
     parser.add_argument('--diff_model_dir', type=str,
-                        default="/data/gkx/Code/opencood/logs/opv2v_point_pillar_lidar_early_2025_04_08_14_30_17/net_epoch79.pth",
+                        default="/data/gkx/Code/checkpoints/train_det/net_epoch87.pth",
                         help='Continued training path')
 
     parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",

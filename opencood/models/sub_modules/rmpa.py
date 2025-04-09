@@ -191,7 +191,7 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
         for bs_idx in range(batch_size):
             bs_mask = (batch_indices == bs_idx)
             sampled_points = src_points[bs_mask].unsqueeze(dim=0)  # (1, N, 3)
-            # print("每辆车的点运数量",sampled_points.shape)
+            # print("每辆车的点云数量",sampled_points.shape)
             tmp_bs_idx_points.append(sampled_points)
             if sampled_points.shape[1]>max_pointnum_batch:
                 max_pointnum_batch = sampled_points.shape[1]
