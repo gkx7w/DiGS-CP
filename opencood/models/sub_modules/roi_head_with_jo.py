@@ -507,7 +507,7 @@ class RoIHead(nn.Module):
         #point_coords不是batch维度的，要把空的box对应的point_coords也mask
         xyz_batch_id = 0
         
-        for bs_idx in range(batch_dict['record_len']):
+        for bs_idx in range(batch_size):
             if empty_roi_mask[bs_idx] or kpt_mask_flag:
                 xyz_batch_cnt[xyz_batch_id] = len(point_coords[bs_idx])
                 kpt_mask_flag = False
@@ -835,17 +835,36 @@ class RoIHead(nn.Module):
         object_factors_batch = []
         # 可以直接融合，取平均值，因子内融合
         record_len = [int(l) for l in batch_dict['record_len']]
+        # 获取实际batch中box的总数量
+        batch_box_len = []
+        current_idx = 0
+        for l in record_len:
+            total_boxes = 0
+            for j in range(l):
+                total_boxes += len(dets_list[current_idx + j])
+            batch_box_len.append(total_boxes)
+            current_idx += l
+        # 首先计算每个batch的起始索引
+        start_indices = [0]
+        for i in range(len(batch_box_len)-1):
+            start_indices.append(start_indices[-1] + batch_box_len[i])
+        
         for i, l in enumerate(record_len):
-            object_factors = [] 
+            object_factors = []
+            start_idx = start_indices[i]
+            end_idx = start_idx + batch_box_len[i]
+            # 获取当前批次的box特征
+            current_boxes_factors = boxes_factors[start_idx:end_idx]
             for j in range(1, cur_cluster_id[i]):
-                object_factors.append(boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
+                object_factors.append(current_boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
             if len(object_factors) > 0:  # 如果有非背景聚类
                 object_factors = torch.cat(object_factors,dim=0)
             else:
                 print("没有非背景聚类???预测的box被过滤了")
                 object_factors = None
-        if object_factors is not None:
-            object_factors_batch.append(object_factors)
+            
+            if object_factors is not None:
+                object_factors_batch.append(object_factors)
 
         batch_dict["fused_object_factors"] = object_factors_batch # 物体数量, 32 *8
         

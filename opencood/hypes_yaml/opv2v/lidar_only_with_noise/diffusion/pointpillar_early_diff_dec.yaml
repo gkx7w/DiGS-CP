@@ -5,8 +5,8 @@ test_dir: "/datasets/OPV2V/test"
 
 yaml_parser: "load_point_pillar_params"
 train_params:
-  batch_size: &batch_size 1
-  epoches: 89
+  batch_size: &batch_size 2
+  epoches: 93
   eval_freq: 2
   save_freq: 1
   max_cav: &max_cav 5
@@ -220,14 +220,12 @@ model:
         attn_resolutions: [16]
         dropout: 0.0
         resamp_with_conv: True
-        # d_cond: 256
+        d_cond: 256
         n_head: 8
       diffusion:
-        beta_schedule: linear
-        beta_start: 0.0005
-        beta_end: 0.02
-        num_diffusion_timesteps: 5
-        sampling_timesteps: 5
+        beta_schedule: cosine
+        num_diffusion_timesteps: 1000
+        sampling_timesteps: 6
         ddim_sampling_eta: 0.0
         guidance_scale: 3.0
     

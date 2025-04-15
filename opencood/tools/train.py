@@ -74,8 +74,8 @@ def main():
     #  start
     hypes = yaml_utils.load_resume_yaml(opt.hypes_yaml, opt)
     # 添加梯度累积参数，如果hypes中没有定义，则默认为1
-    accumulation_steps = hypes['train_params'].get('accumulation_steps', 4)  # 默认累积4个批次
-    print(f'Using gradient accumulation with {accumulation_steps} steps')
+    # accumulation_steps = hypes['train_params'].get('accumulation_steps', 4)  # 默认累积4个批次
+    # print(f'Using gradient accumulation with {accumulation_steps} steps')
 
     print('Dataset Building')
     opencood_train_dataset = build_dataset(hypes, visualize=False, train=True)
@@ -125,7 +125,7 @@ def main():
             'roi_head.factor_encoder',
             'attention_2',
             'layernorm_2']
-        init_epoch = 78
+        init_epoch = 78   
         model = train_utils.load_saved_model_new(opt.diff_model_dir, model)
         model = train_utils.load_saved_model_new(opt.model_dir, model)
         print("loading model from", opt.model_dir)
@@ -134,7 +134,7 @@ def main():
     elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
         trainable_layers = [
             'mdd',
-            # 'roi_head.factor_encoder',
+            'roi_head.factor_encoder',
             # 'cls_layers',
             # 'iou_layers',
             # 'reg_layers',
@@ -148,7 +148,7 @@ def main():
     else: # 从头开始训练的情况
         trainable_layers = []  # 不需要特别解冻任何层
         init_epoch = 0
-
+    
     if trainable_layers:
         for param in model.parameters():
             param.requires_grad = False
@@ -178,7 +178,7 @@ def main():
 
     # record training
     writer = SummaryWriter(saved_path)
-
+    
     print('Training start')
     epoches = hypes['train_params']['epoches']
     supervise_single_flag = False if not hasattr(opencood_train_dataset, "supervise_single") else opencood_train_dataset.supervise_single

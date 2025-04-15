@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import sys
-sys.path.append("/home/ubuntu/Code2")
+sys.path.append("/data/gkx/Code")
 import torch
 torch.autograd.set_detect_anomaly(True)
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 import time
 import argparse
 import os
@@ -113,29 +116,37 @@ def main():
     # optimizer setup
     optimizer = train_utils.setup_optimizer(hypes, model)
 
-    # 定义共用的训练层名称列表
-    trainable_layers = [
-        'mdd',
-        'attention_2',
-        'layernorm_2'
-    ]
-    if opt.model_dir and opt.diff_model_dir:
-        trainable_layers.append('roi_head.factor_encoder')  # 针对特定情况添加
+     # 根据不同条件设置需要解冻的层
+    if opt.model_dir and opt.diff_model_dir: # 两个模型路径都给定的情况
+        trainable_layers = [
+            'roi_head.factor_encoder',
+            'attention_2',
+            'layernorm_2']
+        init_epoch = 78   
+        model = train_utils.load_saved_model_new(opt.diff_model_dir, model)
+        model = train_utils.load_saved_model_new(opt.model_dir, model)
+        print("loading model from", opt.model_dir)
+        print("loading diffusion model from", opt.diff_model_dir)
+        
+    elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
+        trainable_layers = [
+            'mdd',
+            'roi_head.factor_encoder',
+            # 'cls_layers',
+            # 'iou_layers',
+            # 'reg_layers',
+            # 'attention_2',
+            # 'layernorm_2'
+                            ]
+        init_epoch = 78
+        print("loading model from", opt.model_dir)
+        model = train_utils.load_saved_model_new(opt.model_dir, model)
+        
+    else: # 从头开始训练的情况
+        trainable_layers = []  # 不需要特别解冻任何层
+        init_epoch = 0
 
-    # 加载模型和设置初始epoch
-    if opt.model_dir or opt.diff_model_dir:
-        # 加载预训练模型
-        init_epoch = 78 if opt.model_dir else 10
-        
-        # 加载模型权重
-        if opt.model_dir and opt.diff_model_dir:
-            model = train_utils.load_saved_model_new(opt.diff_model_dir, model)
-            model = train_utils.load_saved_model_new(opt.model_dir, model)
-        else:
-            saved_path = opt.model_dir if opt.model_dir else opt.diff_model_dir
-            model = train_utils.load_saved_model_new(saved_path, model)
-        
-        # 冻结所有参数，然后只解冻指定层
+    if trainable_layers:
         for param in model.parameters():
             param.requires_grad = False
         
@@ -148,21 +159,15 @@ def main():
                 print(f"解冻层: {name}")
         
         print(f"总共解冻 {unfrozen_count} 个参数组")
-        
-        # 设置学习率调度器并创建保存路径
-        scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch)
-        print(f"从第 {init_epoch} 个epoch恢复训练")
-    else:
-        # 从头开始训练
-        init_epoch = 0
-        scheduler = train_utils.setup_lr_schedular(hypes, optimizer)
 
-    # 创建保存路径（无论是恢复训练还是从头开始）
+    # 设置学习率调度器
+    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch if init_epoch > 0 else None)
     saved_path = train_utils.setup_train(hypes)
 
-    # 重构优化器以只包含可训练参数
-    trainable_params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = type(optimizer)(trainable_params, **optimizer.defaults)
+    if init_epoch > 0:
+        print(f"从第 {init_epoch} 个epoch恢复训练")
+    else:
+        print("从头开始训练")
 
     # we assume gpu is necessary
     if torch.cuda.is_available():
@@ -194,12 +199,12 @@ def main():
             self.count += n
             self.avg = self.sum / self.count
     # 然后在训练代码中使用
-    data_time = AverageMeter()
-    compute_time = AverageMeter()
-    end = time.time()
+    # data_time = AverageMeter()
+    # compute_time = AverageMeter()
+    # end = time.time()
 
     # 设置梯度累积步数
-    accumulation_steps = 1  # 可以根据需要调整，每4个批次更新一次权重
+    accumulation_steps = 8  # 可以根据需要调整，每4个批次更新一次权重
     for epoch in range(init_epoch, max(epoches, init_epoch)):
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
@@ -207,7 +212,7 @@ def main():
         optimizer.zero_grad()
         
         for i, batch_data in enumerate(train_loader):
-            data_time.update(time.time() - end)
+            # data_time.update(time.time() - end)
             # if i < 5744:#3156 5645
             #     print(i)
             #     continue
@@ -265,10 +270,10 @@ def main():
                     optimizer.zero_grad()  # 更新后清零梯度
 
             
-            compute_time.update(time.time() - end - data_time.val)
-            end = time.time()
-            if i % 10 == 0:
-                print(f"Data loading: {data_time.avg:.4f}s, Computing: {compute_time.avg:.4f}s")
+            # compute_time.update(time.time() - end - data_time.val)
+            # end = time.time()
+            # if i % 10 == 0:
+            #     print(f"Data loading: {data_time.avg:.4f}s, Computing: {compute_time.avg:.4f}s")
 
 
          # 处理最后不足accumulation_steps的批次

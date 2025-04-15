@@ -182,6 +182,13 @@ def load_saved_model_new(saved_path, model):
     for k in model_dict.keys():
         if k not in checkpoint.keys():
             print(f"Missing in checkpoint: {k}")
+            
+    # 检查哪些参数被加载了
+    print("\n==== Parameters Successfully Loaded ====")
+    loaded_params = []
+    for k in model_dict.keys():
+        if k in checkpoint.keys():
+            print(f"Loaded: {k}, Shape: {model_dict[k].shape}")
     
     state_dict = {k: v for k, v in checkpoint.items() if k in model_dict.keys()}
     print(f"\nNumber of parameters successfully loaded: {len(state_dict)}/{len(model_dict)}")

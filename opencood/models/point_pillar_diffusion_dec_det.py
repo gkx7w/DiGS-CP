@@ -28,6 +28,7 @@ from opencood.models.sub_modules.naive_compress import NaiveCompressor
 from opencood.models.fuse_modules.fusion_in_one import MaxFusion, AttFusion, DiscoFusion, V2VNetFusion, V2XViTFusion, When2commFusion
 from opencood.data_utils.pre_processor.sp_voxel_preprocessor import SpVoxelPreprocessor
 from opencood.data_utils.datasets.early_fusion_dataset_diffusion import visualize_gt_boxes
+from opencood.visualization.simple_vis import visualize_averaged_channels_individual
 
 def regroup(x, record_len):
     cum_sum_len = torch.cumsum(record_len, dim=0)
@@ -340,10 +341,13 @@ class PointPillarDiffusionDecDet(nn.Module):
             # 将box抠出来的bev特征输入到mdd中
             # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
             batch_dict = self.mdd(batch_dict)
-            # ！！V2X-R没有单独训练diffusion，是整体一起训的
-            output_dict = {'pred_feature' : batch_dict['pred_feature'], 
-                           'gt_feature' : batch_dict['batch_gt_spatial_features']}
-
+            # loss算错了！应该算noise之间的loss
+            output_dict = {'pred_noise' : batch_dict['pred_noise'], 
+                           'gt_noise' : batch_dict['gt_noise'],
+                           't': batch_dict['t'],}
+            # 可视化特征
+            # visualize_averaged_channels_individual(batch_dict['batch_gt_spatial_features'][0], f"/data/gkx/Code/opencood/bev_visualizations/gt_bev_{i}")
+            # visualize_averaged_channels_individual(output_dict['pred_feature'][0], f"/data/gkx/Code/opencood/bev_visualizations/pre_bev_{i}")
         # 第二阶段预测输出 [42,256]  --> [42,256,1]
         # rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
         # rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]

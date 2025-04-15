@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from einops import reduce
 from opencood.loss.ciassd_loss import CiassdLoss, weighted_smooth_l1_loss
 
 
@@ -111,6 +112,8 @@ class PointPillarLossDiffusion(nn.Module):
         self.reg_loss_func = WeightedSmoothL1Loss()
         self.alpha = 0.25
         self.gamma = 2.0
+        self.sigma_data = 0.1
+        self.num_timesteps = 1000 # 与mdd中的总时间步长对应
         self.total_loss = 0
         self.diff_loss = 0
         self.rcnn_loss = 0
@@ -194,18 +197,25 @@ class PointPillarLossDiffusion(nn.Module):
         
         return loss_cls_reduced,loss_iou_reduced,loss_reg_reduced
         
-    def cal_diff_loss(self, p_e_batch, g_e_batch,weights):
+    def cal_diff_loss(self, p_e_batch, g_e_batch,t_e_batch):
         # 初始化总损失
         diff_loss = 0.0
         # 对每个批次中的每个特征计算损失并累加
         for batch_idx in range(len(p_e_batch)):
-            p_features = p_e_batch[batch_idx]
-            g_features = g_e_batch[batch_idx]
+            p_noise = p_e_batch[batch_idx]
+            g_noise = g_e_batch[batch_idx]
+            t = t_e_batch[batch_idx]
+            loss_weight = self.get_loss_weights(self.num_timesteps, beta_schedule='cosine', sigma_data=self.sigma_data)
             # 计算当前批次的损失
+            # batch_diff_loss = self.weighted_diffusion_loss(
+            #     p_noise,
+            #     g_noise,
+            #     t,
+            #     loss_weight
+            # )
             batch_diff_loss = self.diff_loss_func(
-                p_features,
-                g_features,
-                weights=weights
+                p_noise,
+                g_noise,
             )
             # 累加总损失
             diff_loss += batch_diff_loss
@@ -247,10 +257,11 @@ class PointPillarLossDiffusion(nn.Module):
                 'reg_loss': self.loss_reg_reduced,
             })
 
-        if 'pred_feature' in output_dict.keys() and 'rcnn_label_dict' in output_dict.keys():
-            p_e_batch = output_dict['pred_feature'] 
-            g_e_batch = output_dict['gt_feature']
-            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,weights=self.sigmoid_weight(3, epoch) if train else 0) #self.sigmoid_weight(4, epoch)
+        if 'pred_noise' in output_dict.keys() and 'rcnn_label_dict' in output_dict.keys():
+            p_e_batch = output_dict['pred_noise'] 
+            g_e_batch = output_dict['gt_noise']
+            t_e_batch = output_dict['t']
+            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = rcnn_loss + diff_loss
 
             self.total_loss = total_loss.item()
@@ -258,10 +269,11 @@ class PointPillarLossDiffusion(nn.Module):
             self.loss_dict.update({'total_loss': self.total_loss,
                                     'diff_loss': self.diff_loss
                                     })
-        elif 'pred_feature' in output_dict.keys():
-            p_e_batch = output_dict['pred_feature']  # 批量列表
-            g_e_batch = output_dict['gt_feature']  # 批量列表
-            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,weights=1)
+        elif 'pred_noise' in output_dict.keys():
+            p_e_batch = output_dict['pred_noise']  # 批量列表
+            g_e_batch = output_dict['gt_noise']  # 批量列表
+            t_e_batch = output_dict['t']
+            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = diff_loss
 
             self.total_loss = total_loss.item()
@@ -310,8 +322,95 @@ class PointPillarLossDiffusion(nn.Module):
 
     def diff_loss_func(self, pred_noise: torch.Tensor,
                       gt_noise: torch.Tensor,
-                      weights: int):
+                      weights=1):
         return ((gt_noise - pred_noise) ** 2).sum(dim=1).mean()*weights
+    
+    def get_loss_weights(self, num_timesteps, beta_schedule='linear', sigma_data=1.0):
+        """
+        计算所有时间步的损失权重
+        
+        参数:
+            num_timesteps: 扩散过程的时间步数
+            beta_schedule: 噪声调度类型，如'linear'或'cosine'
+            sigma_data: 数据的固有噪声水平
+            
+        返回:
+            所有时间步的损失权重 [num_timesteps]
+        """
+        # 首先获取所有时间步的噪声水平
+        if beta_schedule == 'linear':
+            # 线性噪声调度
+            betas = torch.linspace(0.0001, 0.02, num_timesteps)
+            alphas = 1. - betas
+            alphas_cumprod = torch.cumprod(alphas, dim=0)
+            sigmas = torch.sqrt((1 - alphas_cumprod) / alphas_cumprod)
+        elif beta_schedule == 'cosine':
+            # 余弦噪声调度
+            steps = torch.arange(num_timesteps + 1, dtype=torch.float32) / num_timesteps
+            alpha_bar = torch.cos((steps + 0.008) / 1.008 * torch.pi / 2) ** 2
+            alpha_bar = alpha_bar / alpha_bar[0]
+            alphas_cumprod = alpha_bar[1:]
+            sigmas = torch.sqrt((1 - alphas_cumprod) / alphas_cumprod)
+        else:
+            raise ValueError(f"未知的噪声调度类型: {beta_schedule}")
+        
+        # 根据噪声水平计算损失权重
+        loss_weights = []
+        for sigma in sigmas:
+            weight = sigma**2 / (sigma**2 + sigma_data**2)
+            loss_weights.append(weight)
+        
+        return torch.tensor(loss_weights)
+
+
+    def weighted_diffusion_loss(self, model_out, target, t, loss_weights):
+        """
+        计算扩散模型的加权损失
+        
+        参数:
+            model_out: 模型预测的噪声 [batch_size, channels, height, width]
+            target: 目标噪声 [batch_size, channels, height, width]  
+            t: 时间步索引 [batch_size]
+            loss_weights: 每个时间步的损失权重 [num_timesteps]
+            
+        返回:
+            标量损失值
+        """
+        # 计算每个元素的均方误差
+        loss = F.mse_loss(model_out, target, reduction='none')
+        
+        # 对通道和空间维度求平均，只保留批次维度
+        loss = reduce(loss, 'b ... -> b', 'sum')
+        
+        # 根据时间步提取权重并应用
+        weights = self.extract(loss_weights, t, loss.shape)
+        loss = loss * weights
+        
+        # 对批次取平均得到最终损失
+        return loss.mean()
+
+
+    def extract(self, values, t, shape):
+        """
+        从values中提取与时间步t对应的值
+        
+        参数:
+            values: 包含所有时间步对应值的张量 [num_timesteps, ...]
+            t: 索引张量 [batch_size]
+            shape: 输出形状
+            
+        返回:
+            提取的值 [shape]
+        """
+        batch_size = t.shape[0]
+        out = values.gather(-1, t.cpu())
+        
+        # 处理广播所需的形状调整
+        while len(out.shape) < len(shape):
+            out = out[..., None]
+            
+        return out.to(t.device)
+    
     @staticmethod
     def sigmoid_cross_entropy_with_logits(input: torch.Tensor, target: torch.Tensor):
         """ PyTorch Implementation for tf.nn.sigmoid_cross_entropy_with_logits:

@@ -6,7 +6,8 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import copy
-
+import torch
+from matplotlib.colors import Normalize
 from opencood.tools.inference_utils import get_cav_box
 import opencood.visualization.simple_plot3d.canvas_3d as canvas_3d
 import opencood.visualization.simple_plot3d.canvas_bev as canvas_bev
@@ -497,3 +498,92 @@ def visualize_one_color(infer_result, pcd, color_select, pc_range, save_path, me
     plt.clf()
     plt.close()
     # plt.show()
+
+
+
+def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=5):
+    """
+    Visualize Bird's Eye View (BEV) features.
+    
+    Args:
+        bev_feature: Tensor of shape [N, C, H, W]
+        save_dir: Directory to save visualizations
+        n_cols: Number of columns in the grid plot
+    """
+    import os
+    os.makedirs(save_dir, exist_ok=True)
+    
+    N, C, H, W = bev_feature.shape
+    
+    # Create a figure for each of the N BEV features
+    for n in range(N):
+        # Get the current BEV feature
+        feature = bev_feature[n]  # Shape: [C, H, W]
+        
+        # Calculate how many rows we need
+        n_rows = (C + n_cols - 1) // n_cols
+        
+        # Create a figure with subplots
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 3, n_rows * 3))
+        fig.suptitle(f'BEV Feature {n+1}/{N}', fontsize=16)
+        
+        # Flatten axes for easy indexing if multiple rows
+        if n_rows > 1:
+            axes = axes.flatten()
+        
+        # Loop through each channel
+        for c in range(C):
+            # Get the current channel
+            channel_data = feature[c].detach().cpu().numpy()  # Shape: [H, W]
+            
+            # Normalize data for better visualization
+            norm = Normalize(vmin=channel_data.min(), vmax=channel_data.max())
+            
+            # Get the corresponding axis
+            if C <= n_cols and n_rows == 1:
+                ax = axes[c] if n_cols > 1 else axes
+            else:
+                ax = axes[c]
+            
+            # Plot the feature as a heatmap
+            im = ax.imshow(channel_data, cmap='viridis', norm=norm)
+            ax.set_title(f'Channel {c}')
+            ax.axis('off')
+            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        
+        # Hide empty subplots
+        for c in range(C, n_rows * n_cols):
+            if C <= n_cols and n_rows == 1:
+                if c < n_cols:  # Check if we're still within the valid range
+                    if n_cols > 1:
+                        axes[c].axis('off')
+            else:
+                axes[c].axis('off')
+        
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        plt.savefig(f'{save_dir}/bev_feature_{n+1}.png', dpi=200)
+        plt.close(fig)
+        
+def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz'):
+    import os
+    os.makedirs(save_dir, exist_ok=True)
+    
+    N, C, H, W = bev_feature.shape
+    
+    for n in range(N):
+        # Average across channels
+        feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
+        
+        # Create a new figure for each BEV
+        fig, ax = plt.subplots(figsize=(6, 6))
+        
+        norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
+        im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
+        ax.set_title(f'BEV {n+1} (avg)')
+        ax.axis('off')
+        fig.colorbar(im, ax=ax)
+        
+        # Save individual figure
+        plt.tight_layout()
+        plt.savefig(f'{save_dir}/bev_{n+1}_avg_channels.png', dpi=200)
+        plt.close(fig)
