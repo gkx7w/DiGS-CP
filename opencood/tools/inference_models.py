@@ -5,7 +5,7 @@ import sys
 sys.path.append("/data/gkx/Code")
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'  
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  
 import argparse
 import os
 import time
@@ -38,7 +38,7 @@ def test_parser():
     #                     help='Continued training path')
     
     parser.add_argument('--diff_model_dir', type=str,
-                        default="/data/gkx/Code/checkpoints/train_factordet_no_mdd/net_epoch88.pth",
+                        default="/data/gkx/Code/opencood/logs/train_with1000mdd_det/net_epoch87.pth",
                         help='Continued training path')
 
     parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",

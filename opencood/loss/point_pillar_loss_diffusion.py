@@ -134,9 +134,9 @@ class PointPillarLossDiffusion(nn.Module):
         return max_weight / 2 * (- (np.tanh(epoch / 4 - 5)) + 1)
 
     def stage2_loss(self, rcnn_cls,rcnn_iou,rcnn_reg,tgt_cls,tgt_iou,tgt_reg):
-        rcnn_cls = rcnn_cls[0].view(1, -1, 1)
-        rcnn_iou = rcnn_iou[0].view(1, -1, 1)
-        rcnn_reg = rcnn_reg[0].view(1, -1, 7)
+        rcnn_cls = rcnn_cls.view(1, -1, 1)
+        rcnn_iou = rcnn_iou.view(1, -1, 1)
+        rcnn_reg = rcnn_reg.view(1, -1, 7)
 
         tgt_cls = tgt_cls.view(1, -1, 1)
         tgt_iou = tgt_iou.view(1, -1, 1)
@@ -207,16 +207,16 @@ class PointPillarLossDiffusion(nn.Module):
             t = t_e_batch[batch_idx]
             loss_weight = self.get_loss_weights(self.num_timesteps, beta_schedule='cosine', sigma_data=self.sigma_data)
             # 计算当前批次的损失
-            # batch_diff_loss = self.weighted_diffusion_loss(
-            #     p_noise,
-            #     g_noise,
-            #     t,
-            #     loss_weight
-            # )
-            batch_diff_loss = self.diff_loss_func(
+            batch_diff_loss = self.weighted_diffusion_loss(
                 p_noise,
                 g_noise,
+                t,
+                loss_weight
             )
+            # batch_diff_loss = self.diff_loss_func(
+            #     p_noise,
+            #     g_noise,
+            # )
             # 累加总损失
             diff_loss += batch_diff_loss
         # 计算平均损失（如果有特征）
@@ -257,9 +257,12 @@ class PointPillarLossDiffusion(nn.Module):
                 'reg_loss': self.loss_reg_reduced,
             })
 
-        if 'pred_noise' in output_dict.keys() and 'rcnn_label_dict' in output_dict.keys():
-            p_e_batch = output_dict['pred_noise'] 
-            g_e_batch = output_dict['gt_noise']
+        if 'pred_out' in output_dict.keys() and 'rcnn_label_dict' in output_dict.keys():
+            p_e_batch = output_dict['pred_out']
+            if output_dict['target'] == 'eps':
+                g_e_batch = output_dict['gt_noise']
+            elif output_dict['target'] == 'x0':
+                g_e_batch = output_dict["gt_x0"]
             t_e_batch = output_dict['t']
             diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = rcnn_loss + diff_loss
@@ -269,9 +272,12 @@ class PointPillarLossDiffusion(nn.Module):
             self.loss_dict.update({'total_loss': self.total_loss,
                                     'diff_loss': self.diff_loss
                                     })
-        elif 'pred_noise' in output_dict.keys():
-            p_e_batch = output_dict['pred_noise']  # 批量列表
-            g_e_batch = output_dict['gt_noise']  # 批量列表
+        elif 'pred_out' in output_dict.keys():
+            p_e_batch = output_dict['pred_out']  # 批量列表
+            if output_dict['target'] == 'eps':
+                g_e_batch = output_dict['gt_noise']
+            elif output_dict['target'] == 'x0':
+                g_e_batch = output_dict["gt_x0"]
             t_e_batch = output_dict['t']
             diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = diff_loss
@@ -377,17 +383,17 @@ class PointPillarLossDiffusion(nn.Module):
             标量损失值
         """
         # 计算每个元素的均方误差
-        loss = F.mse_loss(model_out, target, reduction='none')
+        loss = F.mse_loss(model_out, target, reduction='mean')
         
         # 对通道和空间维度求平均，只保留批次维度
-        loss = reduce(loss, 'b ... -> b', 'sum')
+        # loss = reduce(loss, 'b ... -> b', 'mean')
         
         # 根据时间步提取权重并应用
-        weights = self.extract(loss_weights, t, loss.shape)
-        loss = loss * weights
+        # weights = self.extract(loss_weights, t, loss.shape)
+        # loss = loss * weights
         
         # 对批次取平均得到最终损失
-        return loss.mean()
+        return loss
 
 
     def extract(self, values, t, shape):
@@ -446,7 +452,7 @@ class PointPillarLossDiffusion(nn.Module):
         return boxes1, boxes2
 
 
-    def logging(self, epoch, batch_id, batch_len, writer, pbar=None):
+    def logging(self, epoch, batch_id, batch_len, writer, pbar=None, optimizer=None):
         """
         Print out  the loss function for current iteration.
 
@@ -466,31 +472,45 @@ class PointPillarLossDiffusion(nn.Module):
         cls_loss = self.loss_dict['cls_loss'] if 'cls_loss' in self.loss_dict.keys() else torch.tensor(0)
         iou_loss = self.loss_dict['iou_loss'] if 'iou_loss' in self.loss_dict.keys() else torch.tensor(0)
         rcnn_loss = self.loss_dict['rcnn_loss'] if 'rcnn_loss' in self.loss_dict.keys() else torch.tensor(0)
+        
+        # 获取当前学习率
+        lr = None
+        if optimizer is not None:
+            lr = optimizer.param_groups[0]['lr']
+        
         if pbar is None:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                print("[epoch %d][%d/%d], || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
+                print("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc: %.3f || Iou: %.3f || Diff: %.3f" % (
                     epoch, batch_id + 1, batch_len,
+                    lr if lr is not None else 0,
                     total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss))
             else:
-                print("[epoch %d][%d/%d], || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
+                print("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
                     epoch, batch_id + 1, batch_len,
+                    lr if lr is not None else 0,
                     total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss))
         else:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                pbar.set_description("[epoch %d][%d/%d], || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
+                pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc: %.3f || Iou: %.3f || Diff: %.3f" % (
                     epoch, batch_id + 1, batch_len,
+                    lr if lr is not None else 0,
                     total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss))
             else:
-                pbar.set_description("[epoch %d][%d/%d], || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
+                pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
                     epoch, batch_id + 1, batch_len,
+                    lr if lr is not None else 0,
                     total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss))
 
+        # 记录学习率到tensorboard
+        if lr is not None:
+            writer.add_scalar('Learning_rate', lr, epoch*batch_len + batch_id)
+        
         if 'diff_loss' in self.loss_dict:
             writer.add_scalar('Reconstruction_loss', diff_loss,
                           epoch*batch_len + batch_id)

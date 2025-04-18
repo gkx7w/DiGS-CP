@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-
+import time
 from opencood.models.sub_modules.pillar_vfe_dec_diff import PillarVFE
 from opencood.models.sub_modules.point_pillar_scatter_diffusion import PointPillarScatter
 from opencood.models.sub_modules.point_pillar_scatter_dec import PointPillarScatter as PointPillarScatter_dec
@@ -223,7 +223,7 @@ class PointPillarDiffusionDecDet(nn.Module):
                 box_num_points_stack.append(processed_lidar_car['voxel_num_points'])
                 # 用unique找到所有值，没有的那个id再对应的boxes_fused里面pop掉
                 box_masks.append(np.full(processed_lidar_car['voxel_features'].shape[0], car_idx, dtype=np.int32))
-
+            
             if len(box_coords_stack) == 0:
                 print(batch_dict['path'])
                 print("所有box都没有点云？？")
@@ -238,7 +238,7 @@ class PointPillarDiffusionDecDet(nn.Module):
                     'gt_masks': np.concatenate(box_masks, axis=0),
                     }
             processed_lidar_batch.append(processed_lidar)
-        if processed_lidar_batch[0] is None:
+        if None in processed_lidar_batch:
             batch_dict.update({'processed_lidar': None})
             return batch_dict
         else:
@@ -267,7 +267,7 @@ class PointPillarDiffusionDecDet(nn.Module):
                            'record_len': record_len,
                            })
         # dec n, 4 -> n, c
-        batch_dict = self.pillar_vfe(batch_dict, stage='dec')
+        batch_dict = self.pillar_vfe(batch_dict, stage='dec')  
         # dec n, c -> N, C, H, W
         batch_dict = self.scatter_dec(batch_dict)
         # 标注一下以后都不要投影
@@ -287,7 +287,7 @@ class PointPillarDiffusionDecDet(nn.Module):
         feature_list = self.backbone.get_multiscale_feature(spatial_features)
 
         mv_feature = self.backbone.decode_multiscale_feature(feature_list)
-
+        
         # 不涉及任何投影
         for i, t in enumerate(feature_list):
             batch_dict["dec_spatial_features_%dx" % 2 ** (i + 1)] = t
@@ -337,27 +337,30 @@ class PointPillarDiffusionDecDet(nn.Module):
                             })
             # 得到低层BEV特征 [B,C,H,W] 
             batch_dict = self.pillar_vfe(batch_dict, stage='diff')
-            batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])       
+            batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])    
             # 将box抠出来的bev特征输入到mdd中
             # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
             batch_dict = self.mdd(batch_dict)
             # loss算错了！应该算noise之间的loss
-            output_dict = {'pred_noise' : batch_dict['pred_noise'], 
+            output_dict = {'pred_out': batch_dict['pred_out'],
                            'gt_noise' : batch_dict['gt_noise'],
+                           'gt_x0':batch_dict['gt_x0'],
+                           'target':batch_dict['target'],
                            't': batch_dict['t'],}
             # 可视化特征
             # visualize_averaged_channels_individual(batch_dict['batch_gt_spatial_features'][0], f"/data/gkx/Code/opencood/bev_visualizations/gt_bev_{i}")
-            # visualize_averaged_channels_individual(output_dict['pred_feature'][0], f"/data/gkx/Code/opencood/bev_visualizations/pre_bev_{i}")
+            # visualize_averaged_channels_individual(batch_dict['pred_feature'], f"/data/gkx/Code/opencood/bev_visualizations/pre_bev_{i}")
         # 第二阶段预测输出 [42,256]  --> [42,256,1]
-        # rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-        # rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
-        # rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-        # output_dict['stage2_out'] = {
-        #                         'rcnn_cls': rcnn_cls,
-        #                         'rcnn_iou': rcnn_iou,
-        #                         'rcnn_reg': rcnn_reg,
-        #                         }
-        # batch_dict['stage2_out'] = output_dict['stage2_out']
-        # output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
+        rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
+        rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        rcnn_cls, rcnn_reg, rcnn_iou = [torch.cat(x, dim=0) for x in [rcnn_cls, rcnn_reg, rcnn_iou]]
+        output_dict['stage2_out'] = {
+                                'rcnn_cls': rcnn_cls,
+                                'rcnn_iou': rcnn_iou,
+                                'rcnn_reg': rcnn_reg,
+                                }
+        batch_dict['stage2_out'] = output_dict['stage2_out']
+        output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
 
         return output_dict

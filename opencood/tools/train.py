@@ -135,13 +135,14 @@ def main():
         trainable_layers = [
             'mdd',
             'roi_head.factor_encoder',
-            # 'cls_layers',
-            # 'iou_layers',
-            # 'reg_layers',
+            'cls_layers',
+            'iou_layers',
+            'reg_layers',
             # 'attention_2',
             # 'layernorm_2'
                             ]
         init_epoch = 78
+        diff_epoch = 0
         print("loading model from", opt.model_dir)
         model = train_utils.load_saved_model_new(opt.model_dir, model)
         
@@ -164,7 +165,7 @@ def main():
         print(f"总共解冻 {unfrozen_count} 个参数组")
 
     # 设置学习率调度器
-    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch if init_epoch > 0 else None)
+    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else init_epoch)
     saved_path = train_utils.setup_train(hypes)
 
     if init_epoch > 0:
@@ -184,10 +185,14 @@ def main():
     supervise_single_flag = False if not hasattr(opencood_train_dataset, "supervise_single") else opencood_train_dataset.supervise_single
     # used to help schedule learning rate
 
+    print("batch size: ", hypes['train_params']['batch_size'])
     for epoch in range(init_epoch, max(epoches, init_epoch)):
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
         for i, batch_data in enumerate(train_loader):
+            # if i < 1582:
+            #     print(i)
+            #     continue
             if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or ('processed_lidar' in batch_data['ego'] and batch_data['ego']['processed_lidar'] == {}):
                 continue
             # the model will be evaluation mode during validation
@@ -219,11 +224,11 @@ def main():
             if ouput_dict is None:
                 continue
             final_loss = criterion(ouput_dict, batch_data['ego']['label_dict'])
-            criterion.logging(epoch, i, len(train_loader), writer)
+            criterion.logging(epoch, i, len(train_loader), writer, optimizer = optimizer)
 
             if supervise_single_flag:
                 final_loss += criterion(ouput_dict, batch_data['ego']['label_dict_single'], suffix="_single")
-                criterion.logging(epoch, i, len(train_loader), writer, suffix="_single")
+                criterion.logging(epoch, i, len(train_loader), writer,  optimizer = optimizer, suffix="_single")
 
             # back-propagation
             # without enough data, should'n pass gd_fn
@@ -248,7 +253,7 @@ def main():
             torch.save(model.state_dict(),
                        os.path.join(saved_path,
                                     'net_epoch%d.pth' % (epoch + 1)))
-        scheduler.step(epoch)
+        scheduler.step()
         
         opencood_train_dataset.reinitialize()
         

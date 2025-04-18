@@ -507,7 +507,7 @@ class RoIHead(nn.Module):
         #point_coords不是batch维度的，要把空的box对应的point_coords也mask
         xyz_batch_id = 0
         
-        for bs_idx in range(batch_size):
+        for bs_idx in range(batch_dict['batch_size']): # batch_dict['record_len'] 多batch要改成batch_size，但还有报错3164/6765
             if empty_roi_mask[bs_idx] or kpt_mask_flag:
                 xyz_batch_cnt[xyz_batch_id] = len(point_coords[bs_idx])
                 kpt_mask_flag = False

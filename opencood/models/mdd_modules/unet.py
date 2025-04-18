@@ -8,7 +8,7 @@ from opencood.models.sub_modules.attention import SelfAttention, CrossAttention
 
 from dataclasses import dataclass
 from typing import Tuple, Optional
-
+import time
 # This script is from the following repositories
 # https://github.com/ermongroup/ddim
 # https://github.com/bahjat-kawar/ddrm
@@ -379,7 +379,6 @@ class DiffusionUNet(nn.Module):
                 hs.append(h)
             if i_level != self.num_resolutions-1:
                 hs.append(self.down[i_level].downsample(hs[-1]))
-
         # middle
         h = hs[-1]
         h = self.mid.block_1(h, temb)

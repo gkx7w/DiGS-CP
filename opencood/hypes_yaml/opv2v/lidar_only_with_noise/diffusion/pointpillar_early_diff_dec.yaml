@@ -6,7 +6,7 @@ test_dir: "/datasets/OPV2V/test"
 yaml_parser: "load_point_pillar_params"
 train_params:
   batch_size: &batch_size 2
-  epoches: 93
+  epoches: 89
   eval_freq: 2
   save_freq: 1
   max_cav: &max_cav 5
@@ -212,8 +212,8 @@ model:
 
     mdd_block:
       model:
-        in_channels: 4
-        out_ch: *num_features # in_channels*2
+        in_channels: 8
+        out_ch: 8
         ch: 8
         ch_mult: [1, 1]
         num_res_blocks: 2
@@ -223,11 +223,13 @@ model:
         d_cond: 256
         n_head: 8
       diffusion:
-        beta_schedule: cosine
+        beta_schedule: linear
         num_diffusion_timesteps: 1000
-        sampling_timesteps: 6
+        sampling_timesteps: 40
         ddim_sampling_eta: 0.0
         guidance_scale: 3.0
+        # parameterization: 'eps'
+        parameterization: 'x0'
     
     anchor_num: *achor_num
 
@@ -273,13 +275,17 @@ loss:
       
 optimizer:
   core_method: Adam
-  lr: 0.002
+  lr: 0.0002
   args:
     eps: 1e-10
     weight_decay: 1e-4
 
+# lr_scheduler:
+#   core_method: multistep #step, multistep and Exponential support
+#   gamma: 0.1
+#   step_size: [10, 20]
+
 lr_scheduler:
-  core_method: multistep #step, multistep and Exponential support
-  gamma: 0.1
-  step_size: [10, 20]
+  core_method: exponential
+  gamma: 0.8  # 或0.85-0.9之间的值
 
