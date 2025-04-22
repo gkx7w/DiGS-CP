@@ -478,19 +478,17 @@ class RoIHead(nn.Module):
 
 
     def first_stage_roi_grid_pool(self, batch_dict, rois, empty_roi_mask):
+        # roi list的长度
         batch_size = len(rois)
 
         point_coords = batch_dict['point_coords']
         point_features = batch_dict['point_features']
-
+        # 每个roi的中车辆的数量
         label_record_len = [t.shape[0] for t in rois]
         
         mv_len = batch_dict['record_len']
-        # print("拿gt去产生多视角gt的输出：")
-        # print([t.shape for t in rois])
-
-        rois = torch.cat(rois, dim=0)
-        batch_size = len(label_record_len)
+        rois = torch.cat(rois, dim=0) # [所有车个数(BxN)，7]
+        batch_size = len(label_record_len) #roi list的长度
 
         point_features = torch.cat(point_features, dim=0)
         # (BxN, 6x6x6, 3)
@@ -518,7 +516,6 @@ class RoIHead(nn.Module):
             new_xyz_batch_cnt[bs_idx] = label_record_len[
                                             bs_idx] * self.grid_size ** 3
 
-        # 报错？？
         pooled_points, pooled_features = self.roi_grid_pool_layer(
             xyz=xyz[:, :3].contiguous(),
             xyz_batch_cnt=xyz_batch_cnt,
@@ -527,11 +524,8 @@ class RoIHead(nn.Module):
             features=point_features.contiguous(),  # weighted point features
         )  # (M1 + M2 ..., C)
 
-        # print("gt_pooled_feature1:",pooled_features.shape)
-        # (BxN, 6x6x6, C)
         pooled_features = pooled_features.view(-1, self.grid_size ** 3,
-                                               pooled_features.shape[-1])
-        # print("gt_pooled_feature2:",pooled_features.shape)
+                                               pooled_features.shape[-1]) # (BxN, 6x6x6, C)
 
         return pooled_features
 
@@ -811,17 +805,16 @@ class RoIHead(nn.Module):
                 empty_box_mask.append(True)
                 boxes.append(dets)
 
-        # 这个box数量不对？？
         pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, boxes, empty_box_mask)
 
-        batch_size_mv = pooled_features_mv.shape[0]
+        batch_size_mv = pooled_features_mv.shape[0] # BxN
         pooled_features_mv = pooled_features_mv.permute(0, 2, 1). \
             contiguous().view(batch_size_mv, -1, self.grid_size,
                                 self.grid_size,
                                 self.grid_size)  # (BxN, C, 6, 6, 6)
         # 共享特征提取
         shared_features_mv = self.shared_fc_layers(
-            pooled_features_mv.view(batch_size_mv, -1, 1)) 
+            pooled_features_mv.view(batch_size_mv, -1, 1)) # (BxN, 512, 1)
 
         boxes_factors = []
         for i in range(self.factor_num):
@@ -831,11 +824,11 @@ class RoIHead(nn.Module):
         # all box , 32 *8
         boxes_factors = torch.cat(processed_boxes_factors,dim=1)
         # 寻找公共物体
-        cluster_indices,cur_cluster_id =  batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
+        cluster_indices,cur_cluster_id = batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
         object_factors_batch = []
         # 可以直接融合，取平均值，因子内融合
         record_len = [int(l) for l in batch_dict['record_len']]
-        # 获取实际batch中box的总数量
+        # 获取实际batch中box的总数量 [b1中box数量, b2中box数量, ...]
         batch_box_len = []
         current_idx = 0
         for l in record_len:
@@ -855,17 +848,31 @@ class RoIHead(nn.Module):
             end_idx = start_idx + batch_box_len[i]
             # 获取当前批次的box特征
             current_boxes_factors = boxes_factors[start_idx:end_idx]
-            for j in range(1, cur_cluster_id[i]):
-                object_factors.append(current_boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
-            if len(object_factors) > 0:  # 如果有非背景聚类
-                object_factors = torch.cat(object_factors,dim=0)
-            else:
-                print("没有非背景聚类???预测的box被过滤了")
-                object_factors = None
+            # 检查current_boxes_factors是否为空
+            if len(current_boxes_factors) == 0:
+                default_factor = torch.zeros(1, 256, device=boxes_factors.device)
+                object_factors_batch.append(default_factor)
+                continue
             
-            if object_factors is not None:
-                object_factors_batch.append(object_factors)
+            for j in range(1, cur_cluster_id[i]):
+                mask = (cluster_indices[i] == j)
+                if cluster_indices[i].shape[0] < current_boxes_factors.shape[0]:
+                    # 将掩码扩展，保留原始True位置，其余设为False
+                    mask = torch.zeros(len(current_boxes_factors), dtype=torch.bool, device=cluster_indices[i].device)
+                    mask[:len(cluster_indices[i])] = (cluster_indices[i] == j)
+                object_factors.append(current_boxes_factors[mask].mean(dim=0).unsqueeze(dim=0))
+            object_factors_batch.append(torch.cat(object_factors,dim=0))
+            
+            # if len(object_factors) > 0:  # 如果有非背景聚类
+            #     object_factors = torch.cat(object_factors,dim=0)
+            # else:
+            #     print("没有非背景聚类???预测的box被过滤了")
+            #     object_factors = None
+            
+            # if object_factors is not None:
+            #     object_factors_batch.append(object_factors)
 
+        # 每个batch中的factor个数是聚类的个数，顺序也是聚类的顺序，所以后面对应引导的顺序应该也错了T_T
         batch_dict["fused_object_factors"] = object_factors_batch # 物体数量, 32 *8
         
         return batch_dict

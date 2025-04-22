@@ -208,9 +208,10 @@ class Cond_Diff_Denoise(nn.Module):
         beta_schedule=config.diffusion.beta_schedule
         self.num_timesteps = config.diffusion.num_diffusion_timesteps
         timesteps = config.diffusion.num_diffusion_timesteps
-        self.guidance_scale = getattr(config.diffusion, 'guidance_scale', 3.0)  # 默认值为3.0
+        self.if_normalize = getattr(config.diffusion, 'if_normalize', False)
+        self.guidance_scale = getattr(config.diffusion, 'guidance_scale', 1.0)  # 默认值为1.0
         self.ddim_sampling_eta = getattr(config.diffusion, 'ddim_sampling_eta', 0.0)  # 默认值为0.0
-        self.sampling_timesteps = default(config.diffusion.sampling_timesteps, timesteps) # default num sampling timesteps to number of timesteps at training
+        self.sampling_timesteps = getattr(config.diffusion, 'sampling_timesteps', 3) # default num sampling timesteps to number of timesteps at training
         linear_start=5e-3
         linear_end=5e-2
         self.v_posterior = v_posterior =0 
@@ -218,11 +219,13 @@ class Cond_Diff_Denoise(nn.Module):
         self.signal_scaling_rate = 1
         ###
 
-        new_embed_dim = embed_dim
-        #self.denoiser = Denosier(new_embed_dim)
+        # new_embed_dim = embed_dim
+        # self.denoiser = Denosier(new_embed_dim)
         
         # self.denoiser = DiffusionUNet(config)
         self.denoiser = Unet(config)
+        C, H, W = 8, 24, 28
+        self.norm_layer = nn.LayerNorm([H, W],elementwise_affine=False)
 
         # q sampling
         betas = make_beta_schedule(beta_schedule, timesteps, linear_start=linear_start, linear_end=linear_end)
@@ -294,6 +297,24 @@ class Cond_Diff_Denoise(nn.Module):
         # 归一化逻辑
         x_normalized = (x - x_min) / (x_max - x_min)
         return x_normalized * 2 - 1
+    
+    def min_max_normalize_to_range(self, x, target_min=-1.0, target_max=1.0):
+        # 获取每个通道的最大和最小值
+        # 保持维度以便广播
+        min_vals = x.min(dim=2, keepdim=True)[0].min(dim=3, keepdim=True)[0]
+        max_vals = x.max(dim=2, keepdim=True)[0].max(dim=3, keepdim=True)[0]
+        
+        # 避免除以零
+        denominator = max_vals - min_vals
+        # 添加一个小的epsilon值来避免除以零
+        denominator = torch.clamp(denominator, min=1e-8)
+        
+        # 缩放到 [0, 1]
+        x_scaled = (x - min_vals) / denominator
+        
+        # 缩放到目标范围 [target_min, target_max]
+        return x_scaled * (target_max - target_min) + target_min
+
 
     
     def q_sample(self, x_start, t, noise=None):
@@ -353,15 +374,16 @@ class Cond_Diff_Denoise(nn.Module):
             pred_noise = model_output
             x_start = self.predict_start_from_noise(x, t, pred_noise)
             
-            x_start = maybe_clip(x_start)
-
-            if clip_x_start and rederive_pred_noise:
-                pred_noise = self.predict_noise_from_start(x, t, x_start)
+            if self.if_normalize:
+                x_start = maybe_clip(x_start)
+                if clip_x_start and rederive_pred_noise:
+                    pred_noise = self.predict_noise_from_start(x, t, x_start)
             
 
         elif self.parameterization == "x0":
             x_start = model_output
-            x_start = maybe_clip(x_start)
+            if self.if_normalize:
+                x_start = maybe_clip(x_start)
             pred_noise = self.predict_noise_from_start(x, t, x_start)
         
         return ModelPrediction(pred_noise, x_start)
@@ -441,6 +463,12 @@ class Cond_Diff_Denoise(nn.Module):
         time_pairs = list(zip(times[:-1], times[1:])) # [(T-1, T-2), (T-2, T-3), ..., (1, 0), (0, -1)]
         x_noisy = default(x_start, torch.randn(shape, device = device))
         
+        
+        # t = torch.full((shape[0],), 3, device=device, dtype=torch.long)
+        # noise = default(None, lambda: torch.randn_like(x_start))
+        # x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        # x_noisy = self.normalize_to_minus1_1(x_noisy)
+        
         x_noisy_init_np = normalize_to_0_1(x_noisy).cpu().numpy()
         # fid_noisy_init_score = compute_frechet_distance(x_noisy_init_np, self.gt_np)
         psnr_noisy_init_value = calculate_psnr(x_noisy_init_np, self.gt_np)
@@ -481,8 +509,80 @@ class Cond_Diff_Denoise(nn.Module):
             x_noisys.append(x_noisy)
 
         ret = x_noisy if not return_all_timesteps else torch.stack(x_noisys, dim = 1)
-        ret = self.denormalize_from_minus1_1(ret)
+        if self.if_normalize:
+            ret = self.denormalize_from_minus1_1(ret)
         return ret
+    
+    @torch.inference_mode()
+    def diffusion_inference(self,x_t, cond,num_inference_steps=50, eta=0.0):
+        """
+        使用diffusers中的DDIM scheduler实现推理过程
+        
+        Args:
+            model: 您的UNet或其他噪声预测模型
+            x_t: 初始噪声图像
+            num_inference_steps: 推理步数
+            eta: DDIM的随机性参数，0表示完全确定性
+        
+        Returns:
+            去噪后的图像
+        """
+        from diffusers.schedulers import DDIMScheduler
+        # 初始化scheduler
+        if self.parameterization == "eps":
+            prediction_type = "epsilon"
+        elif self.parameterization == "x0":
+            prediction_type = "sample"
+        
+        if self.if_normalize:
+            clip_sample = True
+        else:
+            clip_sample = False
+                
+        
+        scheduler = DDIMScheduler(
+            beta_start=5e-3,  # 改为与训练相同
+            beta_end=5e-2,    # 改为与训练相同
+            beta_schedule="linear", # 假设您使用线性调度
+            clip_sample=clip_sample,
+            set_alpha_to_one=True,
+            prediction_type=prediction_type
+        )
+        
+        x_noisy_init_np = normalize_to_0_1(x_t).cpu().numpy()
+        # fid_noisy_init_score = compute_frechet_distance(x_noisy_init_np, self.gt_np)
+        psnr_noisy_init_value = calculate_psnr(x_noisy_init_np, self.gt_np)
+        ssim_noisy_init_value = calculate_ssim(x_noisy_init_np, self.gt_np)
+        self.noisy_versions.append({
+            'type': 'Pure Noise',
+            'tensor': x_noisy_init_np,
+            'psnr': psnr_noisy_init_value,
+            'ssim': ssim_noisy_init_value,
+            # 'fd': fid_noisy_init_score
+        })
+        
+        # 设置时间步
+        scheduler.set_timesteps(num_inference_steps)
+        
+        # 推理循环
+        for t in scheduler.timesteps:
+            # 1. 通过模型预测噪声
+            timestep = torch.full((x_t.shape[0],), t, device=x_t.device, dtype=torch.long)
+            with torch.no_grad():
+                model_output = self.denoiser(x_t, timestep,cond)
+            
+            # 2. 使用scheduler计算x_{t-1}
+            x_t = scheduler.step(
+                model_output=model_output,
+                timestep=t,
+                sample=x_t,
+                eta=eta,
+                use_clipped_model_output=False
+            ).prev_sample
+            
+        if self.if_normalize:
+            x_t = self.denormalize_from_minus1_1(x_t)
+        return x_t
     
     
     def forward(self, data_dict):
@@ -500,6 +600,16 @@ class Cond_Diff_Denoise(nn.Module):
         batch_gt_noise = []
         batch_gt_x0 = []
         batch_t = []
+        
+        #----------------------------------------评测----------------------------
+        # inf = True
+        inf = False
+        x_noisy_with_cond_list = []
+        x_noisy_no_cond_list = []
+        noise_init_list =[]
+        noise_list = []
+        x_list = []
+        
         if self.training:
             # 对每个batch处理
             for batch_idx, gt_features in enumerate(batch_gt_spatial_features):
@@ -530,8 +640,25 @@ class Cond_Diff_Denoise(nn.Module):
                         # 如果没有要保留的元素，创建一个空tensor保持原始维度结构
                         box_cond = torch.zeros((0,) + box_cond.shape[1:], device=box_cond.device, dtype=box_cond.dtype)
                 
+                
                 # x_start = gt_features
-                x_start = self.normalize_to_minus1_1(gt_features)  # 当前box框的特征
+                # t = torch.full((x_start.shape[0],), self.num_timesteps-1, device=x_start.device, dtype=torch.long)
+                # noise = default(None, lambda: torch.randn_like(x_start))
+                # x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+                # #逆扩散过程
+                # for _t in reversed(range(1, self.num_timesteps)):
+                #     _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
+                #     x_noisy = self.p_sample(x_noisy, box_cond, _t, upsam=False)
+                # _t = 0
+                # _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
+                # model_out = self.p_sample(x_noisy, box_cond, _t, upsam=True)
+                
+                
+                if self.if_normalize:
+                    x_start = self.norm_layer(gt_features)  # 当前box框的特征
+                    # x_start = self.min_max_normalize_to_range(gt_features, -1.0, 1.0)
+                else:
+                    x_start = gt_features
                 batch_gt_x0.append(x_start)
                 latent_shape = x_start.shape
                 # 随机采样时间t
@@ -541,59 +668,50 @@ class Cond_Diff_Denoise(nn.Module):
                 batch_gt_noise.append(noise)
                 # noise sample
                 x = self.q_sample(x_start = x_start, t = t, noise = noise)
+                x_list.append(x)
                 # predict and take gradient step
-                model_out = self.denoiser(x, t, box_cond)
-                # t = torch.full((x_start.shape[0],), self.num_timesteps-1, device=x_start.device, dtype=torch.long)
-                # noise = default(None, lambda: torch.randn_like(x_start))
-                # x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+                model_out = self.denoiser(x, t, None)
+                
                 #----------------------------------------评测----------------------------
-                if False:
-                # x_noisy_no_cond = copy.deepcopy(x_noisy)
-                # # 初始化结果列表
+                if inf:
                     self.noisy_versions = []
-                # x_noisy_np = normalize_to_0_1(x_noisy).cpu().numpy()
-                    self.gt_np = normalize_to_0_1(batch_gt_spatial_features[0]).cpu().numpy()
-                # base_noisy_versions  = generate_noisy_versions_and_calculate_metrics(gt_np)
-                # noisy_versions.extend(base_noisy_versions)
-                # # 计算当前噪声的指标
-                # fid_noise_score = compute_frechet_distance(x_noisy_np, gt_np)
-                # psnr_noise_value = calculate_psnr(x_noisy_np, gt_np)
-                # ssim_noise_value = calculate_ssim(x_noisy_np, gt_np)
-                # noisy_versions.append({
-                #     'type': 'Noise',
-                #     'tensor': x_noisy_np,
-                #     'psnr': psnr_noise_value,
-                #     'ssim': ssim_noise_value,
-                #     'fd': fid_noise_score
-                # })
-                    
-                #----------------------------------------评测----------------------------
-                # 逆扩散过程
-                # for _t in reversed(range(1, self.num_timesteps)):
-                #     _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
-                #     x_noisy = self.p_sample(x_noisy, box_cond, _t, upsam=False)
-                # _t = 0
-                # _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
-                # x_noisy = self.p_sample(x_noisy, box_cond, _t, upsam=True)
-                # if self.train_mode == 1:
-                #     x_noisy = self.ddim_sample(x_noisy.shape, x_noisy.device, None, x_start=x_noisy )
-                # else:
+                    self.gt_np = normalize_to_0_1(x_start).cpu().numpy()
+                    #----------------------------------------评测----------------------------
+                    # t = torch.full((x_start.shape[0],), self.num_timesteps-1, device=x_start.device, dtype=torch.long)
+                    # noise = default(None, lambda: torch.randn_like(x_start))
+                    # x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+                    # 逆扩散过程
+                    # for _t in reversed(range(1, self.num_timesteps)):
+                    #     _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
+                    #     x_noisy = self.p_sample(x_noisy, box_cond, _t, upsam=False)
+                    # _t = 0
+                    # _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
+                    # x_noisy = self.p_sample(x_noisy, box_cond, _t, upsam=True)
+
                     with torch.inference_mode():
-                        x_noisy = self.ddim_sample(x.shape, x.device, box_cond, guidance_scale=self.guidance_scale)
-                        data_dict['pred_feature'] = x_noisy
+                        t = torch.full((x_start.shape[0],), 250, device=x_start.device, dtype=torch.long)
+                        noise = default(None, lambda: torch.randn_like(x_start))
+                        noise = self.q_sample(x_start=x_start, t=t, noise=noise)
+                        noise_list.append(noise)
+                        
+                        # x_noisy = self.diffusion_inference(noise, box_cond, self.sampling_timesteps)
+                        x_noisy = self.ddim_sample(x.shape, x.device, box_cond,x_start=noise,guidance_scale=self.guidance_scale)#x_start=noise,
+                        x_noisy_with_cond_list.append(x_noisy)
                         x_noisy_init_result_np = normalize_to_0_1(x_noisy).cpu().numpy()
                         # fid_noisy_init_score = compute_frechet_distance(x_noisy_init_result_np, self.gt_np)
                         psnr_noisy_init_value = calculate_psnr(x_noisy_init_result_np, self.gt_np)
                         ssim_noisy_init_value = calculate_ssim(x_noisy_init_result_np, self.gt_np)
                         self.noisy_versions.append({
-                            'type': 'Pure Noise Init',
+                            'type': 'Pure Noise Init W Cond',
                             'tensor': x_noisy_init_result_np,
                             'psnr': psnr_noisy_init_value,
                             'ssim': ssim_noisy_init_value,
                             # 'fd': fid_noisy_init_score
                         })
                         
-                        x_noisy_no_cond = self.ddim_sample(x.shape, x.device, None, guidance_scale=self.guidance_scale)
+                        x_noisy_no_cond = self.ddim_sample(x.shape, x.device, None,x_start=noise,guidance_scale=self.guidance_scale)#x_start=noise,
+                        # x_noisy_no_cond = self.diffusion_inference(noise, None, self.sampling_timesteps)
+                        x_noisy_no_cond_list.append(x_noisy_no_cond)
                         x_noisy_init_no_cond_result_np = normalize_to_0_1(x_noisy_no_cond).cpu().numpy()
                         # fid_noisy_init_no_cond_score = compute_frechet_distance(x_noisy_init_no_cond_result_np, self.gt_np)
                         psnr_noisy_init_no_cond_value = calculate_psnr(x_noisy_init_no_cond_result_np, self.gt_np)
@@ -605,85 +723,45 @@ class Cond_Diff_Denoise(nn.Module):
                             'ssim': ssim_noisy_init_no_cond_value,
                             # 'fd': fid_noisy_init_no_cond_score
                         })
-                    pass
+                        
+                        noise_init = torch.full(x.shape, -0.35, device=x_start.device)
+                        noise_init_list.append(noise_init)
+                        noisy_init_np = normalize_to_0_1(noise_init).cpu().numpy()
+                        # fid_noisy_score = compute_frechet_distance(noisy_init_np, self.gt_np)
+                        psnr_noisy_value = calculate_psnr(noisy_init_np, self.gt_np)
+                        ssim_noisy_value = calculate_ssim(noisy_init_np, self.gt_np)
+                        self.noisy_versions.append({
+                            'type': 'Pure Noise Init -0.35',
+                            'tensor': noise_init,
+                            'psnr': psnr_noisy_value,
+                            'ssim': ssim_noisy_value,
+                            # 'fd': fid_noisy_score
+                        })
+                        loss = F.mse_loss(noise_init, x_start, reduction='mean')
+                        print("noise loss：", loss.item())
+                        
+                        print("噪声类型\t\tPSNR (dB)\tSSIM\t\tFD")
+                        print("-" * 70)
+                        for result in self.noisy_versions:
+                            # 调整类型字段的宽度，确保对齐
+                            type_str = result['type'].ljust(20)
+                            print(f"{type_str}\t{result['psnr']:.2f}\t\t{result['ssim']:.4f}\t\t")
+                    
                 # 存储当前box框的预测结果
                 batch_model_out.append(model_out)
 
+            if inf:
+                data_dict['pred_out_inf_with_cond'] = x_noisy_with_cond_list
+                data_dict['pred_out_inf_no_cond'] = x_noisy_no_cond_list
+                data_dict['noise_init'] =  noise_init_list
+                data_dict['noise'] =  noise_list
+                data_dict['x'] =  x_list
+            
             data_dict['pred_out'] = batch_model_out
             data_dict['gt_noise'] = batch_gt_noise
             data_dict['gt_x0'] = batch_gt_x0
             data_dict['t'] = batch_t
             data_dict['target'] = self.parameterization
-            #-------------------------------------------评测--------------------------------
-            if False:
-            # #测试无cond生成
-            # for _t in reversed(range(1, self.num_timesteps)):
-            #     _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
-            #     x_noisy_no_cond = self.p_sample(x_noisy_no_cond, None, _t, upsam=False)
-            # _t = 0
-            # _t = torch.full((x_start.shape[0],), _t, device=x_start.device, dtype=torch.long)
-            # x_noisy_no_cond = self.p_sample(x_noisy_no_cond, None, _t, upsam=True)
-            # #测试有cond噪声生成
-            # x_noisy_init = torch.randn(x_start.shape, device=x_start.device)
-            # x_noisy_init_result = self.p_sample_loop(x_noisy_init, box_cond, x_start.shape)        
-            # # 将所有结果转换为NumPy并计算评估指标
-            # pred_np = normalize_to_0_1(batch_pred_features[0]).cpu().numpy()
-            # x_noisy_no_cond_np = normalize_to_0_1(x_noisy_no_cond).cpu().numpy()
-            # x_noisy_init_np = normalize_to_0_1(x_noisy_init).cpu().numpy()
-            # x_noisy_init_result_np = normalize_to_0_1(x_noisy_init_result).cpu().numpy()
-            # # 添加预测结果的指标
-            # fid_score = compute_frechet_distance(pred_np, gt_np)
-            # psnr_value = calculate_psnr(pred_np, gt_np)
-            # ssim_value = calculate_ssim(pred_np, gt_np)
-            # noisy_versions.append({
-            #     'type': 'With Condition',
-            #     'tensor': pred_np,
-            #     'psnr': psnr_value,
-            #     'ssim': ssim_value,
-            #     'fd': fid_score
-            # })
-            # # 添加无条件生成的指标
-            # fid_no_cond_score = compute_frechet_distance(x_noisy_no_cond_np, gt_np)
-            # psnr_no_cond_value = calculate_psnr(x_noisy_no_cond_np, gt_np)
-            # ssim_no_cond_value = calculate_ssim(x_noisy_no_cond_np, gt_np)
-            # noisy_versions.append({
-            #     'type': 'No Condition',
-            #     'tensor': x_noisy_no_cond_np,
-            #     'psnr': psnr_no_cond_value,
-            #     'ssim': ssim_no_cond_value,
-            #     'fd': fid_no_cond_score
-            # })
-            # # 添加从纯噪声生成的指标
-            # fid_noisy_init_score = compute_frechet_distance(x_noisy_init_result_np, gt_np)
-            # psnr_noisy_init_value = calculate_psnr(x_noisy_init_result_np, gt_np)
-            # ssim_noisy_init_value = calculate_ssim(x_noisy_init_result_np, gt_np)
-            # noisy_versions.append({
-            #     'type': 'Pure Noise Init',
-            #     'tensor': x_noisy_init_result_np,
-            #     'psnr': psnr_noisy_init_value,
-            #     'ssim': ssim_noisy_init_value,
-            #     'fd': fid_noisy_init_score
-            # })
-            # # 添加纯噪声的指标
-            # fid_noisy_init_score = compute_frechet_distance(x_noisy_init_np, gt_np)
-            # psnr_noisy_init_value = calculate_psnr(x_noisy_init_np, gt_np)
-            # ssim_noisy_init_value = calculate_ssim(x_noisy_init_np, gt_np)
-            # noisy_versions.append({
-            #     'type': 'Pure Noise',
-            #     'tensor': x_noisy_init_np,
-            #     'psnr': psnr_noisy_init_value,
-            #     'ssim': ssim_noisy_init_value,
-            #     'fd': fid_noisy_init_score
-            # })
-            # # 输出所有结果
-                print("噪声类型\t\tPSNR (dB)\tSSIM\t\tFD")
-                print("-" * 70)
-                for result in self.noisy_versions:
-                    # 调整类型字段的宽度，确保对齐
-                    type_str = result['type'].ljust(20)
-                    print(f"{type_str}\t{result['psnr']:.2f}\t\t{result['ssim']:.4f}\t\t")
-                pass
-            #-------------------------------------------评测--------------------------------
         else:
             # 对每个batch处理
             for batch_idx, gt_features in enumerate(batch_gt_spatial_features):

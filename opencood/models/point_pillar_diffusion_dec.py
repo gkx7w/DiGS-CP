@@ -28,6 +28,7 @@ from opencood.models.sub_modules.naive_compress import NaiveCompressor
 from opencood.models.fuse_modules.fusion_in_one import MaxFusion, AttFusion, DiscoFusion, V2VNetFusion, V2XViTFusion, When2commFusion
 from opencood.data_utils.pre_processor.sp_voxel_preprocessor import SpVoxelPreprocessor
 from opencood.data_utils.datasets.early_fusion_dataset_diffusion import visualize_gt_boxes
+from opencood.visualization.simple_vis import visualize_averaged_channels_individual
 
 def regroup(x, record_len):
     cum_sum_len = torch.cumsum(record_len, dim=0)
@@ -353,8 +354,41 @@ class PointPillarDiffusionDec(nn.Module):
             # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
             batch_dict = self.mdd(batch_dict)
             # ！！V2X-R没有单独训练diffusion，是整体一起训的
-            output_dict = {'pred_feature' : batch_dict['pred_feature'], 
-                        'gt_feature' : batch_dict['batch_gt_spatial_features']}
+            # output_dict = {'pred_feature' : batch_dict['pred_feature'], 
+            #             'gt_feature' : batch_dict['batch_gt_spatial_features']}
+            
+            
+            output_dict = {'pred_out': batch_dict['pred_out'],
+                           'gt_noise' : batch_dict['gt_noise'],
+                           'gt_x0':batch_dict['gt_x0'],
+                           'target':batch_dict['target'],
+                           't': batch_dict['t'],}
+            # 可视化特征
+            viz_config = [
+                ('batch_gt_spatial_features', 'gt_bev'),
+                # ('gt_noise', 'gt_noise'),
+                ('pred_out', 'pre_bev'),
+                ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
+                ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
+                ('noise', 'noise'),
+                # ('x', 'x')
+            ]
+            base_path = f"/data/gkx/Code/opencood/bev_visualizations"
+            # 计算全局最小值和最大值
+            features = [batch_dict[key][0] for key, _ in viz_config]
+            global_vmin, global_vmax = float('inf'), float('-inf')
+            for feature in features:
+                channels = torch.mean(feature, dim=1).detach().cpu().numpy()
+                global_vmin = min(global_vmin, np.min(channels))
+                global_vmax = max(global_vmax, np.max(channels))
+            # 可视化
+            for key, name in viz_config:
+                visualize_averaged_channels_individual(
+                    batch_dict[key][0], 
+                    f"{base_path}/{name}_{i}", 
+                    global_vmin, 
+                    global_vmax
+                )
             
             # batch_dict = self.scatter(batch_dict)
             # batch_dict = self.backbone(batch_dict)

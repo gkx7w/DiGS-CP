@@ -32,7 +32,7 @@
             "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件
             "env": {
-                "CUDA_VISIBLE_DEVICES": "1"
+                "CUDA_VISIBLE_DEVICES": "0"
             }
         },
         {

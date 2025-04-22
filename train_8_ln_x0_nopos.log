@@ -1,0 +1,1266 @@
+nohup: ignoring input
+Dataset Building
+Postprocessor Stage2 ReDetect:  False
+Dataset dir: /datasets/OPV2V/train
+too many cavs reinitialize
+Postprocessor Stage2 ReDetect:  False
+Dataset dir: /datasets/OPV2V/validate
+too many cavs reinitialize
+too many cavs reinitialize
+Creating Model
+Postprocessor Stage2 ReDetect:  False
+is_resnet
+loading model from /data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth
+
+==== Parameters in Model but not in Checkpoint ====
+Missing in checkpoint: roi_head.factor_encoder.0.0.weight
+Missing in checkpoint: roi_head.factor_encoder.0.3.weight
+Missing in checkpoint: roi_head.factor_encoder.0.6.weight
+Missing in checkpoint: roi_head.factor_encoder.0.6.bias
+Missing in checkpoint: roi_head.factor_encoder.1.0.weight
+Missing in checkpoint: roi_head.factor_encoder.1.3.weight
+Missing in checkpoint: roi_head.factor_encoder.1.6.weight
+Missing in checkpoint: roi_head.factor_encoder.1.6.bias
+Missing in checkpoint: roi_head.factor_encoder.2.0.weight
+Missing in checkpoint: roi_head.factor_encoder.2.3.weight
+Missing in checkpoint: roi_head.factor_encoder.2.6.weight
+Missing in checkpoint: roi_head.factor_encoder.2.6.bias
+Missing in checkpoint: roi_head.factor_encoder.3.0.weight
+Missing in checkpoint: roi_head.factor_encoder.3.3.weight
+Missing in checkpoint: roi_head.factor_encoder.3.6.weight
+Missing in checkpoint: roi_head.factor_encoder.3.6.bias
+Missing in checkpoint: roi_head.factor_encoder.4.0.weight
+Missing in checkpoint: roi_head.factor_encoder.4.3.weight
+Missing in checkpoint: roi_head.factor_encoder.4.6.weight
+Missing in checkpoint: roi_head.factor_encoder.4.6.bias
+Missing in checkpoint: roi_head.factor_encoder.5.0.weight
+Missing in checkpoint: roi_head.factor_encoder.5.3.weight
+Missing in checkpoint: roi_head.factor_encoder.5.6.weight
+Missing in checkpoint: roi_head.factor_encoder.5.6.bias
+Missing in checkpoint: roi_head.factor_encoder.6.0.weight
+Missing in checkpoint: roi_head.factor_encoder.6.3.weight
+Missing in checkpoint: roi_head.factor_encoder.6.6.weight
+Missing in checkpoint: roi_head.factor_encoder.6.6.bias
+Missing in checkpoint: roi_head.factor_encoder.7.0.weight
+Missing in checkpoint: roi_head.factor_encoder.7.3.weight
+Missing in checkpoint: roi_head.factor_encoder.7.6.weight
+Missing in checkpoint: roi_head.factor_encoder.7.6.bias
+Missing in checkpoint: mdd.betas
+Missing in checkpoint: mdd.alphas_cumprod
+Missing in checkpoint: mdd.alphas_cumprod_prev
+Missing in checkpoint: mdd.sqrt_alphas_cumprod
+Missing in checkpoint: mdd.sqrt_one_minus_alphas_cumprod
+Missing in checkpoint: mdd.log_one_minus_alphas_cumprod
+Missing in checkpoint: mdd.sqrt_recip_alphas_cumprod
+Missing in checkpoint: mdd.sqrt_recipm1_alphas_cumprod
+Missing in checkpoint: mdd.posterior_variance
+Missing in checkpoint: mdd.posterior_log_variance_clipped
+Missing in checkpoint: mdd.posterior_mean_coef1
+Missing in checkpoint: mdd.posterior_mean_coef2
+Missing in checkpoint: mdd.denoiser.init_conv.weight
+Missing in checkpoint: mdd.denoiser.init_conv.bias
+Missing in checkpoint: mdd.denoiser.time_mlp.1.weight
+Missing in checkpoint: mdd.denoiser.time_mlp.1.bias
+Missing in checkpoint: mdd.denoiser.time_mlp.3.weight
+Missing in checkpoint: mdd.denoiser.time_mlp.3.bias
+Missing in checkpoint: mdd.denoiser.downs.0.0.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.downs.0.0.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.downs.0.0.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.0.0.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.0.0.block1.norm.g
+Missing in checkpoint: mdd.denoiser.downs.0.0.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.0.0.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.0.0.block2.norm.g
+Missing in checkpoint: mdd.denoiser.downs.0.1.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.downs.0.1.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.downs.0.1.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.0.1.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.0.1.block1.norm.g
+Missing in checkpoint: mdd.denoiser.downs.0.1.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.0.1.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.0.1.block2.norm.g
+Missing in checkpoint: mdd.denoiser.downs.0.2.groupnorm.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.groupnorm.bias
+Missing in checkpoint: mdd.denoiser.downs.0.2.conv_input.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.conv_input.bias
+Missing in checkpoint: mdd.denoiser.downs.0.2.layernorm_1.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.layernorm_1.bias
+Missing in checkpoint: mdd.denoiser.downs.0.2.attention_1.in_proj.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.attention_1.out_proj.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.attention_1.out_proj.bias
+Missing in checkpoint: mdd.denoiser.downs.0.2.layernorm_3.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.layernorm_3.bias
+Missing in checkpoint: mdd.denoiser.downs.0.2.linear_geglu_1.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.linear_geglu_1.bias
+Missing in checkpoint: mdd.denoiser.downs.0.2.linear_geglu_2.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.linear_geglu_2.bias
+Missing in checkpoint: mdd.denoiser.downs.0.2.conv_output.weight
+Missing in checkpoint: mdd.denoiser.downs.0.2.conv_output.bias
+Missing in checkpoint: mdd.denoiser.downs.0.3.1.weight
+Missing in checkpoint: mdd.denoiser.downs.0.3.1.bias
+Missing in checkpoint: mdd.denoiser.downs.1.0.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.downs.1.0.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.downs.1.0.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.1.0.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.1.0.block1.norm.g
+Missing in checkpoint: mdd.denoiser.downs.1.0.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.1.0.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.1.0.block2.norm.g
+Missing in checkpoint: mdd.denoiser.downs.1.1.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.downs.1.1.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.downs.1.1.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.1.1.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.1.1.block1.norm.g
+Missing in checkpoint: mdd.denoiser.downs.1.1.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.downs.1.1.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.downs.1.1.block2.norm.g
+Missing in checkpoint: mdd.denoiser.downs.1.2.groupnorm.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.groupnorm.bias
+Missing in checkpoint: mdd.denoiser.downs.1.2.conv_input.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.conv_input.bias
+Missing in checkpoint: mdd.denoiser.downs.1.2.layernorm_1.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.layernorm_1.bias
+Missing in checkpoint: mdd.denoiser.downs.1.2.attention_1.in_proj.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.attention_1.out_proj.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.attention_1.out_proj.bias
+Missing in checkpoint: mdd.denoiser.downs.1.2.layernorm_3.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.layernorm_3.bias
+Missing in checkpoint: mdd.denoiser.downs.1.2.linear_geglu_1.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.linear_geglu_1.bias
+Missing in checkpoint: mdd.denoiser.downs.1.2.linear_geglu_2.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.linear_geglu_2.bias
+Missing in checkpoint: mdd.denoiser.downs.1.2.conv_output.weight
+Missing in checkpoint: mdd.denoiser.downs.1.2.conv_output.bias
+Missing in checkpoint: mdd.denoiser.downs.1.3.weight
+Missing in checkpoint: mdd.denoiser.downs.1.3.bias
+Missing in checkpoint: mdd.denoiser.ups.0.0.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.ups.0.0.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.ups.0.0.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.0.0.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.0.0.block1.norm.g
+Missing in checkpoint: mdd.denoiser.ups.0.0.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.0.0.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.0.0.block2.norm.g
+Missing in checkpoint: mdd.denoiser.ups.0.0.res_conv.weight
+Missing in checkpoint: mdd.denoiser.ups.0.0.res_conv.bias
+Missing in checkpoint: mdd.denoiser.ups.0.1.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.ups.0.1.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.ups.0.1.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.0.1.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.0.1.block1.norm.g
+Missing in checkpoint: mdd.denoiser.ups.0.1.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.0.1.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.0.1.block2.norm.g
+Missing in checkpoint: mdd.denoiser.ups.0.1.res_conv.weight
+Missing in checkpoint: mdd.denoiser.ups.0.1.res_conv.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.groupnorm.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.groupnorm.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.conv_input.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.conv_input.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.layernorm_1.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.layernorm_1.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.attention_1.in_proj.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.attention_1.out_proj.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.attention_1.out_proj.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.layernorm_3.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.layernorm_3.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.linear_geglu_1.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.linear_geglu_1.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.linear_geglu_2.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.linear_geglu_2.bias
+Missing in checkpoint: mdd.denoiser.ups.0.2.conv_output.weight
+Missing in checkpoint: mdd.denoiser.ups.0.2.conv_output.bias
+Missing in checkpoint: mdd.denoiser.ups.0.3.1.weight
+Missing in checkpoint: mdd.denoiser.ups.0.3.1.bias
+Missing in checkpoint: mdd.denoiser.ups.1.0.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.ups.1.0.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.ups.1.0.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.1.0.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.1.0.block1.norm.g
+Missing in checkpoint: mdd.denoiser.ups.1.0.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.1.0.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.1.0.block2.norm.g
+Missing in checkpoint: mdd.denoiser.ups.1.0.res_conv.weight
+Missing in checkpoint: mdd.denoiser.ups.1.0.res_conv.bias
+Missing in checkpoint: mdd.denoiser.ups.1.1.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.ups.1.1.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.ups.1.1.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.1.1.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.1.1.block1.norm.g
+Missing in checkpoint: mdd.denoiser.ups.1.1.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.ups.1.1.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.ups.1.1.block2.norm.g
+Missing in checkpoint: mdd.denoiser.ups.1.1.res_conv.weight
+Missing in checkpoint: mdd.denoiser.ups.1.1.res_conv.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.groupnorm.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.groupnorm.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.conv_input.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.conv_input.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.layernorm_1.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.layernorm_1.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.attention_1.in_proj.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.attention_1.out_proj.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.attention_1.out_proj.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.layernorm_3.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.layernorm_3.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.linear_geglu_1.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.linear_geglu_1.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.linear_geglu_2.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.linear_geglu_2.bias
+Missing in checkpoint: mdd.denoiser.ups.1.2.conv_output.weight
+Missing in checkpoint: mdd.denoiser.ups.1.2.conv_output.bias
+Missing in checkpoint: mdd.denoiser.ups.1.3.weight
+Missing in checkpoint: mdd.denoiser.ups.1.3.bias
+Missing in checkpoint: mdd.denoiser.mid_block1.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.mid_block1.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.mid_block1.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.mid_block1.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.mid_block1.block1.norm.g
+Missing in checkpoint: mdd.denoiser.mid_block1.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.mid_block1.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.mid_block1.block2.norm.g
+Missing in checkpoint: mdd.denoiser.mid_attn.groupnorm.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.groupnorm.bias
+Missing in checkpoint: mdd.denoiser.mid_attn.conv_input.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.conv_input.bias
+Missing in checkpoint: mdd.denoiser.mid_attn.layernorm_1.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.layernorm_1.bias
+Missing in checkpoint: mdd.denoiser.mid_attn.attention_1.in_proj.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.attention_1.out_proj.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.attention_1.out_proj.bias
+Missing in checkpoint: mdd.denoiser.mid_attn.layernorm_3.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.layernorm_3.bias
+Missing in checkpoint: mdd.denoiser.mid_attn.linear_geglu_1.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.linear_geglu_1.bias
+Missing in checkpoint: mdd.denoiser.mid_attn.linear_geglu_2.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.linear_geglu_2.bias
+Missing in checkpoint: mdd.denoiser.mid_attn.conv_output.weight
+Missing in checkpoint: mdd.denoiser.mid_attn.conv_output.bias
+Missing in checkpoint: mdd.denoiser.mid_block2.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.mid_block2.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.mid_block2.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.mid_block2.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.mid_block2.block1.norm.g
+Missing in checkpoint: mdd.denoiser.mid_block2.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.mid_block2.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.mid_block2.block2.norm.g
+Missing in checkpoint: mdd.denoiser.final_res_block.mlp.1.weight
+Missing in checkpoint: mdd.denoiser.final_res_block.mlp.1.bias
+Missing in checkpoint: mdd.denoiser.final_res_block.block1.proj.weight
+Missing in checkpoint: mdd.denoiser.final_res_block.block1.proj.bias
+Missing in checkpoint: mdd.denoiser.final_res_block.block1.norm.g
+Missing in checkpoint: mdd.denoiser.final_res_block.block2.proj.weight
+Missing in checkpoint: mdd.denoiser.final_res_block.block2.proj.bias
+Missing in checkpoint: mdd.denoiser.final_res_block.block2.norm.g
+Missing in checkpoint: mdd.denoiser.final_res_block.res_conv.weight
+Missing in checkpoint: mdd.denoiser.final_res_block.res_conv.bias
+Missing in checkpoint: mdd.denoiser.final_conv.weight
+Missing in checkpoint: mdd.denoiser.final_conv.bias
+Missing in checkpoint: cls_layers.0.weight
+Missing in checkpoint: cls_layers.3.weight
+Missing in checkpoint: cls_layers.6.weight
+Missing in checkpoint: cls_layers.6.bias
+Missing in checkpoint: iou_layers.0.weight
+Missing in checkpoint: iou_layers.3.weight
+Missing in checkpoint: iou_layers.6.weight
+Missing in checkpoint: iou_layers.6.bias
+Missing in checkpoint: reg_layers.0.weight
+Missing in checkpoint: reg_layers.3.weight
+Missing in checkpoint: reg_layers.6.weight
+Missing in checkpoint: reg_layers.6.bias
+
+==== Parameters Successfully Loaded ====
+Loaded: pillar_vfe.pfn_layers.0.linear.weight, Shape: torch.Size([64, 10])
+Loaded: pillar_vfe.pfn_layers.0.norm.weight, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.bias, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.running_mean, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.running_var, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.0.conv1.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.0.bn1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.0.conv2.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.0.bn2.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.0.downsample.0.weight, Shape: torch.Size([64, 64, 1, 1])
+Loaded: backbone.resnet.layer0.0.downsample.1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.1.conv1.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.1.bn1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.1.conv2.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.1.bn2.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.2.conv1.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.2.bn1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.2.conv2.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.2.bn2.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.0.conv1.weight, Shape: torch.Size([128, 64, 3, 3])
+Loaded: backbone.resnet.layer1.0.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.0.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.0.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.0.downsample.0.weight, Shape: torch.Size([128, 64, 1, 1])
+Loaded: backbone.resnet.layer1.0.downsample.1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.1.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.1.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.1.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.1.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.2.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.2.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.2.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.2.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.3.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.3.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.3.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.3.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.4.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.4.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.4.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.4.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.0.conv1.weight, Shape: torch.Size([256, 128, 3, 3])
+Loaded: backbone.resnet.layer2.0.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.0.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.0.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.0.downsample.0.weight, Shape: torch.Size([256, 128, 1, 1])
+Loaded: backbone.resnet.layer2.0.downsample.1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.1.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.1.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.1.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.1.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.2.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.2.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.2.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.2.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.3.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.3.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.3.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.3.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.4.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.4.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.4.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.4.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.5.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.5.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.5.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.5.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.6.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.6.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.6.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.6.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.7.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.7.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.7.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.7.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.deblocks.0.0.weight, Shape: torch.Size([64, 128, 1, 1])
+Loaded: backbone.deblocks.0.1.weight, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.bias, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.deblocks.1.0.weight, Shape: torch.Size([128, 128, 2, 2])
+Loaded: backbone.deblocks.1.1.weight, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.bias, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.deblocks.2.0.weight, Shape: torch.Size([256, 128, 4, 4])
+Loaded: backbone.deblocks.2.1.weight, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.bias, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: shrink_conv.layers.0.double_conv.0.weight, Shape: torch.Size([256, 384, 3, 3])
+Loaded: shrink_conv.layers.0.double_conv.0.bias, Shape: torch.Size([256])
+Loaded: shrink_conv.layers.0.double_conv.2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: shrink_conv.layers.0.double_conv.2.bias, Shape: torch.Size([256])
+Loaded: head.conv_box.weight, Shape: torch.Size([14, 256, 1, 1])
+Loaded: head.conv_box.bias, Shape: torch.Size([14])
+Loaded: head.conv_cls.weight, Shape: torch.Size([2, 256, 1, 1])
+Loaded: head.conv_cls.bias, Shape: torch.Size([2])
+Loaded: head.conv_iou.weight, Shape: torch.Size([2, 256, 1, 1])
+Loaded: head.conv_dir.weight, Shape: torch.Size([4, 256, 1, 1])
+Loaded: head.conv_dir.bias, Shape: torch.Size([4])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.0.weight, Shape: torch.Size([16, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.0.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.weight, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.running_mean, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.running_var, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.0.weight, Shape: torch.Size([16, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.0.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.weight, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.running_mean, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.running_var, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.0.weight, Shape: torch.Size([32, 128])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.0.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.weight, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.running_mean, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.running_var, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.0.weight, Shape: torch.Size([64, 256])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.0.weight, Shape: torch.Size([16, 16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.0.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.weight, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.running_mean, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.running_var, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.0.weight, Shape: torch.Size([32, 32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.0.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.weight, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.running_mean, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.running_var, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.0.weight, Shape: torch.Size([64, 64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.0.weight, Shape: torch.Size([128, 128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.0.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.weight, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.running_mean, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.running_var, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.0.weight, Shape: torch.Size([32, 512])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.weight, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.running_mean, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.running_var, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.0.weight, Shape: torch.Size([64, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.0.weight, Shape: torch.Size([64, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.0.weight, Shape: torch.Size([128, 128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.0.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.weight, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.running_mean, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.running_var, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.0.weight, Shape: torch.Size([256, 256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.0.bias, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.weight, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.bias, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.running_mean, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.running_var, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.0.weight, Shape: torch.Size([64, 35, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.3.weight, Shape: torch.Size([64, 64, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.0.weight, Shape: torch.Size([64, 35, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.3.weight, Shape: torch.Size([64, 64, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.fake_shared_fc_layers.0.weight, Shape: torch.Size([1024, 27648, 1])
+Loaded: roi_head.fake_shared_fc_layers.3.weight, Shape: torch.Size([512, 1024, 1])
+Loaded: roi_head.shared_fc_layers.0.weight, Shape: torch.Size([1024, 27648, 1])
+Loaded: roi_head.shared_fc_layers.3.weight, Shape: torch.Size([512, 1024, 1])
+Loaded: roi_head.convertor.0.weight, Shape: torch.Size([1024, 512, 1])
+Loaded: roi_head.convertor.3.weight, Shape: torch.Size([512, 1024, 1])
+
+Number of parameters successfully loaded: 365/620
+model data =  tensor(23993014.)
+解冻层: roi_head.factor_encoder.0.0.weight
+解冻层: roi_head.factor_encoder.0.3.weight
+解冻层: roi_head.factor_encoder.0.6.weight
+解冻层: roi_head.factor_encoder.0.6.bias
+解冻层: roi_head.factor_encoder.1.0.weight
+解冻层: roi_head.factor_encoder.1.3.weight
+解冻层: roi_head.factor_encoder.1.6.weight
+解冻层: roi_head.factor_encoder.1.6.bias
+解冻层: roi_head.factor_encoder.2.0.weight
+解冻层: roi_head.factor_encoder.2.3.weight
+解冻层: roi_head.factor_encoder.2.6.weight
+解冻层: roi_head.factor_encoder.2.6.bias
+解冻层: roi_head.factor_encoder.3.0.weight
+解冻层: roi_head.factor_encoder.3.3.weight
+解冻层: roi_head.factor_encoder.3.6.weight
+解冻层: roi_head.factor_encoder.3.6.bias
+解冻层: roi_head.factor_encoder.4.0.weight
+解冻层: roi_head.factor_encoder.4.3.weight
+解冻层: roi_head.factor_encoder.4.6.weight
+解冻层: roi_head.factor_encoder.4.6.bias
+解冻层: roi_head.factor_encoder.5.0.weight
+解冻层: roi_head.factor_encoder.5.3.weight
+解冻层: roi_head.factor_encoder.5.6.weight
+解冻层: roi_head.factor_encoder.5.6.bias
+解冻层: roi_head.factor_encoder.6.0.weight
+解冻层: roi_head.factor_encoder.6.3.weight
+解冻层: roi_head.factor_encoder.6.6.weight
+解冻层: roi_head.factor_encoder.6.6.bias
+解冻层: roi_head.factor_encoder.7.0.weight
+解冻层: roi_head.factor_encoder.7.3.weight
+解冻层: roi_head.factor_encoder.7.6.weight
+解冻层: roi_head.factor_encoder.7.6.bias
+解冻层: mdd.denoiser.init_conv.weight
+解冻层: mdd.denoiser.init_conv.bias
+解冻层: mdd.denoiser.time_mlp.1.weight
+解冻层: mdd.denoiser.time_mlp.1.bias
+解冻层: mdd.denoiser.time_mlp.3.weight
+解冻层: mdd.denoiser.time_mlp.3.bias
+解冻层: mdd.denoiser.downs.0.0.mlp.1.weight
+解冻层: mdd.denoiser.downs.0.0.mlp.1.bias
+解冻层: mdd.denoiser.downs.0.0.block1.proj.weight
+解冻层: mdd.denoiser.downs.0.0.block1.proj.bias
+解冻层: mdd.denoiser.downs.0.0.block1.norm.g
+解冻层: mdd.denoiser.downs.0.0.block2.proj.weight
+解冻层: mdd.denoiser.downs.0.0.block2.proj.bias
+解冻层: mdd.denoiser.downs.0.0.block2.norm.g
+解冻层: mdd.denoiser.downs.0.1.mlp.1.weight
+解冻层: mdd.denoiser.downs.0.1.mlp.1.bias
+解冻层: mdd.denoiser.downs.0.1.block1.proj.weight
+解冻层: mdd.denoiser.downs.0.1.block1.proj.bias
+解冻层: mdd.denoiser.downs.0.1.block1.norm.g
+解冻层: mdd.denoiser.downs.0.1.block2.proj.weight
+解冻层: mdd.denoiser.downs.0.1.block2.proj.bias
+解冻层: mdd.denoiser.downs.0.1.block2.norm.g
+解冻层: mdd.denoiser.downs.0.2.groupnorm.weight
+解冻层: mdd.denoiser.downs.0.2.groupnorm.bias
+解冻层: mdd.denoiser.downs.0.2.conv_input.weight
+解冻层: mdd.denoiser.downs.0.2.conv_input.bias
+解冻层: mdd.denoiser.downs.0.2.layernorm_1.weight
+解冻层: mdd.denoiser.downs.0.2.layernorm_1.bias
+解冻层: mdd.denoiser.downs.0.2.attention_1.in_proj.weight
+解冻层: mdd.denoiser.downs.0.2.attention_1.out_proj.weight
+解冻层: mdd.denoiser.downs.0.2.attention_1.out_proj.bias
+解冻层: mdd.denoiser.downs.0.2.layernorm_3.weight
+解冻层: mdd.denoiser.downs.0.2.layernorm_3.bias
+解冻层: mdd.denoiser.downs.0.2.linear_geglu_1.weight
+解冻层: mdd.denoiser.downs.0.2.linear_geglu_1.bias
+解冻层: mdd.denoiser.downs.0.2.linear_geglu_2.weight
+解冻层: mdd.denoiser.downs.0.2.linear_geglu_2.bias
+解冻层: mdd.denoiser.downs.0.2.conv_output.weight
+解冻层: mdd.denoiser.downs.0.2.conv_output.bias
+解冻层: mdd.denoiser.downs.0.3.1.weight
+解冻层: mdd.denoiser.downs.0.3.1.bias
+解冻层: mdd.denoiser.downs.1.0.mlp.1.weight
+解冻层: mdd.denoiser.downs.1.0.mlp.1.bias
+解冻层: mdd.denoiser.downs.1.0.block1.proj.weight
+解冻层: mdd.denoiser.downs.1.0.block1.proj.bias
+解冻层: mdd.denoiser.downs.1.0.block1.norm.g
+解冻层: mdd.denoiser.downs.1.0.block2.proj.weight
+解冻层: mdd.denoiser.downs.1.0.block2.proj.bias
+解冻层: mdd.denoiser.downs.1.0.block2.norm.g
+解冻层: mdd.denoiser.downs.1.1.mlp.1.weight
+解冻层: mdd.denoiser.downs.1.1.mlp.1.bias
+解冻层: mdd.denoiser.downs.1.1.block1.proj.weight
+解冻层: mdd.denoiser.downs.1.1.block1.proj.bias
+解冻层: mdd.denoiser.downs.1.1.block1.norm.g
+解冻层: mdd.denoiser.downs.1.1.block2.proj.weight
+解冻层: mdd.denoiser.downs.1.1.block2.proj.bias
+解冻层: mdd.denoiser.downs.1.1.block2.norm.g
+解冻层: mdd.denoiser.downs.1.2.groupnorm.weight
+解冻层: mdd.denoiser.downs.1.2.groupnorm.bias
+解冻层: mdd.denoiser.downs.1.2.conv_input.weight
+解冻层: mdd.denoiser.downs.1.2.conv_input.bias
+解冻层: mdd.denoiser.downs.1.2.layernorm_1.weight
+解冻层: mdd.denoiser.downs.1.2.layernorm_1.bias
+解冻层: mdd.denoiser.downs.1.2.attention_1.in_proj.weight
+解冻层: mdd.denoiser.downs.1.2.attention_1.out_proj.weight
+解冻层: mdd.denoiser.downs.1.2.attention_1.out_proj.bias
+解冻层: mdd.denoiser.downs.1.2.layernorm_3.weight
+解冻层: mdd.denoiser.downs.1.2.layernorm_3.bias
+解冻层: mdd.denoiser.downs.1.2.linear_geglu_1.weight
+解冻层: mdd.denoiser.downs.1.2.linear_geglu_1.bias
+解冻层: mdd.denoiser.downs.1.2.linear_geglu_2.weight
+解冻层: mdd.denoiser.downs.1.2.linear_geglu_2.bias
+解冻层: mdd.denoiser.downs.1.2.conv_output.weight
+解冻层: mdd.denoiser.downs.1.2.conv_output.bias
+解冻层: mdd.denoiser.downs.1.3.weight
+解冻层: mdd.denoiser.downs.1.3.bias
+解冻层: mdd.denoiser.ups.0.0.mlp.1.weight
+解冻层: mdd.denoiser.ups.0.0.mlp.1.bias
+解冻层: mdd.denoiser.ups.0.0.block1.proj.weight
+解冻层: mdd.denoiser.ups.0.0.block1.proj.bias
+解冻层: mdd.denoiser.ups.0.0.block1.norm.g
+解冻层: mdd.denoiser.ups.0.0.block2.proj.weight
+解冻层: mdd.denoiser.ups.0.0.block2.proj.bias
+解冻层: mdd.denoiser.ups.0.0.block2.norm.g
+解冻层: mdd.denoiser.ups.0.0.res_conv.weight
+解冻层: mdd.denoiser.ups.0.0.res_conv.bias
+解冻层: mdd.denoiser.ups.0.1.mlp.1.weight
+解冻层: mdd.denoiser.ups.0.1.mlp.1.bias
+解冻层: mdd.denoiser.ups.0.1.block1.proj.weight
+解冻层: mdd.denoiser.ups.0.1.block1.proj.bias
+解冻层: mdd.denoiser.ups.0.1.block1.norm.g
+解冻层: mdd.denoiser.ups.0.1.block2.proj.weight
+解冻层: mdd.denoiser.ups.0.1.block2.proj.bias
+解冻层: mdd.denoiser.ups.0.1.block2.norm.g
+解冻层: mdd.denoiser.ups.0.1.res_conv.weight
+解冻层: mdd.denoiser.ups.0.1.res_conv.bias
+解冻层: mdd.denoiser.ups.0.2.groupnorm.weight
+解冻层: mdd.denoiser.ups.0.2.groupnorm.bias
+解冻层: mdd.denoiser.ups.0.2.conv_input.weight
+解冻层: mdd.denoiser.ups.0.2.conv_input.bias
+解冻层: mdd.denoiser.ups.0.2.layernorm_1.weight
+解冻层: mdd.denoiser.ups.0.2.layernorm_1.bias
+解冻层: mdd.denoiser.ups.0.2.attention_1.in_proj.weight
+解冻层: mdd.denoiser.ups.0.2.attention_1.out_proj.weight
+解冻层: mdd.denoiser.ups.0.2.attention_1.out_proj.bias
+解冻层: mdd.denoiser.ups.0.2.layernorm_3.weight
+解冻层: mdd.denoiser.ups.0.2.layernorm_3.bias
+解冻层: mdd.denoiser.ups.0.2.linear_geglu_1.weight
+解冻层: mdd.denoiser.ups.0.2.linear_geglu_1.bias
+解冻层: mdd.denoiser.ups.0.2.linear_geglu_2.weight
+解冻层: mdd.denoiser.ups.0.2.linear_geglu_2.bias
+解冻层: mdd.denoiser.ups.0.2.conv_output.weight
+解冻层: mdd.denoiser.ups.0.2.conv_output.bias
+解冻层: mdd.denoiser.ups.0.3.1.weight
+解冻层: mdd.denoiser.ups.0.3.1.bias
+解冻层: mdd.denoiser.ups.1.0.mlp.1.weight
+解冻层: mdd.denoiser.ups.1.0.mlp.1.bias
+解冻层: mdd.denoiser.ups.1.0.block1.proj.weight
+解冻层: mdd.denoiser.ups.1.0.block1.proj.bias
+解冻层: mdd.denoiser.ups.1.0.block1.norm.g
+解冻层: mdd.denoiser.ups.1.0.block2.proj.weight
+解冻层: mdd.denoiser.ups.1.0.block2.proj.bias
+解冻层: mdd.denoiser.ups.1.0.block2.norm.g
+解冻层: mdd.denoiser.ups.1.0.res_conv.weight
+解冻层: mdd.denoiser.ups.1.0.res_conv.bias
+解冻层: mdd.denoiser.ups.1.1.mlp.1.weight
+解冻层: mdd.denoiser.ups.1.1.mlp.1.bias
+解冻层: mdd.denoiser.ups.1.1.block1.proj.weight
+解冻层: mdd.denoiser.ups.1.1.block1.proj.bias
+解冻层: mdd.denoiser.ups.1.1.block1.norm.g
+解冻层: mdd.denoiser.ups.1.1.block2.proj.weight
+解冻层: mdd.denoiser.ups.1.1.block2.proj.bias
+解冻层: mdd.denoiser.ups.1.1.block2.norm.g
+解冻层: mdd.denoiser.ups.1.1.res_conv.weight
+解冻层: mdd.denoiser.ups.1.1.res_conv.bias
+解冻层: mdd.denoiser.ups.1.2.groupnorm.weight
+解冻层: mdd.denoiser.ups.1.2.groupnorm.bias
+解冻层: mdd.denoiser.ups.1.2.conv_input.weight
+解冻层: mdd.denoiser.ups.1.2.conv_input.bias
+解冻层: mdd.denoiser.ups.1.2.layernorm_1.weight
+解冻层: mdd.denoiser.ups.1.2.layernorm_1.bias
+解冻层: mdd.denoiser.ups.1.2.attention_1.in_proj.weight
+解冻层: mdd.denoiser.ups.1.2.attention_1.out_proj.weight
+解冻层: mdd.denoiser.ups.1.2.attention_1.out_proj.bias
+解冻层: mdd.denoiser.ups.1.2.layernorm_3.weight
+解冻层: mdd.denoiser.ups.1.2.layernorm_3.bias
+解冻层: mdd.denoiser.ups.1.2.linear_geglu_1.weight
+解冻层: mdd.denoiser.ups.1.2.linear_geglu_1.bias
+解冻层: mdd.denoiser.ups.1.2.linear_geglu_2.weight
+解冻层: mdd.denoiser.ups.1.2.linear_geglu_2.bias
+解冻层: mdd.denoiser.ups.1.2.conv_output.weight
+解冻层: mdd.denoiser.ups.1.2.conv_output.bias
+解冻层: mdd.denoiser.ups.1.3.weight
+解冻层: mdd.denoiser.ups.1.3.bias
+解冻层: mdd.denoiser.mid_block1.mlp.1.weight
+解冻层: mdd.denoiser.mid_block1.mlp.1.bias
+解冻层: mdd.denoiser.mid_block1.block1.proj.weight
+解冻层: mdd.denoiser.mid_block1.block1.proj.bias
+解冻层: mdd.denoiser.mid_block1.block1.norm.g
+解冻层: mdd.denoiser.mid_block1.block2.proj.weight
+解冻层: mdd.denoiser.mid_block1.block2.proj.bias
+解冻层: mdd.denoiser.mid_block1.block2.norm.g
+解冻层: mdd.denoiser.mid_attn.groupnorm.weight
+解冻层: mdd.denoiser.mid_attn.groupnorm.bias
+解冻层: mdd.denoiser.mid_attn.conv_input.weight
+解冻层: mdd.denoiser.mid_attn.conv_input.bias
+解冻层: mdd.denoiser.mid_attn.layernorm_1.weight
+解冻层: mdd.denoiser.mid_attn.layernorm_1.bias
+解冻层: mdd.denoiser.mid_attn.attention_1.in_proj.weight
+解冻层: mdd.denoiser.mid_attn.attention_1.out_proj.weight
+解冻层: mdd.denoiser.mid_attn.attention_1.out_proj.bias
+解冻层: mdd.denoiser.mid_attn.layernorm_3.weight
+解冻层: mdd.denoiser.mid_attn.layernorm_3.bias
+解冻层: mdd.denoiser.mid_attn.linear_geglu_1.weight
+解冻层: mdd.denoiser.mid_attn.linear_geglu_1.bias
+解冻层: mdd.denoiser.mid_attn.linear_geglu_2.weight
+解冻层: mdd.denoiser.mid_attn.linear_geglu_2.bias
+解冻层: mdd.denoiser.mid_attn.conv_output.weight
+解冻层: mdd.denoiser.mid_attn.conv_output.bias
+解冻层: mdd.denoiser.mid_block2.mlp.1.weight
+解冻层: mdd.denoiser.mid_block2.mlp.1.bias
+解冻层: mdd.denoiser.mid_block2.block1.proj.weight
+解冻层: mdd.denoiser.mid_block2.block1.proj.bias
+解冻层: mdd.denoiser.mid_block2.block1.norm.g
+解冻层: mdd.denoiser.mid_block2.block2.proj.weight
+解冻层: mdd.denoiser.mid_block2.block2.proj.bias
+解冻层: mdd.denoiser.mid_block2.block2.norm.g
+解冻层: mdd.denoiser.final_res_block.mlp.1.weight
+解冻层: mdd.denoiser.final_res_block.mlp.1.bias
+解冻层: mdd.denoiser.final_res_block.block1.proj.weight
+解冻层: mdd.denoiser.final_res_block.block1.proj.bias
+解冻层: mdd.denoiser.final_res_block.block1.norm.g
+解冻层: mdd.denoiser.final_res_block.block2.proj.weight
+解冻层: mdd.denoiser.final_res_block.block2.proj.bias
+解冻层: mdd.denoiser.final_res_block.block2.norm.g
+解冻层: mdd.denoiser.final_res_block.res_conv.weight
+解冻层: mdd.denoiser.final_res_block.res_conv.bias
+解冻层: mdd.denoiser.final_conv.weight
+解冻层: mdd.denoiser.final_conv.bias
+总共解冻 231 个参数组
+从第 78 个epoch恢复训练
+Training start
+batch size:  8
+learning rate 0.001600
+[epoch 78][1/845], LR: 0.001600 || Loss: 6.680 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 6.680
+[epoch 78][2/845], LR: 0.001600 || Loss: 4.532 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 4.532
+[epoch 78][3/845], LR: 0.001600 || Loss: 3.392 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 3.392
+[epoch 78][4/845], LR: 0.001600 || Loss: 2.730 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 2.730
+[epoch 78][5/845], LR: 0.001600 || Loss: 2.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 2.312
+[epoch 78][6/845], LR: 0.001600 || Loss: 2.015 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 2.015
+[epoch 78][7/845], LR: 0.001600 || Loss: 1.799 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 1.799
+[epoch 78][8/845], LR: 0.001600 || Loss: 1.572 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 1.572
+[epoch 78][9/845], LR: 0.001600 || Loss: 1.409 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 1.409
+[epoch 78][10/845], LR: 0.001600 || Loss: 1.300 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 1.300
+[epoch 78][11/845], LR: 0.001600 || Loss: 1.178 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 1.178
+[epoch 78][12/845], LR: 0.001600 || Loss: 1.087 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 1.087
+[epoch 78][13/845], LR: 0.001600 || Loss: 1.005 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 1.005
+[epoch 78][14/845], LR: 0.001600 || Loss: 0.933 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.933
+[epoch 78][15/845], LR: 0.001600 || Loss: 0.869 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.869
+[epoch 78][16/845], LR: 0.001600 || Loss: 0.825 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.825
+[epoch 78][17/845], LR: 0.001600 || Loss: 0.787 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.787
+[epoch 78][18/845], LR: 0.001600 || Loss: 0.750 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.750
+[epoch 78][19/845], LR: 0.001600 || Loss: 0.718 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.718
+[epoch 78][20/845], LR: 0.001600 || Loss: 0.684 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.684
+[epoch 78][21/845], LR: 0.001600 || Loss: 0.653 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.653
+[epoch 78][22/845], LR: 0.001600 || Loss: 0.618 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.618
+[epoch 78][23/845], LR: 0.001600 || Loss: 0.605 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.605
+[epoch 78][24/845], LR: 0.001600 || Loss: 0.576 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.576
+[epoch 78][25/845], LR: 0.001600 || Loss: 0.561 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.561
+[epoch 78][26/845], LR: 0.001600 || Loss: 0.547 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.547
+[epoch 78][27/845], LR: 0.001600 || Loss: 0.543 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.543
+[epoch 78][28/845], LR: 0.001600 || Loss: 0.530 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.530
+[epoch 78][29/845], LR: 0.001600 || Loss: 0.512 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.512
+[epoch 78][30/845], LR: 0.001600 || Loss: 0.505 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.505
+[epoch 78][31/845], LR: 0.001600 || Loss: 0.500 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.500
+[epoch 78][32/845], LR: 0.001600 || Loss: 0.470 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.470
+[epoch 78][33/845], LR: 0.001600 || Loss: 0.461 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.461
+[epoch 78][34/845], LR: 0.001600 || Loss: 0.460 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.460
+[epoch 78][35/845], LR: 0.001600 || Loss: 0.443 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.443
+[epoch 78][36/845], LR: 0.001600 || Loss: 0.445 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.445
+[epoch 78][37/845], LR: 0.001600 || Loss: 0.423 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.423
+[epoch 78][38/845], LR: 0.001600 || Loss: 0.410 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.410
+[epoch 78][39/845], LR: 0.001600 || Loss: 0.417 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.417
+[epoch 78][40/845], LR: 0.001600 || Loss: 0.401 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.401
+[epoch 78][41/845], LR: 0.001600 || Loss: 0.390 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.390
+[epoch 78][42/845], LR: 0.001600 || Loss: 0.392 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.392
+[epoch 78][43/845], LR: 0.001600 || Loss: 0.377 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.377
+[epoch 78][44/845], LR: 0.001600 || Loss: 0.372 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.372
+[epoch 78][45/845], LR: 0.001600 || Loss: 0.370 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.370
+[epoch 78][46/845], LR: 0.001600 || Loss: 0.375 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.375
+[epoch 78][47/845], LR: 0.001600 || Loss: 0.372 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.372
+[epoch 78][48/845], LR: 0.001600 || Loss: 0.369 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.369
+[epoch 78][49/845], LR: 0.001600 || Loss: 0.362 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.362
+[epoch 78][50/845], LR: 0.001600 || Loss: 0.370 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.370
+[epoch 78][51/845], LR: 0.001600 || Loss: 0.355 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.355
+[epoch 78][52/845], LR: 0.001600 || Loss: 0.353 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.353
+[epoch 78][53/845], LR: 0.001600 || Loss: 0.374 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.374
+[epoch 78][54/845], LR: 0.001600 || Loss: 0.405 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.405
+[epoch 78][55/845], LR: 0.001600 || Loss: 0.412 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.412
+[epoch 78][56/845], LR: 0.001600 || Loss: 0.404 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.404
+[epoch 78][57/845], LR: 0.001600 || Loss: 0.412 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.412
+[epoch 78][58/845], LR: 0.001600 || Loss: 0.409 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.409
+[epoch 78][59/845], LR: 0.001600 || Loss: 0.408 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.408
+[epoch 78][60/845], LR: 0.001600 || Loss: 0.394 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.394
+[epoch 78][61/845], LR: 0.001600 || Loss: 0.402 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.402
+[epoch 78][62/845], LR: 0.001600 || Loss: 0.402 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.402
+[epoch 78][63/845], LR: 0.001600 || Loss: 0.403 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.403
+[epoch 78][64/845], LR: 0.001600 || Loss: 0.396 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.396
+[epoch 78][65/845], LR: 0.001600 || Loss: 0.392 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.392
+[epoch 78][66/845], LR: 0.001600 || Loss: 0.381 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.381
+[epoch 78][67/845], LR: 0.001600 || Loss: 0.397 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.397
+[epoch 78][68/845], LR: 0.001600 || Loss: 0.388 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.388
+[epoch 78][69/845], LR: 0.001600 || Loss: 0.393 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.393
+[epoch 78][70/845], LR: 0.001600 || Loss: 0.387 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.387
+[epoch 78][71/845], LR: 0.001600 || Loss: 0.396 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.396
+[epoch 78][72/845], LR: 0.001600 || Loss: 0.366 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.366
+[epoch 78][73/845], LR: 0.001600 || Loss: 0.362 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.362
+[epoch 78][74/845], LR: 0.001600 || Loss: 0.368 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.368
+[epoch 78][75/845], LR: 0.001600 || Loss: 0.373 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.373
+[epoch 78][76/845], LR: 0.001600 || Loss: 0.365 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.365
+[epoch 78][77/845], LR: 0.001600 || Loss: 0.371 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.371
+[epoch 78][78/845], LR: 0.001600 || Loss: 0.366 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.366
+[epoch 78][79/845], LR: 0.001600 || Loss: 0.376 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.376
+[epoch 78][80/845], LR: 0.001600 || Loss: 0.365 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.365
+[epoch 78][81/845], LR: 0.001600 || Loss: 0.379 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.379
+[epoch 78][82/845], LR: 0.001600 || Loss: 0.379 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.379
+[epoch 78][83/845], LR: 0.001600 || Loss: 0.377 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.377
+[epoch 78][84/845], LR: 0.001600 || Loss: 0.369 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.369
+[epoch 78][85/845], LR: 0.001600 || Loss: 0.374 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.374
+[epoch 78][86/845], LR: 0.001600 || Loss: 0.371 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.371
+[epoch 78][87/845], LR: 0.001600 || Loss: 0.377 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.377
+[epoch 78][88/845], LR: 0.001600 || Loss: 0.358 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.358
+[epoch 78][89/845], LR: 0.001600 || Loss: 0.358 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.358
+[epoch 78][90/845], LR: 0.001600 || Loss: 0.355 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.355
+[epoch 78][91/845], LR: 0.001600 || Loss: 0.352 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.352
+[epoch 78][92/845], LR: 0.001600 || Loss: 0.358 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.358
+[epoch 78][93/845], LR: 0.001600 || Loss: 0.357 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.357
+[epoch 78][94/845], LR: 0.001600 || Loss: 0.356 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.356
+[epoch 78][95/845], LR: 0.001600 || Loss: 0.345 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.345
+[epoch 78][96/845], LR: 0.001600 || Loss: 0.282 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.282
+[epoch 78][97/845], LR: 0.001600 || Loss: 0.285 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.285
+[epoch 78][98/845], LR: 0.001600 || Loss: 0.333 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.333
+[epoch 78][99/845], LR: 0.001600 || Loss: 0.356 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.356
+[epoch 78][100/845], LR: 0.001600 || Loss: 0.350 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.350
+[epoch 78][101/845], LR: 0.001600 || Loss: 0.359 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.359
+[epoch 78][102/845], LR: 0.001600 || Loss: 0.359 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.359
+[epoch 78][103/845], LR: 0.001600 || Loss: 0.346 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.346
+[epoch 78][104/845], LR: 0.001600 || Loss: 0.357 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.357
+[epoch 78][105/845], LR: 0.001600 || Loss: 0.361 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.361
+[epoch 78][106/845], LR: 0.001600 || Loss: 0.361 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.361
+[epoch 78][107/845], LR: 0.001600 || Loss: 0.350 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.350
+[epoch 78][108/845], LR: 0.001600 || Loss: 0.336 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.336
+[epoch 78][109/845], LR: 0.001600 || Loss: 0.338 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.338
+[epoch 78][110/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][111/845], LR: 0.001600 || Loss: 0.300 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.300
+[epoch 78][112/845], LR: 0.001600 || Loss: 0.319 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.319
+[epoch 78][113/845], LR: 0.001600 || Loss: 0.314 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.314
+[epoch 78][114/845], LR: 0.001600 || Loss: 0.310 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.310
+[epoch 78][115/845], LR: 0.001600 || Loss: 0.322 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.322
+[epoch 78][116/845], LR: 0.001600 || Loss: 0.327 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.327
+[epoch 78][117/845], LR: 0.001600 || Loss: 0.322 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.322
+[epoch 78][118/845], LR: 0.001600 || Loss: 0.364 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.364
+[epoch 78][119/845], LR: 0.001600 || Loss: 0.361 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.361
+[epoch 78][120/845], LR: 0.001600 || Loss: 0.355 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.355
+[epoch 78][121/845], LR: 0.001600 || Loss: 0.354 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.354
+[epoch 78][122/845], LR: 0.001600 || Loss: 0.349 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.349
+[epoch 78][123/845], LR: 0.001600 || Loss: 0.350 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.350
+[epoch 78][124/845], LR: 0.001600 || Loss: 0.336 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.336
+[epoch 78][125/845], LR: 0.001600 || Loss: 0.334 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.334
+[epoch 78][126/845], LR: 0.001600 || Loss: 0.329 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.329
+[epoch 78][127/845], LR: 0.001600 || Loss: 0.320 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.320
+[epoch 78][128/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][129/845], LR: 0.001600 || Loss: 0.350 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.350
+[epoch 78][130/845], LR: 0.001600 || Loss: 0.346 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.346
+[epoch 78][131/845], LR: 0.001600 || Loss: 0.350 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.350
+[epoch 78][132/845], LR: 0.001600 || Loss: 0.329 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.329
+[epoch 78][133/845], LR: 0.001600 || Loss: 0.354 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.354
+[epoch 78][134/845], LR: 0.001600 || Loss: 0.350 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.350
+[epoch 78][135/845], LR: 0.001600 || Loss: 0.349 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.349
+[epoch 78][136/845], LR: 0.001600 || Loss: 0.369 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.369
+[epoch 78][137/845], LR: 0.001600 || Loss: 0.366 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.366
+[epoch 78][138/845], LR: 0.001600 || Loss: 0.352 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.352
+[epoch 78][139/845], LR: 0.001600 || Loss: 0.351 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.351
+[epoch 78][140/845], LR: 0.001600 || Loss: 0.304 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.304
+[epoch 78][141/845], LR: 0.001600 || Loss: 0.290 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.290
+[epoch 78][142/845], LR: 0.001600 || Loss: 0.277 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.277
+[epoch 78][143/845], LR: 0.001600 || Loss: 0.276 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.276
+[epoch 78][144/845], LR: 0.001600 || Loss: 0.290 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.290
+[epoch 78][145/845], LR: 0.001600 || Loss: 0.299 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.299
+[epoch 78][146/845], LR: 0.001600 || Loss: 0.297 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.297
+[epoch 78][147/845], LR: 0.001600 || Loss: 0.298 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.298
+[epoch 78][148/845], LR: 0.001600 || Loss: 0.280 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.280
+[epoch 78][149/845], LR: 0.001600 || Loss: 0.296 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.296
+[epoch 78][150/845], LR: 0.001600 || Loss: 0.285 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.285
+[epoch 78][151/845], LR: 0.001600 || Loss: 0.309 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.309
+[epoch 78][152/845], LR: 0.001600 || Loss: 0.334 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.334
+[epoch 78][153/845], LR: 0.001600 || Loss: 0.326 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.326
+[epoch 78][154/845], LR: 0.001600 || Loss: 0.329 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.329
+[epoch 78][155/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][156/845], LR: 0.001600 || Loss: 0.353 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.353
+[epoch 78][157/845], LR: 0.001600 || Loss: 0.346 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.346
+[epoch 78][158/845], LR: 0.001600 || Loss: 0.340 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.340
+[epoch 78][159/845], LR: 0.001600 || Loss: 0.345 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.345
+[epoch 78][160/845], LR: 0.001600 || Loss: 0.340 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.340
+[epoch 78][161/845], LR: 0.001600 || Loss: 0.333 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.333
+[epoch 78][162/845], LR: 0.001600 || Loss: 0.319 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.319
+[epoch 78][163/845], LR: 0.001600 || Loss: 0.311 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.311
+[epoch 78][164/845], LR: 0.001600 || Loss: 0.253 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.253
+[epoch 78][165/845], LR: 0.001600 || Loss: 0.254 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.254
+[epoch 78][166/845], LR: 0.001600 || Loss: 0.334 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.334
+[epoch 78][167/845], LR: 0.001600 || Loss: 0.336 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.336
+[epoch 78][168/845], LR: 0.001600 || Loss: 0.334 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.334
+[epoch 78][169/845], LR: 0.001600 || Loss: 0.336 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.336
+[epoch 78][170/845], LR: 0.001600 || Loss: 0.319 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.319
+[epoch 78][171/845], LR: 0.001600 || Loss: 0.319 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.319
+[epoch 78][172/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][173/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][174/845], LR: 0.001600 || Loss: 0.319 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.319
+[epoch 78][175/845], LR: 0.001600 || Loss: 0.321 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.321
+[epoch 78][176/845], LR: 0.001600 || Loss: 0.308 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.308
+[epoch 78][177/845], LR: 0.001600 || Loss: 0.306 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.306
+[epoch 78][178/845], LR: 0.001600 || Loss: 0.299 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.299
+[epoch 78][179/845], LR: 0.001600 || Loss: 0.295 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.295
+[epoch 78][180/845], LR: 0.001600 || Loss: 0.300 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.300
+[epoch 78][181/845], LR: 0.001600 || Loss: 0.279 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.279
+[epoch 78][182/845], LR: 0.001600 || Loss: 0.295 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.295
+[epoch 78][183/845], LR: 0.001600 || Loss: 0.279 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.279
+[epoch 78][184/845], LR: 0.001600 || Loss: 0.295 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.295
+[epoch 78][185/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][186/845], LR: 0.001600 || Loss: 0.340 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.340
+[epoch 78][187/845], LR: 0.001600 || Loss: 0.338 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.338
+[epoch 78][188/845], LR: 0.001600 || Loss: 0.340 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.340
+[epoch 78][189/845], LR: 0.001600 || Loss: 0.344 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.344
+[epoch 78][190/845], LR: 0.001600 || Loss: 0.341 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.341
+[epoch 78][191/845], LR: 0.001600 || Loss: 0.343 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.343
+[epoch 78][192/845], LR: 0.001600 || Loss: 0.361 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.361
+[epoch 78][193/845], LR: 0.001600 || Loss: 0.350 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.350
+[epoch 78][194/845], LR: 0.001600 || Loss: 0.346 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.346
+[epoch 78][195/845], LR: 0.001600 || Loss: 0.358 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.358
+[epoch 78][196/845], LR: 0.001600 || Loss: 0.337 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.337
+[epoch 78][197/845], LR: 0.001600 || Loss: 0.328 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.328
+[epoch 78][198/845], LR: 0.001600 || Loss: 0.333 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.333
+[epoch 78][199/845], LR: 0.001600 || Loss: 0.320 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.320
+[epoch 78][200/845], LR: 0.001600 || Loss: 0.317 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.317
+[epoch 78][201/845], LR: 0.001600 || Loss: 0.330 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.330
+[epoch 78][202/845], LR: 0.001600 || Loss: 0.336 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.336
+[epoch 78][203/845], LR: 0.001600 || Loss: 0.318 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.318
+[epoch 78][204/845], LR: 0.001600 || Loss: 0.313 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.313
+[epoch 78][205/845], LR: 0.001600 || Loss: 0.309 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.309
+[epoch 78][206/845], LR: 0.001600 || Loss: 0.317 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.317
+[epoch 78][207/845], LR: 0.001600 || Loss: 0.320 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.320
+[epoch 78][208/845], LR: 0.001600 || Loss: 0.328 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.328
+[epoch 78][209/845], LR: 0.001600 || Loss: 0.330 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.330
+[epoch 78][210/845], LR: 0.001600 || Loss: 0.337 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.337
+[epoch 78][211/845], LR: 0.001600 || Loss: 0.334 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.334
+[epoch 78][212/845], LR: 0.001600 || Loss: 0.337 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.337
+[epoch 78][213/845], LR: 0.001600 || Loss: 0.344 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.344
+[epoch 78][214/845], LR: 0.001600 || Loss: 0.348 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.348
+[epoch 78][215/845], LR: 0.001600 || Loss: 0.341 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.341
+[epoch 78][216/845], LR: 0.001600 || Loss: 0.348 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.348
+[epoch 78][217/845], LR: 0.001600 || Loss: 0.351 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.351
+[epoch 78][218/845], LR: 0.001600 || Loss: 0.341 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.341
+[epoch 78][219/845], LR: 0.001600 || Loss: 0.341 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.341
+[epoch 78][220/845], LR: 0.001600 || Loss: 0.352 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.352
+[epoch 78][221/845], LR: 0.001600 || Loss: 0.341 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.341
+[epoch 78][222/845], LR: 0.001600 || Loss: 0.337 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.337
+[epoch 78][223/845], LR: 0.001600 || Loss: 0.351 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.351
+[epoch 78][224/845], LR: 0.001600 || Loss: 0.341 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.341
+[epoch 78][225/845], LR: 0.001600 || Loss: 0.349 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.349
+[epoch 78][226/845], LR: 0.001600 || Loss: 0.333 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.333
+[epoch 78][227/845], LR: 0.001600 || Loss: 0.349 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.349
+[epoch 78][228/845], LR: 0.001600 || Loss: 0.348 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.348
+[epoch 78][229/845], LR: 0.001600 || Loss: 0.347 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.347
+[epoch 78][230/845], LR: 0.001600 || Loss: 0.345 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.345
+[epoch 78][231/845], LR: 0.001600 || Loss: 0.329 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.329
+[epoch 78][232/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][233/845], LR: 0.001600 || Loss: 0.340 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.340
+[epoch 78][234/845], LR: 0.001600 || Loss: 0.332 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.332
+[epoch 78][235/845], LR: 0.001600 || Loss: 0.332 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.332
+[epoch 78][236/845], LR: 0.001600 || Loss: 0.340 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.340
+[epoch 78][237/845], LR: 0.001600 || Loss: 0.330 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.330
+[epoch 78][238/845], LR: 0.001600 || Loss: 0.341 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.341
+[epoch 78][239/845], LR: 0.001600 || Loss: 0.314 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.314
+[epoch 78][240/845], LR: 0.001600 || Loss: 0.293 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.293
+[epoch 78][241/845], LR: 0.001600 || Loss: 0.297 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.297
+[epoch 78][242/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][243/845], LR: 0.001600 || Loss: 0.311 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.311
+[epoch 78][244/845], LR: 0.001600 || Loss: 0.296 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.296
+[epoch 78][245/845], LR: 0.001600 || Loss: 0.304 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.304
+[epoch 78][246/845], LR: 0.001600 || Loss: 0.310 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.310
+[epoch 78][247/845], LR: 0.001600 || Loss: 0.315 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.315
+[epoch 78][248/845], LR: 0.001600 || Loss: 0.303 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.303
+[epoch 78][249/845], LR: 0.001600 || Loss: 0.308 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.308
+[epoch 78][250/845], LR: 0.001600 || Loss: 0.298 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.298
+[epoch 78][251/845], LR: 0.001600 || Loss: 0.304 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.304
+[epoch 78][252/845], LR: 0.001600 || Loss: 0.309 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.309
+[epoch 78][253/845], LR: 0.001600 || Loss: 0.317 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.317
+[epoch 78][254/845], LR: 0.001600 || Loss: 0.320 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.320
+[epoch 78][255/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][256/845], LR: 0.001600 || Loss: 0.311 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.311
+[epoch 78][257/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][258/845], LR: 0.001600 || Loss: 0.336 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.336
+[epoch 78][259/845], LR: 0.001600 || Loss: 0.321 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.321
+[epoch 78][260/845], LR: 0.001600 || Loss: 0.317 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.317
+[epoch 78][261/845], LR: 0.001600 || Loss: 0.309 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.309
+[epoch 78][262/845], LR: 0.001600 || Loss: 0.310 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.310
+[epoch 78][263/845], LR: 0.001600 || Loss: 0.303 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.303
+[epoch 78][264/845], LR: 0.001600 || Loss: 0.301 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.301
+[epoch 78][265/845], LR: 0.001600 || Loss: 0.282 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.282
+[epoch 78][266/845], LR: 0.001600 || Loss: 0.301 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.301
+[epoch 78][267/845], LR: 0.001600 || Loss: 0.290 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.290
+[epoch 78][268/845], LR: 0.001600 || Loss: 0.288 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.288
+[epoch 78][269/845], LR: 0.001600 || Loss: 0.293 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.293
+[epoch 78][270/845], LR: 0.001600 || Loss: 0.288 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.288
+[epoch 78][271/845], LR: 0.001600 || Loss: 0.313 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.313
+[epoch 78][272/845], LR: 0.001600 || Loss: 0.307 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.307
+[epoch 78][273/845], LR: 0.001600 || Loss: 0.305 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.305
+[epoch 78][274/845], LR: 0.001600 || Loss: 0.305 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.305
+[epoch 78][275/845], LR: 0.001600 || Loss: 0.298 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.298
+[epoch 78][276/845], LR: 0.001600 || Loss: 0.298 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.298
+[epoch 78][277/845], LR: 0.001600 || Loss: 0.306 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.306
+[epoch 78][278/845], LR: 0.001600 || Loss: 0.314 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.314
+[epoch 78][279/845], LR: 0.001600 || Loss: 0.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.312
+[epoch 78][280/845], LR: 0.001600 || Loss: 0.296 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.296
+[epoch 78][281/845], LR: 0.001600 || Loss: 0.300 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.300
+[epoch 78][282/845], LR: 0.001600 || Loss: 0.304 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.304
+[epoch 78][283/845], LR: 0.001600 || Loss: 0.302 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.302
+[epoch 78][284/845], LR: 0.001600 || Loss: 0.317 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.317
+[epoch 78][285/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][286/845], LR: 0.001600 || Loss: 0.321 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.321
+[epoch 78][287/845], LR: 0.001600 || Loss: 0.320 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.320
+[epoch 78][288/845], LR: 0.001600 || Loss: 0.297 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.297
+[epoch 78][289/845], LR: 0.001600 || Loss: 0.289 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.289
+[epoch 78][290/845], LR: 0.001600 || Loss: 0.299 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.299
+[epoch 78][291/845], LR: 0.001600 || Loss: 0.275 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.275
+[epoch 78][292/845], LR: 0.001600 || Loss: 0.268 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.268
+[epoch 78][293/845], LR: 0.001600 || Loss: 0.285 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.285
+[epoch 78][294/845], LR: 0.001600 || Loss: 0.262 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.262
+[epoch 78][295/845], LR: 0.001600 || Loss: 0.270 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.270
+[epoch 78][296/845], LR: 0.001600 || Loss: 0.292 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.292
+[epoch 78][297/845], LR: 0.001600 || Loss: 0.299 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.299
+[epoch 78][298/845], LR: 0.001600 || Loss: 0.295 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.295
+[epoch 78][299/845], LR: 0.001600 || Loss: 0.300 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.300
+[epoch 78][300/845], LR: 0.001600 || Loss: 0.294 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.294
+[epoch 78][301/845], LR: 0.001600 || Loss: 0.308 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.308
+[epoch 78][302/845], LR: 0.001600 || Loss: 0.294 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.294
+[epoch 78][303/845], LR: 0.001600 || Loss: 0.296 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.296
+[epoch 78][304/845], LR: 0.001600 || Loss: 0.286 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.286
+[epoch 78][305/845], LR: 0.001600 || Loss: 0.290 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.290
+[epoch 78][306/845], LR: 0.001600 || Loss: 0.272 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.272
+[epoch 78][307/845], LR: 0.001600 || Loss: 0.284 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.284
+[epoch 78][308/845], LR: 0.001600 || Loss: 0.277 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.277
+[epoch 78][309/845], LR: 0.001600 || Loss: 0.279 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.279
+[epoch 78][310/845], LR: 0.001600 || Loss: 0.258 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.258
+[epoch 78][311/845], LR: 0.001600 || Loss: 0.266 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.266
+[epoch 78][312/845], LR: 0.001600 || Loss: 0.286 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.286
+[epoch 78][313/845], LR: 0.001600 || Loss: 0.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.312
+[epoch 78][314/845], LR: 0.001600 || Loss: 0.298 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.298
+[epoch 78][315/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][316/845], LR: 0.001600 || Loss: 0.314 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.314
+[epoch 78][317/845], LR: 0.001600 || Loss: 0.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.312
+[epoch 78][318/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][319/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][320/845], LR: 0.001600 || Loss: 0.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.312
+[epoch 78][321/845], LR: 0.001600 || Loss: 0.317 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.317
+[epoch 78][322/845], LR: 0.001600 || Loss: 0.320 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.320
+[epoch 78][323/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][324/845], LR: 0.001600 || Loss: 0.322 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.322
+[epoch 78][325/845], LR: 0.001600 || Loss: 0.311 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.311
+[epoch 78][326/845], LR: 0.001600 || Loss: 0.313 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.313
+[epoch 78][327/845], LR: 0.001600 || Loss: 0.313 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.313
+[epoch 78][328/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][329/845], LR: 0.001600 || Loss: 0.287 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.287
+[epoch 78][330/845], LR: 0.001600 || Loss: 0.314 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.314
+[epoch 78][331/845], LR: 0.001600 || Loss: 0.318 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.318
+[epoch 78][332/845], LR: 0.001600 || Loss: 0.317 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.317
+[epoch 78][333/845], LR: 0.001600 || Loss: 0.335 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.335
+[epoch 78][334/845], LR: 0.001600 || Loss: 0.321 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.321
+[epoch 78][335/845], LR: 0.001600 || Loss: 0.337 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.337
+[epoch 78][336/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][337/845], LR: 0.001600 || Loss: 0.321 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.321
+[epoch 78][338/845], LR: 0.001600 || Loss: 0.339 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.339
+[epoch 78][339/845], LR: 0.001600 || Loss: 0.337 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.337
+[epoch 78][340/845], LR: 0.001600 || Loss: 0.330 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.330
+[epoch 78][341/845], LR: 0.001600 || Loss: 0.336 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.336
+[epoch 78][342/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][343/845], LR: 0.001600 || Loss: 0.330 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.330
+[epoch 78][344/845], LR: 0.001600 || Loss: 0.333 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.333
+[epoch 78][345/845], LR: 0.001600 || Loss: 0.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.312
+[epoch 78][346/845], LR: 0.001600 || Loss: 0.322 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.322
+[epoch 78][347/845], LR: 0.001600 || Loss: 0.318 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.318
+[epoch 78][348/845], LR: 0.001600 || Loss: 0.320 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.320
+[epoch 78][349/845], LR: 0.001600 || Loss: 0.323 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.323
+[epoch 78][350/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][351/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][352/845], LR: 0.001600 || Loss: 0.319 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.319
+[epoch 78][353/845], LR: 0.001600 || Loss: 0.311 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.311
+[epoch 78][354/845], LR: 0.001600 || Loss: 0.305 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.305
+[epoch 78][355/845], LR: 0.001600 || Loss: 0.329 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.329
+[epoch 78][356/845], LR: 0.001600 || Loss: 0.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.312
+[epoch 78][357/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][358/845], LR: 0.001600 || Loss: 0.334 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.334
+[epoch 78][359/845], LR: 0.001600 || Loss: 0.325 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.325
+[epoch 78][360/845], LR: 0.001600 || Loss: 0.330 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.330
+[epoch 78][361/845], LR: 0.001600 || Loss: 0.324 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.324
+[epoch 78][362/845], LR: 0.001600 || Loss: 0.311 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.311
+[epoch 78][363/845], LR: 0.001600 || Loss: 0.315 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.315
+[epoch 78][364/845], LR: 0.001600 || Loss: 0.326 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.326
+[epoch 78][365/845], LR: 0.001600 || Loss: 0.334 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.334
+[epoch 78][366/845], LR: 0.001600 || Loss: 0.314 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.314
+[epoch 78][367/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][368/845], LR: 0.001600 || Loss: 0.313 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.313
+[epoch 78][369/845], LR: 0.001600 || Loss: 0.313 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.313
+[epoch 78][370/845], LR: 0.001600 || Loss: 0.316 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.316
+[epoch 78][371/845], LR: 0.001600 || Loss: 0.290 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.290
+[epoch 78][372/845], LR: 0.001600 || Loss: 0.290 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.290
+[epoch 78][373/845], LR: 0.001600 || Loss: 0.294 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.294
+[epoch 78][374/845], LR: 0.001600 || Loss: 0.304 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.304
+[epoch 78][375/845], LR: 0.001600 || Loss: 0.318 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.318
+[epoch 78][376/845], LR: 0.001600 || Loss: 0.293 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.293
+[epoch 78][377/845], LR: 0.001600 || Loss: 0.280 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.280
+[epoch 78][378/845], LR: 0.001600 || Loss: 0.291 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.291
+[epoch 78][379/845], LR: 0.001600 || Loss: 0.260 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.260
+[epoch 78][380/845], LR: 0.001600 || Loss: 0.301 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.301
+[epoch 78][381/845], LR: 0.001600 || Loss: 0.305 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.305
+[epoch 78][382/845], LR: 0.001600 || Loss: 0.308 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.308
+[epoch 78][383/845], LR: 0.001600 || Loss: 0.323 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.323
+[epoch 78][384/845], LR: 0.001600 || Loss: 0.326 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.326
+[epoch 78][385/845], LR: 0.001600 || Loss: 0.315 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.315
+[epoch 78][386/845], LR: 0.001600 || Loss: 0.292 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.292
+[epoch 78][387/845], LR: 0.001600 || Loss: 0.313 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.313
+[epoch 78][388/845], LR: 0.001600 || Loss: 0.300 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.300
+[epoch 78][389/845], LR: 0.001600 || Loss: 0.312 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.312
+[epoch 78][390/845], LR: 0.001600 || Loss: 0.299 || Rcnn: 0.000|| Cls: 0.000 || Loc: 0.000 || Iou: 0.000 || Diff: 0.299

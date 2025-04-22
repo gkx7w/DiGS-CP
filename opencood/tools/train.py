@@ -135,9 +135,9 @@ def main():
         trainable_layers = [
             'mdd',
             'roi_head.factor_encoder',
-            'cls_layers',
-            'iou_layers',
-            'reg_layers',
+            # 'cls_layers',
+            # 'iou_layers',
+            # 'reg_layers',
             # 'attention_2',
             # 'layernorm_2'
                             ]
@@ -190,7 +190,7 @@ def main():
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
         for i, batch_data in enumerate(train_loader):
-            # if i < 1582:
+            # if i < 628:
             #     print(i)
             #     continue
             if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or ('processed_lidar' in batch_data['ego'] and batch_data['ego']['processed_lidar'] == {}):

@@ -115,10 +115,10 @@ class PointPillarScatter(nn.Module):
             # 将该batch的gt空间特征字典添加到batch列表中 ！！此时每个gtbev大小一致，可堆叠为tensor
             batch_gt_spatial_features.append(torch.stack(list(gt_spatial_features_dict.values())))
         
-        # 添加位置编码
-        pe = self.positionalencoding2d(self.num_bev_features, self.ny, self.nx).to(pillar_features.device)
-        pe = [pe.unsqueeze(0).repeat(batch_gt_spatial_features[i].shape[0], 1, 1, 1) for i in range(len(batch_gt_spatial_features))]
-        batch_gt_spatial_features = [batch_gt_spatial_features[i] + pe[i] for i in range(len(batch_gt_spatial_features))]
+        # 添加位置编码  
+        # pe = self.positionalencoding2d(self.num_bev_features, self.ny, self.nx).to(pillar_features.device)
+        # pe = [pe.unsqueeze(0).repeat(batch_gt_spatial_features[i].shape[0], 1, 1, 1) for i in range(len(batch_gt_spatial_features))]
+        # batch_gt_spatial_features = [batch_gt_spatial_features[i] + pe[i] for i in range(len(batch_gt_spatial_features))]
         
         batch_dict['batch_gt_spatial_features'] = batch_gt_spatial_features
         

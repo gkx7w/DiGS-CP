@@ -202,20 +202,21 @@ class PointPillarDiffusionDecDet(nn.Module):
             for car_idx in range(len(pre_fused_boxes)):
                 # 获取当前box中的点并平移到以box中心为原点的坐标系 box里没有点怎么办？？特征全为0吗？
                 box_point = batch_ori_lidar[point_indices[car_idx] > 0]
-                if len(box_point) == 0:
-                    print("此bxo中没有点云！！")
+                if len(box_point) < 100:
+                    # print("此bxo中没有点云！！")
                     # pc_range = [-15, -15, -1, 15, 15, 1]
                     # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
                     continue
                 box_point[:, :3] -= pre_fused_boxes[car_idx][0:3]
                 # pre_fused_boxes[car_idx][0:3] = [0, 0, 0]
                 # pc_range = [-15, -15, -1, 15, 15, 1]
-                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_expand_{car_idx}.png",scale_bev=10)
+                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/data/gkx/Code/opencood/vis_output/pred_expand_{car_idx+1}.png",scale_bev=10)
                 # 旋转点云 
                 box_point = common_utils.rotate_points_along_z(box_point[np.newaxis, :, :], np.array([rotation_angles[car_idx]]))[0]
                 # pre_fused_boxes[car_idx][0:3] = common_utils.rotate_points_along_z(pre_fused_boxes[car_idx][np.newaxis, np.newaxis, 0:3], np.array([-float(pre_fused_boxes[car_idx][6])]))[0,0]
                 # pre_fused_boxes[car_idx][6] -= float(pre_fused_boxes[car_idx][6])
-                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/home/ubuntu/Code2/opencood/vis_output/pred_rotate_{car_idx}.png",scale_bev=10)
+                # pre_fused_boxes[car_idx][6] += np.pi
+                # visualize_gt_boxes(pre_fused_boxes[car_idx][np.newaxis, :], box_point, pc_range, f"/data/gkx/Code/opencood/vis_output/pred_rotate_{car_idx+1}.png",scale_bev=10)
                 # 体素化 不能并行！！
                 processed_lidar_car = self.pre_processor.preprocess(box_point, is_car=True)
                 box_voxel_stack.append(processed_lidar_car['voxel_features'])
@@ -348,19 +349,43 @@ class PointPillarDiffusionDecDet(nn.Module):
                            'target':batch_dict['target'],
                            't': batch_dict['t'],}
             # 可视化特征
-            # visualize_averaged_channels_individual(batch_dict['batch_gt_spatial_features'][0], f"/data/gkx/Code/opencood/bev_visualizations/gt_bev_{i}")
-            # visualize_averaged_channels_individual(batch_dict['pred_feature'], f"/data/gkx/Code/opencood/bev_visualizations/pre_bev_{i}")
+            # viz_config = [
+            #     # ('batch_gt_spatial_features', 'gt_bev'),
+            #     ('gt_x0', 'gt_x0'),
+            #     # ('gt_noise', 'gt_noise'),
+            #     ('pred_out', 'pre_bev'),
+            #     ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
+            #     ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
+            #     # ('noise', 'noise'),
+            #     # ('x', 'x')
+            # ]
+            # base_path = f"/data/gkx/Code/opencood/bev_visualizations"
+            # # 计算全局最小值和最大值
+            # features = [batch_dict[key][0] for key, _ in viz_config]
+            # global_vmin, global_vmax = float('inf'), float('-inf')
+            # for feature in features:
+            #     channels = torch.mean(feature, dim=1).detach().cpu().numpy()
+            #     global_vmin = min(global_vmin, np.min(channels))
+            #     global_vmax = max(global_vmax, np.max(channels))
+            # # 可视化
+            # for key, name in viz_config:
+            #     visualize_averaged_channels_individual(
+            #         batch_dict[key][0], 
+            #         f"{base_path}/{name}_{i}", 
+            #         global_vmin, 
+            #         global_vmax
+            #     )
         # 第二阶段预测输出 [42,256]  --> [42,256,1]
-        rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-        rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
-        rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
-        rcnn_cls, rcnn_reg, rcnn_iou = [torch.cat(x, dim=0) for x in [rcnn_cls, rcnn_reg, rcnn_iou]]
-        output_dict['stage2_out'] = {
-                                'rcnn_cls': rcnn_cls,
-                                'rcnn_iou': rcnn_iou,
-                                'rcnn_reg': rcnn_reg,
-                                }
-        batch_dict['stage2_out'] = output_dict['stage2_out']
-        output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
+        # rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        # rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 7]
+        # rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
+        # rcnn_cls, rcnn_reg, rcnn_iou = [torch.cat(x, dim=0) for x in [rcnn_cls, rcnn_reg, rcnn_iou]]
+        # output_dict['stage2_out'] = {
+        #                         'rcnn_cls': rcnn_cls,
+        #                         'rcnn_iou': rcnn_iou,
+        #                         'rcnn_reg': rcnn_reg,
+        #                         }
+        # batch_dict['stage2_out'] = output_dict['stage2_out']
+        # output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
 
         return output_dict

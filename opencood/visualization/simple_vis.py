@@ -11,6 +11,14 @@ from matplotlib.colors import Normalize
 from opencood.tools.inference_utils import get_cav_box
 import opencood.visualization.simple_plot3d.canvas_3d as canvas_3d
 import opencood.visualization.simple_plot3d.canvas_bev as canvas_bev
+import os
+import math
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+import torch
+import numpy as np
+from matplotlib.gridspec import GridSpec
+
 
 def visualize(infer_result, pcd, pc_range, save_path, scale_3d=40, scale_bev=10, method='3d', left_hand=False):
         """
@@ -564,26 +572,54 @@ def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=
         plt.savefig(f'{save_dir}/bev_feature_{n+1}.png', dpi=200)
         plt.close(fig)
         
-def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz'):
-    import os
+def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz', vmin=None, vmax=None):
     os.makedirs(save_dir, exist_ok=True)
     
     N, C, H, W = bev_feature.shape
+
+    # 确定网格布局（尽量接近正方形）
+    grid_size = math.ceil(math.sqrt(N))
+    rows = grid_size
+    cols = math.ceil(N / rows)
+    
+    # 创建一个大图，包含所有BEV特征
+    fig = plt.figure(figsize=(cols * 4, rows * 4))
+    gs = GridSpec(rows, cols, figure=fig)
+    
+    # 找到所有特征的全局最小值和最大值，用于统一颜色范围
+    all_features = torch.mean(bev_feature, dim=1).detach().cpu().numpy()
+    current_vmin = np.min(all_features)
+    current_vmax = np.max(all_features)
     
     for n in range(N):
-        # Average across channels
-        feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
+        # 计算该特征在网格中的位置
+        row = n // cols
+        col = n % cols
         
-        # Create a new figure for each BEV
-        fig, ax = plt.subplots(figsize=(6, 6))
+        # 在特定位置创建子图
+        ax = fig.add_subplot(gs[row, col])
         
-        norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
+        # 获取通道平均特征
+        feature_avg = all_features[n]
+        
+        # 使用统一的颜色范围
+        if vmin is not None and vmax is not None:
+            norm = Normalize(vmin=vmin, vmax=vmax)
+        else:
+            norm = Normalize(vmin=current_vmin, vmax=current_vmax)
         im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
-        ax.set_title(f'BEV {n+1} (avg)')
+        ax.set_title(f'BEV {n+1}')
         ax.axis('off')
-        fig.colorbar(im, ax=ax)
-        
-        # Save individual figure
-        plt.tight_layout()
-        plt.savefig(f'{save_dir}/bev_{n+1}_avg_channels.png', dpi=200)
-        plt.close(fig)
+    
+    # 添加全局颜色条
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+    fig.colorbar(im, cax=cbar_ax)
+    
+    # 设置整体标题
+    fig.suptitle(f'Averaged BEV Features (N={N}, C={C}, H={W}, W={H})', fontsize=16)
+    
+    plt.tight_layout(rect=[0, 0, 0.9, 0.95])
+    plt.savefig(save_dir, dpi=200, bbox_inches='tight')
+    plt.close(fig)
+    
+    print(f"Saved grid visualization to {save_dir}")

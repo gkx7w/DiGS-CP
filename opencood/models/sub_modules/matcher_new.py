@@ -30,7 +30,7 @@ class Matcher(nn.Module):
         self.merge_keypoints(data_dict)
         return data_dict
 
-
+    
     def clustering(self, data_dict):
         """
         Assign predicted boxes to clusters according to their ious with each other
@@ -41,9 +41,9 @@ class Matcher(nn.Module):
         cur_cluster_id_batch = []
         record_len = [int(l) for l in data_dict['record_len']]
         lidar_poses = data_dict['lidar_pose'].cpu().numpy()
-        for i, l in enumerate(record_len):
+        for i, l in enumerate(record_len):         
             cur_boxes_list = data_dict['det_boxes'][sum(record_len[:i]):sum(record_len[:i])+l]
-            
+                
             # Added by Yifan Lu 
             if data_dict['proj_first'] is False:
                 cur_boxes_list_ego = []
@@ -63,13 +63,16 @@ class Matcher(nn.Module):
 
             cur_scores_list = data_dict['det_scores'][sum(record_len[:i]):sum(record_len[:i])+l]
             cur_boxes_list = [b for b in cur_boxes_list if len(b) > 0]
-            cur_scores_list = [s for s in cur_scores_list if len(s) > 0]
+            cur_scores_list = [s for s in cur_scores_list if len(s) > 0]         
             if len(cur_scores_list) == 0:
                 clusters_batch.append([torch.Tensor([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.57]).
                                       to(torch.device('cuda')).view(1, 7)])
                 scores_batch.append([torch.Tensor([0.01]).to(torch.device('cuda')).view(-1)])
+                cluster_indices_batch.append(torch.ones(1, device=torch.device('cuda'), dtype=torch.int))
+                # 因为没有形成任何有效簇 (ID >= 1)，下一个可用 ID 是 1
+                cur_cluster_id_batch.append(1)
                 continue
-
+      
             pred_boxes_cat = torch.cat(cur_boxes_list, dim=0)
             pred_boxes_cat[:, -1] = limit_period(pred_boxes_cat[:, -1])
             pred_scores_cat = torch.cat(cur_scores_list, dim=0)
@@ -77,6 +80,8 @@ class Matcher(nn.Module):
              # 在调用boxes_iou3d_gpu前确保数据类型是float32
             pred_boxes_cat = pred_boxes_cat.float()  # 显式转换为Float类型
             ious = boxes_iou3d_gpu(pred_boxes_cat, pred_boxes_cat)
+            
+            
             cluster_indices = torch.zeros(len(ious)).int() # gt assignments of preds
             cur_cluster_id = 1
             while torch.any(cluster_indices == 0):
@@ -172,7 +177,7 @@ class Matcher(nn.Module):
                 new_id += 1
             
             # Update cluster indices
-            original_indices = cluster_indices_batch[i]
+            original_indices = cluster_indices_batch[i] #索引越界了
             new_indices = torch.zeros_like(original_indices)
             
             for old_id, new_id in old_to_new_id.items():
