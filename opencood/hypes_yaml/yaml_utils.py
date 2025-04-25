@@ -167,6 +167,7 @@ def load_point_pillar_params(param):
         grid_size_lidar = np.maximum(np.round(grid_size_lidar).astype(np.int64), 1)
         
         param['model']['args']['point_pillar_scatter']['grid_size'] = grid_size_car
+        param['model']['args']['mdd_block']['diffusion']['grid_size'] = grid_size_car
         param['model']['args']['point_pillar_scatter']['grid_size_dec'] = grid_size_lidar
     else:
         grid_size = (np.array(cav_lidar_range[3:6]) - np.array(

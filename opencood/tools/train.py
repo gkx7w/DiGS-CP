@@ -24,6 +24,7 @@ from numpy import cov, trace, iscomplexobj
 from scipy.linalg import sqrtm
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
+from opencood.visualization.simple_vis import visualize_averaged_channels_individual
 
 # 设置随机种子以确保确定性
 def seed_everything(seed):
@@ -134,7 +135,7 @@ def main():
     elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
         trainable_layers = [
             'mdd',
-            'roi_head.factor_encoder',
+            # 'roi_head.factor_encoder',
             # 'cls_layers',
             # 'iou_layers',
             # 'reg_layers',
@@ -142,7 +143,7 @@ def main():
             # 'layernorm_2'
                             ]
         init_epoch = 78
-        diff_epoch = 0
+        diff_epoch = 0 
         print("loading model from", opt.model_dir)
         model = train_utils.load_saved_model_new(opt.model_dir, model)
         
@@ -165,7 +166,7 @@ def main():
         print(f"总共解冻 {unfrozen_count} 个参数组")
 
     # 设置学习率调度器
-    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else init_epoch)
+    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else diff_epoch)
     saved_path = train_utils.setup_train(hypes)
 
     if init_epoch > 0:
@@ -241,14 +242,47 @@ def main():
                 if ouput_dict["det_scores_fused"] is None or sum([t.shape[0] for t in ouput_dict["det_scores_fused"]]) == 0:
                     should_backward = False
 
-                # 这个问题没有完全解决，今晚再看看
-                # print("现有的框的数量：",sum([t.shape[0] for t in ouput_dict["det_scores_fused"]]))
             if should_backward:
                 final_loss.backward()
+                # 记录梯度信息
+                add_gradient_histograms(model, writer, epoch * len(train_loader) + i)
                 optimizer.step()
                 torch.cuda.empty_cache()
 
-
+        #——————————————————————————————————可视化————————————————————————————————————
+        
+        ouput_dict['pred_out_inf_no_cond'] = []
+        for batch_idx in range(len(ouput_dict['gt_x0'])):
+            x_noisy_no_cond = model.mdd.ddim_sample(ouput_dict['gt_x0'][batch_idx].shape, ouput_dict['gt_x0'][batch_idx].device, None,guidance_scale=1)#x_start=noise,
+            ouput_dict['pred_out_inf_no_cond'].append(x_noisy_no_cond)
+        viz_config = [
+            # ('batch_gt_spatial_features', 'gt_bev'),
+            ('gt_x0', 'gt_x0'),
+            # ('gt_noise', 'gt_noise'),
+            ('pred_out', 'pre_bev'),
+            # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
+            ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
+            # ('noise', 'noise'),
+            # ('x', 'x')
+        ]
+        base_path = f"/data/gkx/Code/opencood/bev_visualizations/train"
+        # 计算全局最小值和最大值
+        features = [ouput_dict[key][0] for key, _ in viz_config]
+        global_vmin, global_vmax = float('inf'), float('-inf')
+        for feature in features:
+            channels = torch.mean(feature, dim=1).detach().cpu().numpy()
+            global_vmin = min(global_vmin, np.min(channels))
+            global_vmax = max(global_vmax, np.max(channels))
+        # 可视化
+        for key, name in viz_config:
+            visualize_averaged_channels_individual(
+                ouput_dict[key][0], 
+                f"{base_path}/{name}_{epoch}", 
+                global_vmin, 
+                global_vmax
+            )
+        #——————————————————————————————————可视化————————————————————————————————————
+    
         if epoch % hypes['train_params']['save_freq'] == 0:
             torch.save(model.state_dict(),
                        os.path.join(saved_path,
@@ -265,7 +299,6 @@ def main():
     bestval_model_list = glob.glob(os.path.join(saved_path, "net_epoch_bestval_at*"))
     
     if len(bestval_model_list) > 1:
-        import numpy as np
         bestval_model_epoch_list = [eval(x.split("/")[-1].lstrip("net_epoch_bestval_at").rstrip(".pth")) for x in bestval_model_list]
         ascending_idx = np.argsort(bestval_model_epoch_list)
         for idx in ascending_idx:
@@ -302,6 +335,13 @@ def main():
 #     # calculate score
 #     fid = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
 #     return fid
+
+def add_gradient_histograms(model, writer, step):
+    for name, param in model.named_parameters():
+        if param.requires_grad and param.grad is not None:
+            writer.add_histogram(f'gradients/{name}', param.grad, step)
+            # 可选：也可以记录参数值的直方图
+            writer.add_histogram(f'weights/{name}', param, step)
 
 
 def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=5):
@@ -368,29 +408,29 @@ def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=
         plt.close(fig)
 
 
-def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz'):
-    import os
-    os.makedirs(save_dir, exist_ok=True)
+# def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz'):
+#     import os
+#     # os.makedirs(save_dir, exist_ok=True)
     
-    N, C, H, W = bev_feature.shape
+#     N, C, H, W = bev_feature.shape
     
-    for n in range(N):
-        # Average across channels
-        feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
+#     for n in range(N):
+#         # Average across channels
+#         feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
         
-        # Create a new figure for each BEV
-        fig, ax = plt.subplots(figsize=(6, 6))
+#         # Create a new figure for each BEV
+#         fig, ax = plt.subplots(figsize=(6, 6))
         
-        norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
-        im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
-        ax.set_title(f'BEV {n+1} (avg)')
-        ax.axis('off')
-        fig.colorbar(im, ax=ax)
+#         norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
+#         im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
+#         ax.set_title(f'BEV {n+1} (avg)')
+#         ax.axis('off')
+#         fig.colorbar(im, ax=ax)
         
-        # Save individual figure
-        plt.tight_layout()
-        plt.savefig(f'{save_dir}/bev_{n+1}_avg_channels.png', dpi=200)
-        plt.close(fig)
+#         # Save individual figure
+#         plt.tight_layout()
+#         plt.savefig(f'{save_dir}/bev_{n+1}_avg_channels.png', dpi=200)
+#         plt.close(fig)
 
 
 # def visualize_averaged_channels(bev_feature, save_dir='./bev_avg_viz'):

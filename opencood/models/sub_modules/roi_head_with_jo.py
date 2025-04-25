@@ -248,7 +248,7 @@ class RoIHead(nn.Module):
                                                   output_channels=
                                                    self.factor_dim)[0])
 
-        # self._init_weights(weight_init='xavier')
+        self._init_weights(weight_init='xavier')
 
     def _init_weights(self, weight_init='xavier'):
         if weight_init == 'kaiming':
@@ -268,7 +268,7 @@ class RoIHead(nn.Module):
                     init_func(m.weight)
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
-        nn.init.normal_(self.reg_layers[-1].weight, mean=0, std=0.001)
+        # nn.init.normal_(self.reg_layers[-1].weight, mean=0, std=0.001)
 
     def _make_fc_layers(self, input_channels, fc_list, output_channels=None):
         fc_layers = []

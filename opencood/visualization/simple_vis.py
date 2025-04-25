@@ -573,7 +573,7 @@ def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=
         plt.close(fig)
         
 def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz', vmin=None, vmax=None):
-    os.makedirs(save_dir, exist_ok=True)
+    # os.makedirs(save_dir, exist_ok=True)
     
     N, C, H, W = bev_feature.shape
 

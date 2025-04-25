@@ -5,7 +5,7 @@ test_dir: "/datasets/OPV2V/test"
 
 yaml_parser: "load_point_pillar_params"
 train_params:
-  batch_size: &batch_size 8
+  batch_size: &batch_size 4
   epoches: 89
   eval_freq: 2
   save_freq: 1
@@ -37,7 +37,7 @@ preprocess: &preprocess
   args:
     voxel_size: &voxel_size [0.4, 0.4, 4] #粒度可以变小一点
     max_points_per_voxel: &T 32
-    voxel_size_car: &voxel_size_car [0.2, 0.1, 4] #粒度可以变小一点
+    voxel_size_car: &voxel_size_car [0.1, 0.1, 4] #粒度可以变小一点
     max_points_per_voxel_car: &T_car 16
     max_voxel_train: 32000
     max_voxel_test: 70000
@@ -277,7 +277,7 @@ loss:
       
 optimizer:
   core_method: Adam
-  lr: 0.0016
+  lr: 0.0008
   args:
     eps: 1e-10
     weight_decay: 1e-4

@@ -180,11 +180,11 @@ class FpvrcnnPostprocessor(VoxelPostprocessor):
             return None, None
         output_dict = data_dict['ego']['stage2_out']
         label_dict = data_dict['ego']['rcnn_label_dict']
-        rcnn_cls = output_dict['rcnn_cls'][0].sigmoid().view(-1)
+        rcnn_cls = output_dict['rcnn_cls'].sigmoid().view(-1)
 
         # use stage2 score
         if 'rcnn_iou' in output_dict:
-            rcnn_iou = output_dict['rcnn_iou'][0].view(-1)
+            rcnn_iou = output_dict['rcnn_iou'].view(-1)
             rcnn_iou = rcnn_iou / 2 + 0.5 # renormalize
             rcnn_score = rcnn_cls * rcnn_iou**4
         else:
@@ -199,7 +199,7 @@ class FpvrcnnPostprocessor(VoxelPostprocessor):
 
         # rcnn_score = rcnn_cls
 
-        rcnn_reg = output_dict['rcnn_reg'][0].view(-1, 7)
+        rcnn_reg = output_dict['rcnn_reg'].view(-1, 7)
         rois_anchor = label_dict['rois_anchor'] # lwh order
         rois = label_dict['rois'] # lwh order
         roi_center = rois[:, 0:3]

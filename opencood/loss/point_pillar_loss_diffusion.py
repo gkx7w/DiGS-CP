@@ -197,31 +197,142 @@ class PointPillarLossDiffusion(nn.Module):
         
         return loss_cls_reduced,loss_iou_reduced,loss_reg_reduced
         
+    def edge_loss(self, predicted, target):
+        # 定义Sobel算子
+        sobel_x = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=torch.float32).view(1, 1, 3, 3).to(predicted.device)
+        sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=torch.float32).view(1, 1, 3, 3).to(predicted.device)
+        
+        # 如果输入是多通道的，需要按通道计算梯度
+        if len(predicted.shape) == 4:  # [B, C, H, W]
+            batch_size, channels = predicted.shape[:2]
+            sobel_x = sobel_x.repeat(channels, 1, 1, 1)
+            sobel_y = sobel_y.repeat(channels, 1, 1, 1)
+            
+            # 计算预测图像的梯度
+            pred_grad_x = F.conv2d(predicted, sobel_x, padding=1, groups=channels)
+            pred_grad_y = F.conv2d(predicted, sobel_y, padding=1, groups=channels)
+            pred_grad = torch.sqrt(pred_grad_x**2 + pred_grad_y**2 + 1e-8)  # 添加小值避免0处梯度
+            
+            # 计算目标图像的梯度
+            target_grad_x = F.conv2d(target, sobel_x, padding=1, groups=channels)
+            target_grad_y = F.conv2d(target, sobel_y, padding=1, groups=channels)
+            target_grad = torch.sqrt(target_grad_x**2 + target_grad_y**2 + 1e-8)
+            
+        else:  # 单通道图像 [B, H, W]
+            # 添加通道维度
+            pred_reshaped = predicted.unsqueeze(1)
+            target_reshaped = target.unsqueeze(1)
+            
+            # 计算预测图像的梯度
+            pred_grad_x = F.conv2d(pred_reshaped, sobel_x, padding=1)
+            pred_grad_y = F.conv2d(pred_reshaped, sobel_y, padding=1)
+            pred_grad = torch.sqrt(pred_grad_x**2 + pred_grad_y**2 + 1e-8)
+            
+            # 计算目标图像的梯度
+            target_grad_x = F.conv2d(target_reshaped, sobel_x, padding=1)
+            target_grad_y = F.conv2d(target_reshaped, sobel_y, padding=1)
+            target_grad = torch.sqrt(target_grad_x**2 + target_grad_y**2 + 1e-8)
+        
+        # 计算梯度差的L2损失
+        loss = F.mse_loss(pred_grad, target_grad)
+        
+        return loss
+
+    
+    def gaussian_kernel(self, size, sigma):
+        """
+        生成高斯卷积核
+        """
+        # 确保size是正确的奇数值
+        if size % 2 == 0:
+            size = size + 1
+            
+        # 创建一维坐标
+        coords = torch.arange(size).to(dtype=torch.float)
+        coords -= size // 2
+        
+        # 计算高斯权重
+        g = coords ** 2
+        g = -(g / (2 * sigma ** 2))
+        g = torch.exp(g)
+        
+        # 归一化
+        g /= g.sum()
+        kernel_1d = g.view(-1)
+        kernel_2d = kernel_1d.unsqueeze(1) @ kernel_1d.unsqueeze(0)  # 外积生成二维核
+        
+        return kernel_2d  # 直接返回形状为[size, size]的二维核
+        
+    def ssim_loss(self,predicted, target, window_size=11, sigma=1.5, eps=1e-8, K1=0.01, K2=0.03):
+        """
+        Args:
+            predicted: LayerNorm处理后的预测图像张量
+            target: LayerNorm处理后的目标图像张量
+        """
+        # 检查输入维度
+        if len(predicted.shape) != 4 or len(target.shape) != 4:
+            raise ValueError("输入必须是4D张量 [B, C, H, W]")
+        
+        # 获取批次大小和通道数
+        batch_size, channels = predicted.shape[:2]
+        
+        # 估计数据范围
+        data_range = torch.max(torch.abs(torch.cat([
+            predicted.view(batch_size, -1), 
+            target.view(batch_size, -1)
+        ], dim=1)), dim=1)[0]
+        data_range = data_range.view(batch_size, 1, 1, 1)
+        
+        # 计算常数 - 基于数据范围动态调整
+        C1 = (K1 * data_range) ** 2
+        C2 = (K2 * data_range) ** 2
+        
+        # 生成高斯核
+        kernel = self.gaussian_kernel(window_size, sigma).to(predicted.device)
+        kernel = kernel.view(1, 1, window_size, window_size)
+        kernel = kernel.repeat(channels, 1, 1, 1)
+        
+        # 填充
+        pad = window_size // 2
+        
+        # 计算均值
+        mu1 = F.conv2d(predicted, kernel, padding=pad, groups=channels)
+        mu2 = F.conv2d(target, kernel, padding=pad, groups=channels)
+        
+        # 计算平方
+        mu1_sq = mu1 ** 2
+        mu2_sq = mu2 ** 2
+        mu1_mu2 = mu1 * mu2
+        
+        # 计算方差和协方差
+        sigma1_sq = F.conv2d(predicted * predicted, kernel, padding=pad, groups=channels) - mu1_sq
+        sigma2_sq = F.conv2d(target * target, kernel, padding=pad, groups=channels) - mu2_sq
+        sigma12 = F.conv2d(predicted * target, kernel, padding=pad, groups=channels) - mu1_mu2
+        
+        # SSIM公式
+        ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2 + eps))
+        
+        # 计算均值SSIM
+        ssim_value = ssim_map.mean()
+        return 1.0 - ssim_value
+    
     def cal_diff_loss(self, p_e_batch, g_e_batch,t_e_batch):
         # 初始化总损失
         diff_loss = 0.0
+        
         # 对每个批次中的每个特征计算损失并累加
         for batch_idx in range(len(p_e_batch)):
             p_noise = p_e_batch[batch_idx]
             g_noise = g_e_batch[batch_idx]
-            t = t_e_batch[batch_idx]
-            loss_weight = self.get_loss_weights(self.num_timesteps, beta_schedule='cosine', sigma_data=self.sigma_data)
             # 计算当前批次的损失
-            batch_diff_loss = self.weighted_diffusion_loss(
-                p_noise,
-                g_noise,
-                t,
-                loss_weight
-            )
-            # batch_diff_loss = self.diff_loss_func(
-            #     p_noise,
-            #     g_noise,
-            # )
+            pixel_loss = F.mse_loss(p_noise, g_noise, reduction='mean')
+            edge_loss = self.edge_loss(p_noise, g_noise)
+            ssim_loss = self.ssim_loss(p_noise, g_noise)
             # 累加总损失
-            diff_loss += batch_diff_loss
-        # 计算平均损失（如果有特征）
+            diff_loss += 0.5 * pixel_loss + 0.05 * edge_loss + 1.0 * ssim_loss
+        # 计算平均损失
         diff_loss = diff_loss / len(p_e_batch)
-        return diff_loss
+        return diff_loss, 0.5 * pixel_loss, 0.05 * edge_loss, 1.0 * ssim_loss
         
     def forward(self, output_dict, target_dict, epoch = 1, train = True):
         """
@@ -264,13 +375,16 @@ class PointPillarLossDiffusion(nn.Module):
             elif output_dict['target'] == 'x0':
                 g_e_batch = output_dict["gt_x0"]
             t_e_batch = output_dict['t']
-            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
+            diff_loss, pixel_loss, edge_loss, ssim_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = rcnn_loss + diff_loss
 
             self.total_loss = total_loss.item()
             self.diff_loss = diff_loss.item()
             self.loss_dict.update({'total_loss': self.total_loss,
-                                    'diff_loss': self.diff_loss
+                                    'diff_loss': self.diff_loss,
+                                    'pixel_loss':pixel_loss.item(),
+                                    'edge_loss':edge_loss.item(),
+                                    'ssim_loss':ssim_loss.item(),
                                     })
         elif 'pred_out' in output_dict.keys():
             p_e_batch = output_dict['pred_out']  # 批量列表
@@ -279,7 +393,7 @@ class PointPillarLossDiffusion(nn.Module):
             elif output_dict['target'] == 'x0':
                 g_e_batch = output_dict["gt_x0"]
             t_e_batch = output_dict['t']
-            diff_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
+            diff_loss, pixel_loss, edge_loss, ssim_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = diff_loss
 
             self.total_loss = total_loss.item()
@@ -289,7 +403,10 @@ class PointPillarLossDiffusion(nn.Module):
                                    'reg_loss': self.reg_loss,
                                    'cls_loss': self.cls_loss,
                                    'iou_loss': self.iou_loss,
-                                   'diff_loss': self.diff_loss 
+                                   'diff_loss': self.diff_loss,
+                                   'pixel_loss':pixel_loss.item(),
+                                   'edge_loss':edge_loss.item(),
+                                   'ssim_loss':ssim_loss.item(), 
                                     })
     
         return total_loss
@@ -331,92 +448,7 @@ class PointPillarLossDiffusion(nn.Module):
                       weights=1):
         return ((gt_noise - pred_noise) ** 2).sum(dim=1).mean()*weights
     
-    def get_loss_weights(self, num_timesteps, beta_schedule='linear', sigma_data=1.0):
-        """
-        计算所有时间步的损失权重
-        
-        参数:
-            num_timesteps: 扩散过程的时间步数
-            beta_schedule: 噪声调度类型，如'linear'或'cosine'
-            sigma_data: 数据的固有噪声水平
-            
-        返回:
-            所有时间步的损失权重 [num_timesteps]
-        """
-        # 首先获取所有时间步的噪声水平
-        if beta_schedule == 'linear':
-            # 线性噪声调度
-            betas = torch.linspace(0.0001, 0.02, num_timesteps)
-            alphas = 1. - betas
-            alphas_cumprod = torch.cumprod(alphas, dim=0)
-            sigmas = torch.sqrt((1 - alphas_cumprod) / alphas_cumprod)
-        elif beta_schedule == 'cosine':
-            # 余弦噪声调度
-            steps = torch.arange(num_timesteps + 1, dtype=torch.float32) / num_timesteps
-            alpha_bar = torch.cos((steps + 0.008) / 1.008 * torch.pi / 2) ** 2
-            alpha_bar = alpha_bar / alpha_bar[0]
-            alphas_cumprod = alpha_bar[1:]
-            sigmas = torch.sqrt((1 - alphas_cumprod) / alphas_cumprod)
-        else:
-            raise ValueError(f"未知的噪声调度类型: {beta_schedule}")
-        
-        # 根据噪声水平计算损失权重
-        loss_weights = []
-        for sigma in sigmas:
-            weight = sigma**2 / (sigma**2 + sigma_data**2)
-            loss_weights.append(weight)
-        
-        return torch.tensor(loss_weights)
-
-
-    def weighted_diffusion_loss(self, model_out, target, t, loss_weights):
-        """
-        计算扩散模型的加权损失
-        
-        参数:
-            model_out: 模型预测的噪声 [batch_size, channels, height, width]
-            target: 目标噪声 [batch_size, channels, height, width]  
-            t: 时间步索引 [batch_size]
-            loss_weights: 每个时间步的损失权重 [num_timesteps]
-            
-        返回:
-            标量损失值
-        """
-        # 计算每个元素的均方误差
-        loss = F.mse_loss(model_out, target, reduction='mean')
-        
-        # 对通道和空间维度求平均，只保留批次维度
-        # loss = reduce(loss, 'b ... -> b', 'mean')
-        
-        # 根据时间步提取权重并应用
-        # weights = self.extract(loss_weights, t, loss.shape)
-        # loss = loss * weights
-        
-        # 对批次取平均得到最终损失
-        return loss
-
-
-    def extract(self, values, t, shape):
-        """
-        从values中提取与时间步t对应的值
-        
-        参数:
-            values: 包含所有时间步对应值的张量 [num_timesteps, ...]
-            t: 索引张量 [batch_size]
-            shape: 输出形状
-            
-        返回:
-            提取的值 [shape]
-        """
-        batch_size = t.shape[0]
-        out = values.gather(-1, t.cpu())
-        
-        # 处理广播所需的形状调整
-        while len(out.shape) < len(shape):
-            out = out[..., None]
-            
-        return out.to(t.device)
-    
+   
     @staticmethod
     def sigmoid_cross_entropy_with_logits(input: torch.Tensor, target: torch.Tensor):
         """ PyTorch Implementation for tf.nn.sigmoid_cross_entropy_with_logits:
@@ -481,11 +513,14 @@ class PointPillarLossDiffusion(nn.Module):
         if pbar is None:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
+                pixel_loss = self.loss_dict['pixel_loss']
+                edge_loss = self.loss_dict['edge_loss']
+                ssim_loss = self.loss_dict['ssim_loss']
                 print("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
-                " || Loc: %.3f || Iou: %.3f || Diff: %.3f" % (
+                " || Loc: %.3f || Iou: %.3f || Diff: %.3f|| Pixel: %.3f|| Edge: %.3f|| Ssim: %.3f" % (
                     epoch, batch_id + 1, batch_len,
                     lr if lr is not None else 0,
-                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, pixel_loss, edge_loss, ssim_loss))
             else:
                 print("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
@@ -495,11 +530,14 @@ class PointPillarLossDiffusion(nn.Module):
         else:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
+                pixel_loss = self.loss_dict['pixel_loss']
+                edge_loss = self.loss_dict['edge_loss']
+                ssim_loss = self.loss_dict['ssim_loss']
                 pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
-                " || Loc: %.3f || Iou: %.3f || Diff: %.3f" % (
+                " || Loc: %.3f || Iou: %.3f || Diff: %.3f|| Pixel: %.3f|| Edge: %.3f|| Ssim: %.3f" % (
                     epoch, batch_id + 1, batch_len,
                     lr if lr is not None else 0,
-                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, pixel_loss, edge_loss, ssim_loss))
             else:
                 pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
@@ -513,6 +551,12 @@ class PointPillarLossDiffusion(nn.Module):
         
         if 'diff_loss' in self.loss_dict:
             writer.add_scalar('Reconstruction_loss', diff_loss,
+                          epoch*batch_len + batch_id)
+            writer.add_scalar('Pixel_loss', pixel_loss,
+                          epoch*batch_len + batch_id)
+            writer.add_scalar('Edge_loss', edge_loss,
+                          epoch*batch_len + batch_id)
+            writer.add_scalar('Ssim_loss', ssim_loss,
                           epoch*batch_len + batch_id)
         writer.add_scalar('Regression_loss', reg_loss,
                           epoch*batch_len + batch_id)

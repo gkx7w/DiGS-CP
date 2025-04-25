@@ -92,7 +92,7 @@ class PointPillarDiffusionDecDet(nn.Module):
         else:
             print("not_resnet")
             self.backbone = BaseBEVBackbone(args['base_bev_backbone'],
-                                            64)  # or you can use ResNetBEVBackbone, which is stronger
+                                            64)  
         
         # self.voxel_preprocessor = build_preprocessor(args['preprocess'], train=True)
         # self.fusion_net = nn.ModuleList()
@@ -338,11 +338,11 @@ class PointPillarDiffusionDecDet(nn.Module):
                             })
             # 得到低层BEV特征 [B,C,H,W] 
             batch_dict = self.pillar_vfe(batch_dict, stage='diff')
-            batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])    
+            batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])
+                
             # 将box抠出来的bev特征输入到mdd中
             # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
             batch_dict = self.mdd(batch_dict)
-            # loss算错了！应该算noise之间的loss
             output_dict = {'pred_out': batch_dict['pred_out'],
                            'gt_noise' : batch_dict['gt_noise'],
                            'gt_x0':batch_dict['gt_x0'],
@@ -354,7 +354,7 @@ class PointPillarDiffusionDecDet(nn.Module):
             #     ('gt_x0', 'gt_x0'),
             #     # ('gt_noise', 'gt_noise'),
             #     ('pred_out', 'pre_bev'),
-            #     ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
+            #     # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
             #     ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
             #     # ('noise', 'noise'),
             #     # ('x', 'x')
