@@ -280,6 +280,7 @@ class PillarVFE(nn.Module):
             statistical_features[:, 1:4] = statistical_features[:, 1:4] * (~single_point_mask)  # 注意这里改为1:4，因为points_count不需要置零
             
             # 将统计特征添加到batch_dict中
+            statistical_features = self.normalize_statistical_features(statistical_features)
             batch_dict['pillar_features'] = statistical_features
             
             # 在返回之前添加分析
@@ -292,3 +293,62 @@ class PillarVFE(nn.Module):
             # batch_dict['pillar_features'] = features
 
         return batch_dict
+    
+    def normalize_statistical_features(self, statistical_features):
+        """
+        对统计特征进行通道级别的归一化
+        输入: statistical_features [M, 8] - 包含mean_relative_offsets(3), variance(3), max_distances(1), points_count(1)
+        输出: 归一化后的特征 [M, 8]
+        """
+        # 复制一份特征，避免修改原始数据
+        normalized_features = statistical_features.clone()
+        
+        # 分别对不同类型的特征进行归一化
+        # 1. 对mean_relative_offsets进行归一化 (前3个通道)
+        for i in range(3):
+            channel_data = normalized_features[:, i]
+            
+            # 方式1: 如果值很小，使用标准化而非最小-最大缩放
+            std_val = channel_data.std()
+            if std_val > 1e-10:  # 使用更小的阈值
+                # 使用标准差归一化，保留符号信息
+                normalized_features[:, i] = channel_data / (3 * std_val)  # 3倍标准差通常覆盖大部分数据
+            else:
+                # 如果标准差极小，使用绝对值最大值归一化
+                max_abs = torch.max(torch.abs(channel_data))
+                if max_abs > 1e-10:
+                    normalized_features[:, i] = channel_data / max_abs
+                else:
+                    normalized_features[:, i] = torch.zeros_like(channel_data)
+        
+        # 2. 对variance进行归一化 (3-6通道)
+        for i in range(3, 6):
+            channel_data = normalized_features[:, i]
+            # variance通常是非负的，可以使用最大值归一化
+            max_val = channel_data.max()
+            if max_val > 1e-6:
+                normalized_features[:, i] = channel_data / max_val
+            else:
+                normalized_features[:, i] = torch.zeros_like(channel_data)
+        
+        # 3. 对max_distances进行归一化 (第6个通道)
+        max_dist = normalized_features[:, 6]
+        max_val = max_dist.max()
+        if max_val > 1e-6:
+            normalized_features[:, 6] = max_dist / max_val
+        
+        # 4. 对points_count进行归一化 (第7个通道)
+        # 通常点数是整数，可以考虑除以最大点数或者用log变换
+        points_count = normalized_features[:, 7]
+        max_points = points_count.max()
+        if max_points > 0:
+            # 方案1: 直接除以最大值
+            # normalized_features[:, 7] = points_count / max_points
+            
+            # 方案2: 对点数使用log变换再归一化，能更好地处理点数分布
+            log_points = torch.log1p(points_count)  # log(1+x)避免log(0)
+            max_log = log_points.max()
+            if max_log > 0:
+                normalized_features[:, 7] = log_points / max_log
+        
+        return normalized_features

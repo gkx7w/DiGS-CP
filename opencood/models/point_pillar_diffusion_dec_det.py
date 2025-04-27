@@ -28,7 +28,7 @@ from opencood.models.sub_modules.naive_compress import NaiveCompressor
 from opencood.models.fuse_modules.fusion_in_one import MaxFusion, AttFusion, DiscoFusion, V2VNetFusion, V2XViTFusion, When2commFusion
 from opencood.data_utils.pre_processor.sp_voxel_preprocessor import SpVoxelPreprocessor
 from opencood.data_utils.datasets.early_fusion_dataset_diffusion import visualize_gt_boxes
-from opencood.visualization.simple_vis import visualize_averaged_channels_individual
+from opencood.visualization.simple_vis import visualize_averaged_channels_individual,visualize_channels_individually,visualize_all_channels_grid
 
 def regroup(x, record_len):
     cum_sum_len = torch.cumsum(record_len, dim=0)
@@ -353,9 +353,9 @@ class PointPillarDiffusionDecDet(nn.Module):
             #     # ('batch_gt_spatial_features', 'gt_bev'),
             #     ('gt_x0', 'gt_x0'),
             #     # ('gt_noise', 'gt_noise'),
-            #     ('pred_out', 'pre_bev'),
+            #     # ('pred_out', 'pre_bev'),
             #     # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
-            #     ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
+            #     # ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
             #     # ('noise', 'noise'),
             #     # ('x', 'x')
             # ]
@@ -369,7 +369,7 @@ class PointPillarDiffusionDecDet(nn.Module):
             #     global_vmax = max(global_vmax, np.max(channels))
             # # 可视化
             # for key, name in viz_config:
-            #     visualize_averaged_channels_individual(
+            #     visualize_all_channels_grid(
             #         batch_dict[key][0], 
             #         f"{base_path}/{name}_{i}", 
             #         global_vmin, 

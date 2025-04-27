@@ -225,7 +225,10 @@ class Cond_Diff_Denoise(nn.Module):
         # self.denoiser = DiffusionUNet(config)
         self.denoiser = Unet(config)
         H, W, _ = config.diffusion.grid_size
+        C = config.model.ch
         self.norm_layer = nn.LayerNorm([W, H],elementwise_affine=False)
+        self.group_norm = nn.GroupNorm(num_groups=C, num_channels=C)
+        self.instance_norm = nn.InstanceNorm2d(C, affine=False)
 
         # q sampling
         betas = make_beta_schedule(beta_schedule, timesteps, linear_start=linear_start, linear_end=linear_end)
@@ -315,7 +318,15 @@ class Cond_Diff_Denoise(nn.Module):
         # 缩放到目标范围 [target_min, target_max]
         return x_scaled * (target_max - target_min) + target_min
 
-
+    def channel_balance_norm(self, x):
+        # 先对每个通道独立归一化
+        mean = x.mean(dim=(2, 3), keepdim=True)  # [N, C, 1, 1]
+        std = x.std(dim=(2, 3), keepdim=True)    # [N, C, 1, 1]
+        x_norm = (x - mean) / (std + 1e-5)
+        
+        # 再做通道间的均衡
+        channel_max = x_norm.amax(dim=(2, 3), keepdim=True)  # [N, C, 1, 1]
+        return x_norm / (channel_max + 1e-5)
     
     def q_sample(self, x_start, t, noise=None):
         return (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
@@ -359,7 +370,7 @@ class Cond_Diff_Denoise(nn.Module):
         return uncond_pred + guidance_scale * (cond_pred - uncond_pred)
     
     @torch.inference_mode()
-    def model_predictions(self, x, t, cond = None, guidance_scale=1.0, clip_x_start = False, rederive_pred_noise = False):
+    def model_predictions(self, x, t, cond = None, guidance_scale=1.0, clip_x_start = True, rederive_pred_noise = True):
         if guidance_scale == 1.0 or cond is None:
             model_output = self.denoiser(x, t.float(), cond)
         else:
@@ -382,8 +393,8 @@ class Cond_Diff_Denoise(nn.Module):
 
         elif self.parameterization == "x0":
             x_start = model_output
-            # if self.if_normalize:
-            #     x_start = maybe_clip(x_start)
+            if self.if_normalize:
+                x_start = maybe_clip(x_start)
             pred_noise = self.predict_noise_from_start(x, t, x_start)
         
         return ModelPrediction(pred_noise, x_start)
@@ -509,8 +520,8 @@ class Cond_Diff_Denoise(nn.Module):
             x_noisys.append(x_noisy)
 
         ret = x_noisy if not return_all_timesteps else torch.stack(x_noisys, dim = 1)
-        # if self.if_normalize:
-        #     ret = self.denormalize_from_minus1_1(ret)
+        if self.if_normalize:
+            ret = self.denormalize_from_minus1_1(ret)
         return ret
     
     @torch.inference_mode()
@@ -655,10 +666,11 @@ class Cond_Diff_Denoise(nn.Module):
                 
                 
                 if self.if_normalize:
-                    x_start = self.norm_layer(gt_features)  # 当前box框的特征
-                    # x_start = self.min_max_normalize_to_range(gt_features, -1.0, 1.0)
+                    # x_start = self.norm_layer(gt_features)  # 当前box框的特征
+                    # x_start = self.channel_balance_norm(x_start) 
+                    x_start = self.normalize_to_minus1_1(gt_features[:, -1:, :, :])
                 else:
-                    x_start = gt_features
+                    x_start = gt_features[:, -1:, :, :]   
                 batch_gt_x0.append(x_start)
                 latent_shape = x_start.shape
                 # 随机采样时间t
@@ -701,12 +713,12 @@ class Cond_Diff_Denoise(nn.Module):
                         x_noisy_init_result_np = normalize_to_0_1(x_noisy).cpu().numpy()
                         # fid_noisy_init_score = compute_frechet_distance(x_noisy_init_result_np, self.gt_np)
                         psnr_noisy_init_value = calculate_psnr(x_noisy_init_result_np, self.gt_np)
-                        ssim_noisy_init_value = calculate_ssim(x_noisy_init_result_np, self.gt_np)
+                        # ssim_noisy_init_value = calculate_ssim(x_noisy_init_result_np, self.gt_np)
                         self.noisy_versions.append({
                             'type': 'Pure Noise Init W Cond',
                             'tensor': x_noisy_init_result_np,
                             'psnr': psnr_noisy_init_value,
-                            'ssim': ssim_noisy_init_value,
+                            # 'ssim': ssim_noisy_init_value,
                             # 'fd': fid_noisy_init_score
                         })
                         
@@ -716,12 +728,12 @@ class Cond_Diff_Denoise(nn.Module):
                         x_noisy_init_no_cond_result_np = normalize_to_0_1(x_noisy_no_cond).cpu().numpy()
                         # fid_noisy_init_no_cond_score = compute_frechet_distance(x_noisy_init_no_cond_result_np, self.gt_np)
                         psnr_noisy_init_no_cond_value = calculate_psnr(x_noisy_init_no_cond_result_np, self.gt_np)
-                        ssim_noisy_init_no_cond_value = calculate_ssim(x_noisy_init_no_cond_result_np, self.gt_np)
+                        # ssim_noisy_init_no_cond_value = calculate_ssim(x_noisy_init_no_cond_result_np, self.gt_np)
                         self.noisy_versions.append({
                             'type': 'Pure Noise Init No Cond',
                             'tensor': x_noisy_init_no_cond_result_np,
                             'psnr': psnr_noisy_init_no_cond_value,
-                            'ssim': ssim_noisy_init_no_cond_value,
+                            # 'ssim': ssim_noisy_init_no_cond_value,
                             # 'fd': fid_noisy_init_no_cond_score
                         })
                         
@@ -730,12 +742,12 @@ class Cond_Diff_Denoise(nn.Module):
                         noisy_init_np = normalize_to_0_1(noise_init).cpu().numpy()
                         # fid_noisy_score = compute_frechet_distance(noisy_init_np, self.gt_np)
                         psnr_noisy_value = calculate_psnr(noisy_init_np, self.gt_np)
-                        ssim_noisy_value = calculate_ssim(noisy_init_np, self.gt_np)
+                        # ssim_noisy_value = calculate_ssim(noisy_init_np, self.gt_np)
                         self.noisy_versions.append({
                             'type': 'Pure Noise Init -0.35',
                             'tensor': noise_init,
                             'psnr': psnr_noisy_value,
-                            'ssim': ssim_noisy_value,
+                            # 'ssim': ssim_noisy_value,
                             # 'fd': fid_noisy_score
                         })
                         loss = F.mse_loss(noise_init, x_start, reduction='mean')
@@ -746,7 +758,7 @@ class Cond_Diff_Denoise(nn.Module):
                         for result in self.noisy_versions:
                             # 调整类型字段的宽度，确保对齐
                             type_str = result['type'].ljust(20)
-                            print(f"{type_str}\t{result['psnr']:.2f}\t\t{result['ssim']:.4f}\t\t")
+                            print(f"{type_str}\t{result['psnr']:.2f}\t\t")#\t\t{result['ssim']:.4f}
                     
                 # 存储当前box框的预测结果
                 batch_model_out.append(model_out)

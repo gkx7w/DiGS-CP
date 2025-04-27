@@ -311,8 +311,6 @@ class PointPillarLossDiffusion(nn.Module):
         
         # SSIM公式
         ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2 + eps))
-        
-        # 计算均值SSIM
         ssim_value = ssim_map.mean()
         return 1.0 - ssim_value
     
@@ -329,10 +327,10 @@ class PointPillarLossDiffusion(nn.Module):
             edge_loss = self.edge_loss(p_noise, g_noise)
             ssim_loss = self.ssim_loss(p_noise, g_noise)
             # 累加总损失
-            diff_loss += 0.5 * pixel_loss + 0.05 * edge_loss + 1.0 * ssim_loss
+            diff_loss += pixel_loss
         # 计算平均损失
         diff_loss = diff_loss / len(p_e_batch)
-        return diff_loss, 0.5 * pixel_loss, 0.05 * edge_loss, 1.0 * ssim_loss
+        return diff_loss, pixel_loss, 0.05 * edge_loss, ssim_loss
         
     def forward(self, output_dict, target_dict, epoch = 1, train = True):
         """
@@ -517,10 +515,10 @@ class PointPillarLossDiffusion(nn.Module):
                 edge_loss = self.loss_dict['edge_loss']
                 ssim_loss = self.loss_dict['ssim_loss']
                 print("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
-                " || Loc: %.3f || Iou: %.3f || Diff: %.3f|| Pixel: %.3f|| Edge: %.3f|| Ssim: %.3f" % (
+                " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Pixel: %.4f" % (
                     epoch, batch_id + 1, batch_len,
                     lr if lr is not None else 0,
-                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, pixel_loss, edge_loss, ssim_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss,pixel_loss))
             else:
                 print("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
@@ -534,10 +532,10 @@ class PointPillarLossDiffusion(nn.Module):
                 edge_loss = self.loss_dict['edge_loss']
                 ssim_loss = self.loss_dict['ssim_loss']
                 pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
-                " || Loc: %.3f || Iou: %.3f || Diff: %.3f|| Pixel: %.3f|| Edge: %.3f|| Ssim: %.3f" % (
+                " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Pixel: %.4f" % (
                     epoch, batch_id + 1, batch_len,
                     lr if lr is not None else 0,
-                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, pixel_loss, edge_loss, ssim_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, pixel_loss))
             else:
                 pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
@@ -554,10 +552,10 @@ class PointPillarLossDiffusion(nn.Module):
                           epoch*batch_len + batch_id)
             writer.add_scalar('Pixel_loss', pixel_loss,
                           epoch*batch_len + batch_id)
-            writer.add_scalar('Edge_loss', edge_loss,
-                          epoch*batch_len + batch_id)
-            writer.add_scalar('Ssim_loss', ssim_loss,
-                          epoch*batch_len + batch_id)
+            # writer.add_scalar('Edge_loss', edge_loss,
+            #               epoch*batch_len + batch_id)
+            # writer.add_scalar('Ssim_loss', ssim_loss,
+            #               epoch*batch_len + batch_id)
         writer.add_scalar('Regression_loss', reg_loss,
                           epoch*batch_len + batch_id)
         writer.add_scalar('Cls_loss', cls_loss,

@@ -5,7 +5,7 @@ test_dir: "/datasets/OPV2V/test"
 
 yaml_parser: "load_point_pillar_params"
 train_params:
-  batch_size: &batch_size 4
+  batch_size: &batch_size 2
   epoches: 89
   eval_freq: 2
   save_freq: 1
@@ -212,15 +212,15 @@ model:
 
     mdd_block:
       model:
-        in_channels: 8 #4
-        out_ch: 8
-        ch: 8
+        in_channels: 1 #8
+        out_ch: 1 #8
+        ch: 64
         ch_mult: [1, 1]
         num_res_blocks: 2
         attn_resolutions: [16]
         dropout: 0.0
         resamp_with_conv: True
-        # d_cond: 256
+        # d_cond: 512
         n_head: 8
       diffusion:
         beta_schedule: linear
@@ -277,7 +277,7 @@ loss:
       
 optimizer:
   core_method: Adam
-  lr: 0.0008
+  lr: 0.0004
   args:
     eps: 1e-10
     weight_decay: 1e-4

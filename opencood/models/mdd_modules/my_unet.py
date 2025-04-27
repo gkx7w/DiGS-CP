@@ -288,7 +288,7 @@ class Attention(nn.Module):
         super().__init__()
         # channels = n_head * n_embd
         # 有空把这个num_groups改成超参数
-        self.groupnorm = nn.GroupNorm(2, channels, eps=1e-6)
+        self.groupnorm = nn.GroupNorm(1, channels, eps=1e-6)
         self.conv_input = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
         self.layernorm_1 = nn.LayerNorm(channels)
         self.attention_1 = SelfAttention(n_head, channels, in_proj_bias=False)

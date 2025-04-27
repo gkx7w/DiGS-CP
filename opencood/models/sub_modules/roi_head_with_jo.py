@@ -224,6 +224,21 @@ class RoIHead(nn.Module):
         # self.convertor = None
         self.convertor, pre_channel = self._make_fc_layers(pre_channel, fc_layers)
 
+        # 新增多头注意力机制和特征增强
+        self.feature_dim = pre_channel  # 使用当前的特征维度
+        self.self_attention = nn.MultiheadAttention(
+            embed_dim=self.feature_dim,
+            num_heads=8,  # 可根据特征维度调整
+            batch_first=True
+        )
+
+        # 特征增强
+        self.feature_enhance = nn.Sequential(
+            nn.Linear(self.feature_dim, self.feature_dim),
+            nn.LayerNorm(self.feature_dim),
+            nn.GELU()
+        )
+        
         # self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
         #                                                     fc_layers,
         #                                                     output_channels=
@@ -814,15 +829,17 @@ class RoIHead(nn.Module):
                                 self.grid_size)  # (BxN, C, 6, 6, 6)
         # 共享特征提取
         shared_features_mv = self.shared_fc_layers(
-            pooled_features_mv.view(batch_size_mv, -1, 1)) # (BxN, 512, 1)
+            pooled_features_mv.view(batch_size_mv, -1, 1)).squeeze() # (BxN, 512)
 
-        boxes_factors = []
-        for i in range(self.factor_num):
-            boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
+        # 解耦
+        # boxes_factors = []
+        # for i in range(self.factor_num):
+        #     boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
 
-        processed_boxes_factors = [factor.unsqueeze(0) if factor.dim() == 1 else factor for factor in boxes_factors]
-        # all box , 32 *8
-        boxes_factors = torch.cat(processed_boxes_factors,dim=1)
+        # processed_boxes_factors = [factor.unsqueeze(0) if factor.dim() == 1 else factor for factor in boxes_factors]
+        # # all box , 32 *8
+        # boxes_factors = torch.cat(processed_boxes_factors,dim=1)
+        
         # 寻找公共物体
         cluster_indices,cur_cluster_id = batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
         object_factors_batch = []
@@ -847,10 +864,10 @@ class RoIHead(nn.Module):
             start_idx = start_indices[i]
             end_idx = start_idx + batch_box_len[i]
             # 获取当前批次的box特征
-            current_boxes_factors = boxes_factors[start_idx:end_idx]
+            current_boxes_factors = shared_features_mv[start_idx:end_idx]
             # 检查current_boxes_factors是否为空
             if len(current_boxes_factors) == 0:
-                default_factor = torch.zeros(1, 256, device=boxes_factors.device)
+                default_factor = torch.zeros(1, 256, device=shared_features_mv.device)
                 object_factors_batch.append(default_factor)
                 continue
             
@@ -861,7 +878,12 @@ class RoIHead(nn.Module):
                     mask = torch.zeros(len(current_boxes_factors), dtype=torch.bool, device=cluster_indices[i].device)
                     mask[:len(cluster_indices[i])] = (cluster_indices[i] == j)
                 object_factors.append(current_boxes_factors[mask].mean(dim=0).unsqueeze(dim=0))
-            object_factors_batch.append(torch.cat(object_factors,dim=0))
+            
+            all_features = torch.cat(object_factors, dim=0).unsqueeze(0)  # [1, sum(N_i), D]
+            attn_output, _ = self.self_attention(all_features, all_features, all_features)
+            enhanced_features = self.feature_enhance(attn_output.squeeze(0))
+            object_factors_batch.append(enhanced_features)
+            # object_factors_batch.append(torch.cat(object_factors,dim=0)) #这里融合没有可优化的参数，故diffusion无法监督融合，监督的还是前面的解耦
             
             # if len(object_factors) > 0:  # 如果有非背景聚类
             #     object_factors = torch.cat(object_factors,dim=0)
@@ -872,7 +894,6 @@ class RoIHead(nn.Module):
             # if object_factors is not None:
             #     object_factors_batch.append(object_factors)
 
-        # 每个batch中的factor个数是聚类的个数，顺序也是聚类的顺序，所以后面对应引导的顺序应该也错了T_T
         batch_dict["fused_object_factors"] = object_factors_batch # 物体数量, 32 *8
         
         return batch_dict

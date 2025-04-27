@@ -24,7 +24,7 @@ from numpy import cov, trace, iscomplexobj
 from scipy.linalg import sqrtm
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
-from opencood.visualization.simple_vis import visualize_averaged_channels_individual
+from opencood.visualization.simple_vis import visualize_averaged_channels_individual,visualize_all_channels_grid
 
 # 设置随机种子以确保确定性
 def seed_everything(seed):
@@ -257,15 +257,15 @@ def main():
             ouput_dict['pred_out_inf_no_cond'].append(x_noisy_no_cond)
         viz_config = [
             # ('batch_gt_spatial_features', 'gt_bev'),
-            ('gt_x0', 'gt_x0'),
+            # ('gt_x0', 'gt_x0'),
             # ('gt_noise', 'gt_noise'),
-            ('pred_out', 'pre_bev'),
+            # ('pred_out', 'pre_bev'),
             # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
             ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
             # ('noise', 'noise'),
             # ('x', 'x')
         ]
-        base_path = f"/data/gkx/Code/opencood/bev_visualizations/train"
+        base_path = f"/data/gkx/Code/opencood/bev_visualizations/train1loss"
         # 计算全局最小值和最大值
         features = [ouput_dict[key][0] for key, _ in viz_config]
         global_vmin, global_vmax = float('inf'), float('-inf')
@@ -275,7 +275,7 @@ def main():
             global_vmax = max(global_vmax, np.max(channels))
         # 可视化
         for key, name in viz_config:
-            visualize_averaged_channels_individual(
+            visualize_all_channels_grid(
                 ouput_dict[key][0], 
                 f"{base_path}/{name}_{epoch}", 
                 global_vmin, 
