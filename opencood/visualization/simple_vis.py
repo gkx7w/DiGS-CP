@@ -18,6 +18,7 @@ from matplotlib.colors import Normalize
 import torch
 import numpy as np
 from matplotlib.gridspec import GridSpec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def visualize(infer_result, pcd, pc_range, save_path, scale_3d=40, scale_bev=10, method='3d', left_hand=False):
@@ -624,21 +625,219 @@ def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz'
     
     print(f"Saved grid visualization to {save_dir}")
     
-
 def visualize_channels_individually(bev_feature, save_dir='./bev_channel_viz', vmin=None, vmax=None):
     """
-    可视化BEV特征的每个通道，每个通道一张单独的图像
+    将所有通道的可视化保存在一张图中，
+    如果提供了vmin和vmax，则所有通道使用相同的颜色范围，
+    否则每个通道使用自身的颜色范围，
+    并包含所有通道平均的可视化
     
     参数:
         bev_feature: 形状为 [N, C, H, W] 的特征张量
-        save_dir: 保存可视化结果的目录
-        vmin, vmax: 颜色范围的最小值和最大值，如果为None则自动确定
+        save_dir: 保存可视化结果的目录/文件路径
+        vmin, vmax: 颜色范围的最小值和最大值，如果都为None则每个通道使用自己的范围
     """
-    os.makedirs(save_dir, exist_ok=True)
+    os.makedirs(os.path.dirname(save_dir), exist_ok=True)
     
     N, C, H, W = bev_feature.shape
     
-    # 获取所有特征的全局最小值和最大值，用于统一颜色范围
+    # 为每个样本创建可视化
+    for n in range(N):
+        # 确定网格布局（尽量接近正方形）
+        grid_size = math.ceil(math.sqrt(C + 1))  # +1 为平均通道图留位置
+        rows = grid_size
+        cols = math.ceil((C + 1) / rows)
+        
+        # 创建一个大图，包含所有通道
+        fig = plt.figure(figsize=(cols * 3, rows * 3))
+        gs = GridSpec(rows, cols, figure=fig)
+        
+        # 获取当前样本的特征
+        features = bev_feature[n].detach().cpu().numpy()
+        
+        # 计算所有通道的平均值
+        avg_feature = np.mean(features, axis=0)
+        
+        # 如果vmin和vmax都未提供，则使用每个通道自己的范围
+        use_global_range = vmin is not None and vmax is not None
+        
+        # 绘制每个通道
+        for c in range(C):
+            # 计算该通道在网格中的位置
+            row = c // cols
+            col = c % cols
+            
+            # 在特定位置创建子图
+            ax = fig.add_subplot(gs[row, col])
+            
+            # 获取当前通道的特征
+            feature = features[c]
+            
+            # 确定颜色范围
+            if use_global_range:
+                # 使用全局提供的颜色范围
+                current_vmin, current_vmax = vmin, vmax
+                range_text = "Global range"
+            else:
+                # 使用当前通道自己的颜色范围
+                current_vmin = np.min(feature)
+                current_vmax = np.max(feature)
+                range_text = f"[{current_vmin:.2f}, {current_vmax:.2f}]"
+            
+            norm = Normalize(vmin=current_vmin, vmax=current_vmax)
+            im = ax.imshow(feature, cmap='viridis', norm=norm)
+            
+            # 设置标题，根据是否使用全局范围显示不同信息
+            if use_global_range:
+                ax.set_title(f'Channel {c}')
+            else:
+                ax.set_title(f'Channel {c}\n{range_text}')
+            
+            ax.axis('off')
+            
+            # 为每个子图添加一个小型颜色条
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            plt.colorbar(im, cax=cax)
+        
+        # 添加平均通道图
+        # 计算平均通道图在网格中的位置
+        avg_row = C // cols
+        avg_col = C % cols
+        
+        # 在特定位置创建子图
+        ax = fig.add_subplot(gs[avg_row, avg_col])
+        
+        # 确定平均通道的颜色范围
+        if use_global_range:
+            # 使用全局提供的颜色范围
+            avg_vmin, avg_vmax = vmin, vmax
+            avg_range_text = "Global range"
+        else:
+            # 使用平均通道自己的颜色范围
+            avg_vmin = np.min(avg_feature)
+            avg_vmax = np.max(avg_feature)
+            avg_range_text = f"[{avg_vmin:.2f}, {avg_vmax:.2f}]"
+        
+        norm_avg = Normalize(vmin=avg_vmin, vmax=avg_vmax)
+        im_avg = ax.imshow(avg_feature, cmap='viridis', norm=norm_avg)
+        
+        # 设置标题，根据是否使用全局范围显示不同信息
+        if use_global_range:
+            ax.set_title(f'Average of All Channels', fontweight='bold')
+        else:
+            ax.set_title(f'Average of All Channels\n{avg_range_text}', fontweight='bold')
+            
+        ax.axis('off')
+        
+        # 为平均图添加红色边框以突出显示
+        for spine in ax.spines.values():
+            spine.set_edgecolor('red')
+            spine.set_linewidth(2)
+            spine.set_visible(True)
+        
+        # 为平均图添加颜色条
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        plt.colorbar(im_avg, cax=cax)
+        
+        # 设置整体标题
+        if use_global_range:
+            fig.suptitle(f'All Channels for Sample {n} (C={C}, H={H}, W={W})\nGlobal Range: [{vmin:.2f}, {vmax:.2f}]', fontsize=16)
+        else:
+            fig.suptitle(f'All Channels for Sample {n} (C={C}, H={H}, W={W})\nIndividual Channel Ranges', fontsize=16)
+        
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        
+        # 处理文件扩展名
+        base_name, ext = os.path.splitext(save_dir)
+        if not ext:  # 如果没有扩展名，添加默认扩展名
+            ext = '.png'
+        
+        # 为每个样本创建单独的文件名
+        if use_global_range:
+            sample_save_path = f"{base_name}_sample_{n}_global_range{ext}"
+        else:
+            sample_save_path = f"{base_name}_sample_{n}_individual_ranges{ext}"
+        
+        plt.savefig(sample_save_path, dpi=200, bbox_inches='tight')
+        plt.close(fig)
+        
+        range_type = "global" if use_global_range else "individual channel"
+        print(f"Saved visualization with {range_type} ranges for sample {n} to {sample_save_path}")
+    
+    print(f"All visualizations saved with base path {save_dir}")
+# def visualize_channels_individually(bev_feature, save_dir='./bev_channel_viz', vmin=None, vmax=None):
+#     """
+#     可视化BEV特征的每个通道，每个通道一张单独的图像
+    
+#     参数:
+#         bev_feature: 形状为 [N, C, H, W] 的特征张量
+#         save_dir: 保存可视化结果的目录
+#         vmin, vmax: 颜色范围的最小值和最大值，如果为None则自动确定
+#     """
+#     os.makedirs(save_dir, exist_ok=True)
+    
+#     N, C, H, W = bev_feature.shape
+    
+#     # 获取所有特征的全局最小值和最大值，用于统一颜色范围
+#     if vmin is None or vmax is None:
+#         all_features = bev_feature.detach().cpu().numpy()
+#         current_vmin = np.min(all_features)
+#         current_vmax = np.max(all_features)
+#     else:
+#         current_vmin = vmin
+#         current_vmax = vmax
+    
+#     # 为每个样本和每个通道创建可视化
+#     for n in range(N):
+#         # 为每个样本创建一个子目录
+#         sample_dir = os.path.join(save_dir, f'sample_{n}')
+#         os.makedirs(sample_dir, exist_ok=True)
+        
+#         # 为每个通道创建一个单独的图像
+#         for c in range(C):
+#             fig, ax = plt.figure(figsize=(6, 6)), plt.gca()
+            
+#             # 获取当前通道的特征
+#             feature = bev_feature[n, c].detach().cpu().numpy()
+            
+#             # 使用统一的颜色范围
+#             norm = Normalize(vmin=current_vmin, vmax=current_vmax)
+#             im = ax.imshow(feature, cmap='viridis', norm=norm)
+            
+#             # 添加颜色条和标题
+#             plt.colorbar(im, ax=ax)
+#             ax.set_title(f'Sample {n}, Channel {c}')
+#             ax.axis('off')
+            
+#             # 保存图像
+#             save_path = os.path.join(sample_dir, f'channel_{c}.png')
+#             plt.savefig(save_path, dpi=150, bbox_inches='tight')
+#             plt.close(fig)
+        
+#         print(f"Saved channel visualizations for sample {n} to {sample_dir}")
+    
+#     # 此外，创建一个每个通道的网格可视化
+#     visualize_all_channels_grid(bev_feature, save_dir, vmin, vmax)
+    
+#     print(f"All visualizations saved to {save_dir}")
+
+
+def visualize_all_channels_grid(bev_feature, save_dir, vmin=None, vmax=None):
+    """为所有样本创建平均通道的网格可视化"""
+    N, C, H, W = bev_feature.shape
+    
+    # 确定网格布局（尽量接近正方形）
+    grid_size = math.ceil(math.sqrt(N))
+    rows = grid_size
+    cols = math.ceil(N / rows)
+    
+    # 创建一个大图，包含所有样本的平均通道
+    fig = plt.figure(figsize=(cols * 4, rows * 4))
+    gs = GridSpec(rows, cols, figure=fig)
+    
+    # 找到所有特征的全局最小值和最大值，用于统一颜色范围
     if vmin is None or vmax is None:
         all_features = bev_feature.detach().cpu().numpy()
         current_vmin = np.min(all_features)
@@ -647,119 +846,217 @@ def visualize_channels_individually(bev_feature, save_dir='./bev_channel_viz', v
         current_vmin = vmin
         current_vmax = vmax
     
-    # 为每个样本和每个通道创建可视化
-    for n in range(N):
-        # 为每个样本创建一个子目录
-        sample_dir = os.path.join(save_dir, f'sample_{n}')
-        os.makedirs(sample_dir, exist_ok=True)
-        
-        # 为每个通道创建一个单独的图像
-        for c in range(C):
-            fig, ax = plt.figure(figsize=(6, 6)), plt.gca()
-            
-            # 获取当前通道的特征
-            feature = bev_feature[n, c].detach().cpu().numpy()
-            
-            # 使用统一的颜色范围
-            norm = Normalize(vmin=current_vmin, vmax=current_vmax)
-            im = ax.imshow(feature, cmap='viridis', norm=norm)
-            
-            # 添加颜色条和标题
-            plt.colorbar(im, ax=ax)
-            ax.set_title(f'Sample {n}, Channel {c}')
-            ax.axis('off')
-            
-            # 保存图像
-            save_path = os.path.join(sample_dir, f'channel_{c}.png')
-            plt.savefig(save_path, dpi=150, bbox_inches='tight')
-            plt.close(fig)
-        
-        print(f"Saved channel visualizations for sample {n} to {sample_dir}")
-    
-    # 此外，创建一个每个通道的网格可视化
-    visualize_all_channels_grid(bev_feature, save_dir, vmin, vmax)
-    
-    print(f"All visualizations saved to {save_dir}")
-
-def visualize_all_channels_grid(bev_feature, save_dir, vmin=None, vmax=None):
-    """为第一个样本创建所有通道的网格可视化，并添加所有通道平均的小图"""
-    N, C, H, W = bev_feature.shape
-    
-    # 只对第一个样本进行处理
-    sample_idx = 0
-    
-    # 确定网格布局（尽量接近正方形）
-    grid_size = math.ceil(math.sqrt(C + 1))  # +1 为平均通道图留位置
-    rows = grid_size
-    cols = math.ceil((C + 1) / rows)
-    
-    # 创建一个大图，包含所有通道
-    fig = plt.figure(figsize=(cols * 3, rows * 3))
-    gs = GridSpec(rows, cols, figure=fig)
-    
-    # 找到所有特征的全局最小值和最大值，用于统一颜色范围
-    features = bev_feature[sample_idx].detach().cpu().numpy()
-    if vmin is None or vmax is None:
-        current_vmin = np.min(features)
-        current_vmax = np.max(features)
-    else:
-        current_vmin = vmin
-        current_vmax = vmax
-    
-    # 计算所有通道的平均值
-    avg_feature = np.mean(features, axis=0)
-    
-    # 绘制每个通道
-    for c in range(C):
-        # 计算该通道在网格中的位置
-        row = c // cols
-        col = c % cols
+    # 绘制每个样本的平均通道
+    for sample_idx in range(N):
+        # 计算该样本在网格中的位置
+        row = sample_idx // cols
+        col = sample_idx % cols
         
         # 在特定位置创建子图
         ax = fig.add_subplot(gs[row, col])
         
-        # 获取当前通道的特征
-        feature = features[c]
+        # 获取当前样本的特征
+        features = bev_feature[sample_idx].detach().cpu().numpy()
+        
+        # 计算该样本所有通道的平均值
+        avg_feature = np.mean(features, axis=0)
         
         # 使用统一的颜色范围
         norm = Normalize(vmin=current_vmin, vmax=current_vmax)
-        im = ax.imshow(feature, cmap='viridis', norm=norm)
-        ax.set_title(f'Channel {c}')
+        im = ax.imshow(avg_feature, cmap='viridis', norm=norm)
+        ax.set_title(f'Sample {sample_idx}\nAvg of {C} channels')
         ax.axis('off')
-    
-    # 添加平均通道图
-    # 计算平均通道图在网格中的位置
-    avg_row = C // cols
-    avg_col = C % cols
-    
-    # 在特定位置创建子图
-    ax = fig.add_subplot(gs[avg_row, avg_col])
-    
-    # 绘制平均通道
-    # 使用与其他通道相同的颜色范围
-    norm_avg = Normalize(vmin=current_vmin, vmax=current_vmax)
-    im_avg = ax.imshow(avg_feature, cmap='viridis', norm=norm_avg)
-    ax.set_title('Average of All Channels', fontweight='bold')
-    ax.axis('off')
-    
-    # 可选：为平均图添加红色边框以突出显示
-    for spine in ax.spines.values():
-        spine.set_edgecolor('red')
-        spine.set_linewidth(2)
-        spine.set_visible(True)
     
     # 添加全局颜色条
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
     fig.colorbar(im, cax=cbar_ax)
     
     # 设置整体标题
-    fig.suptitle(f'All Channels for Sample 0 (C={C}, H={H}, W={W})', fontsize=16)
+    fig.suptitle(f'Average Channel for All {N} Samples (C={C}, H={H}, W={W})', fontsize=16)
     
     plt.tight_layout(rect=[0, 0, 0.9, 0.95])
-    # save_path = os.path.join(save_dir, 'all_channels_grid.png')
-    # 添加这行代码，确保目录存在
-    # os.makedirs(os.path.dirname(save_dir), exist_ok=True)
-    plt.savefig(save_dir, dpi=200, bbox_inches='tight')
+    
+    # 处理文件扩展名
+    base_name, ext = os.path.splitext(save_dir)
+    if not ext:  # 如果没有扩展名，添加默认扩展名
+        ext = '.png'
+    
+    # 创建保存路径
+    save_path = f"{base_name}_all_samples_average{ext}"
+    
+    plt.savefig(save_path, dpi=200, bbox_inches='tight')
     plt.close(fig)
     
-    print(f"Saved grid visualization with average channel to {save_dir}")
+    print(f"Saved grid visualization with average channel for all {N} samples to {save_path}")
+
+
+# def visualize_all_channels_grid(bev_feature, save_dir, vmin=None, vmax=None):
+#     """为所有样本创建所有通道的网格可视化，并添加所有通道平均的小图"""
+#     N, C, H, W = bev_feature.shape
+    
+#     # 处理所有样本
+#     for sample_idx in range(N):
+#         # 确定网格布局（尽量接近正方形）
+#         grid_size = math.ceil(math.sqrt(C + 1))  # +1 为平均通道图留位置
+#         rows = grid_size
+#         cols = math.ceil((C + 1) / rows)
+        
+#         # 创建一个大图，包含所有通道
+#         fig = plt.figure(figsize=(cols * 3, rows * 3))
+#         gs = GridSpec(rows, cols, figure=fig)
+        
+#         # 找到所有特征的全局最小值和最大值，用于统一颜色范围
+#         features = bev_feature[sample_idx].detach().cpu().numpy()
+#         if vmin is None or vmax is None:
+#             current_vmin = np.min(features)
+#             current_vmax = np.max(features)
+#         else:
+#             current_vmin = vmin
+#             current_vmax = vmax
+        
+#         # 计算所有通道的平均值
+#         avg_feature = np.mean(features, axis=0)
+        
+#         # 绘制每个通道
+#         for c in range(C):
+#             # 计算该通道在网格中的位置
+#             row = c // cols
+#             col = c % cols
+            
+#             # 在特定位置创建子图
+#             ax = fig.add_subplot(gs[row, col])
+            
+#             # 获取当前通道的特征
+#             feature = features[c]
+            
+#             # 使用统一的颜色范围
+#             norm = Normalize(vmin=current_vmin, vmax=current_vmax)
+#             im = ax.imshow(feature, cmap='viridis', norm=norm)
+#             ax.set_title(f'Channel {c}')
+#             ax.axis('off')
+        
+#         # 添加平均通道图
+#         # 计算平均通道图在网格中的位置
+#         avg_row = C // cols
+#         avg_col = C % cols
+        
+#         # 在特定位置创建子图
+#         ax = fig.add_subplot(gs[avg_row, avg_col])
+        
+#         # 绘制平均通道
+#         # 使用与其他通道相同的颜色范围
+#         norm_avg = Normalize(vmin=current_vmin, vmax=current_vmax)
+#         im_avg = ax.imshow(avg_feature, cmap='viridis', norm=norm_avg)
+#         ax.set_title('Average of All Channels', fontweight='bold')
+#         ax.axis('off')
+        
+#         # 可选：为平均图添加红色边框以突出显示
+#         for spine in ax.spines.values():
+#             spine.set_edgecolor('red')
+#             spine.set_linewidth(2)
+#             spine.set_visible(True)
+        
+#         # 添加全局颜色条
+#         cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+#         fig.colorbar(im, cax=cbar_ax)
+        
+#         # 设置整体标题
+#         fig.suptitle(f'All Channels for Sample {sample_idx} (C={C}, H={H}, W={W})', fontsize=16)
+        
+#         plt.tight_layout(rect=[0, 0, 0.9, 0.95])
+        
+#         # 修改保存路径，为每个样本创建单独的文件
+#         # 处理文件扩展名
+#         base_name, ext = os.path.splitext(save_dir)
+#         if not ext:  # 如果没有扩展名，添加默认扩展名
+#             ext = '.png'
+        
+#         # 为每个样本创建单独的文件名
+#         sample_save_path = f"{base_name}_sample_{sample_idx}{ext}"
+        
+#         plt.savefig(sample_save_path, dpi=200, bbox_inches='tight')
+#         plt.close(fig)
+        
+#         print(f"Saved grid visualization with average channel for sample {sample_idx} to {sample_save_path}")
+# def visualize_all_channels_grid(bev_feature, save_dir, vmin=None, vmax=None):
+#     """为第一个样本创建所有通道的网格可视化，并添加所有通道平均的小图"""
+#     N, C, H, W = bev_feature.shape
+    
+#     # 只对第一个样本进行处理
+#     sample_idx = 0
+    
+#     # 确定网格布局（尽量接近正方形）
+#     grid_size = math.ceil(math.sqrt(C + 1))  # +1 为平均通道图留位置
+#     rows = grid_size
+#     cols = math.ceil((C + 1) / rows)
+    
+#     # 创建一个大图，包含所有通道
+#     fig = plt.figure(figsize=(cols * 3, rows * 3))
+#     gs = GridSpec(rows, cols, figure=fig)
+    
+#     # 找到所有特征的全局最小值和最大值，用于统一颜色范围
+#     features = bev_feature[sample_idx].detach().cpu().numpy()
+#     if vmin is None or vmax is None:
+#         current_vmin = np.min(features)
+#         current_vmax = np.max(features)
+#     else:
+#         current_vmin = vmin
+#         current_vmax = vmax
+    
+#     # 计算所有通道的平均值
+#     avg_feature = np.mean(features, axis=0)
+    
+#     # 绘制每个通道
+#     for c in range(C):
+#         # 计算该通道在网格中的位置
+#         row = c // cols
+#         col = c % cols
+        
+#         # 在特定位置创建子图
+#         ax = fig.add_subplot(gs[row, col])
+        
+#         # 获取当前通道的特征
+#         feature = features[c]
+        
+#         # 使用统一的颜色范围
+#         norm = Normalize(vmin=current_vmin, vmax=current_vmax)
+#         im = ax.imshow(feature, cmap='viridis', norm=norm)
+#         ax.set_title(f'Channel {c}')
+#         ax.axis('off')
+    
+#     # 添加平均通道图
+#     # 计算平均通道图在网格中的位置
+#     avg_row = C // cols
+#     avg_col = C % cols
+    
+#     # 在特定位置创建子图
+#     ax = fig.add_subplot(gs[avg_row, avg_col])
+    
+#     # 绘制平均通道
+#     # 使用与其他通道相同的颜色范围
+#     norm_avg = Normalize(vmin=current_vmin, vmax=current_vmax)
+#     im_avg = ax.imshow(avg_feature, cmap='viridis', norm=norm_avg)
+#     ax.set_title('Average of All Channels', fontweight='bold')
+#     ax.axis('off')
+    
+#     # 可选：为平均图添加红色边框以突出显示
+#     for spine in ax.spines.values():
+#         spine.set_edgecolor('red')
+#         spine.set_linewidth(2)
+#         spine.set_visible(True)
+    
+#     # 添加全局颜色条
+#     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+#     fig.colorbar(im, cax=cbar_ax)
+    
+#     # 设置整体标题
+#     fig.suptitle(f'All Channels for Sample 0 (C={C}, H={H}, W={W})', fontsize=16)
+    
+#     plt.tight_layout(rect=[0, 0, 0.9, 0.95])
+#     # save_path = os.path.join(save_dir, 'all_channels_grid.png')
+#     # 添加这行代码，确保目录存在
+#     # os.makedirs(os.path.dirname(save_dir), exist_ok=True)
+#     plt.savefig(save_dir, dpi=200, bbox_inches='tight')
+#     plt.close(fig)
+    
+#     print(f"Saved grid visualization with average channel to {save_dir}")

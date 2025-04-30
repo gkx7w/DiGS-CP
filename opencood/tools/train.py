@@ -24,7 +24,7 @@ from numpy import cov, trace, iscomplexobj
 from scipy.linalg import sqrtm
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
-from opencood.visualization.simple_vis import visualize_averaged_channels_individual,visualize_all_channels_grid
+from opencood.visualization.simple_vis import visualize_averaged_channels_individual,visualize_all_channels_grid,visualize_channels_individually
 
 # 设置随机种子以确保确定性
 def seed_everything(seed):
@@ -164,7 +164,7 @@ def main():
                 print(f"解冻层: {name}")
         
         print(f"总共解冻 {unfrozen_count} 个参数组")
-
+    
     # 设置学习率调度器
     scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else diff_epoch)
     saved_path = train_utils.setup_train(hypes)
@@ -245,7 +245,7 @@ def main():
             if should_backward:
                 final_loss.backward()
                 # 记录梯度信息
-                add_gradient_histograms(model, writer, epoch * len(train_loader) + i)
+                # add_gradient_histograms(model, writer, epoch * len(train_loader) + i)
                 optimizer.step()
                 torch.cuda.empty_cache()
 
@@ -265,7 +265,7 @@ def main():
             # ('noise', 'noise'),
             # ('x', 'x')
         ]
-        base_path = f"/data/gkx/Code/opencood/bev_visualizations/train1loss"
+        base_path = f"/data/gkx/Code/opencood/bev_visualizations/train"
         # 计算全局最小值和最大值
         features = [ouput_dict[key][0] for key, _ in viz_config]
         global_vmin, global_vmax = float('inf'), float('-inf')
@@ -275,7 +275,7 @@ def main():
             global_vmax = max(global_vmax, np.max(channels))
         # 可视化
         for key, name in viz_config:
-            visualize_all_channels_grid(
+            visualize_channels_individually(
                 ouput_dict[key][0], 
                 f"{base_path}/{name}_{epoch}", 
                 global_vmin, 

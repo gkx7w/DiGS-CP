@@ -367,13 +367,13 @@ class Unet(Module):
         self.out_dim = config.model.out_ch
         self.d_cond = getattr(config.model, 'd_cond', None)
         self.n_head = config.model.n_head
-        self.dim_mults = config.model.ch_mult
+        dim_mults = config.model.ch_mult
         input_channels = config.model.in_channels
 
         init_dim = default(init_dim, dim)
         self.init_conv = nn.Conv2d(input_channels, init_dim, 7, padding = 3)
 
-        dims = [init_dim, *map(lambda m: dim * m, self.dim_mults)]
+        dims = [init_dim, *map(lambda m: dim * m, dim_mults)]
         in_out = list(zip(dims[:-1], dims[1:]))
 
         # time embeddings
@@ -424,6 +424,7 @@ class Unet(Module):
             is_last = ind >= (num_resolutions - 1)
 
             # attn_klass = FullAttention if layer_full_attn else LinearAttention
+             #后面加引导的时候，可以尝试在高维做cross attention。那这里的attention要改一下
             attn_klass = FullAttention
             
             self.downs.append(ModuleList([
@@ -436,7 +437,7 @@ class Unet(Module):
 
         mid_dim = dims[-1]
         self.mid_block1 = resnet_block(mid_dim, mid_dim)
-        self.mid_attn = FullAttention(mid_dim, n_head=4, d_cond=self.d_cond)
+        self.mid_attn = FullAttention(mid_dim, n_head=self.n_head, d_cond=self.d_cond)
         # self.mid_attn = FullAttention(mid_dim, heads = attn_heads[-1], dim_head = attn_dim_head[-1])
         self.mid_block2 = resnet_block(mid_dim, mid_dim)
 
@@ -449,7 +450,7 @@ class Unet(Module):
             self.ups.append(ModuleList([
                 resnet_block(dim_out + dim_in, dim_out),
                 resnet_block(dim_out + dim_in, dim_out),
-                attn_klass(dim_in),
+                attn_klass(dim_out),
                 # attn_klass(dim_out, dim_head = layer_attn_dim_head, heads = layer_attn_heads),
                 Upsample(dim_out, dim_in) if not is_last else  nn.Conv2d(dim_out, dim_in, 3, padding = 1)
             ]))

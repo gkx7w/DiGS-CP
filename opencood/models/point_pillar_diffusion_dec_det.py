@@ -364,12 +364,13 @@ class PointPillarDiffusionDecDet(nn.Module):
             # features = [batch_dict[key][0] for key, _ in viz_config]
             # global_vmin, global_vmax = float('inf'), float('-inf')
             # for feature in features:
-            #     channels = torch.mean(feature, dim=1).detach().cpu().numpy()
+            #     # channels = torch.mean(feature, dim=1).detach().cpu().numpy()
+            #     channels = feature.detach().cpu().numpy()
             #     global_vmin = min(global_vmin, np.min(channels))
             #     global_vmax = max(global_vmax, np.max(channels))
             # # 可视化
             # for key, name in viz_config:
-            #     visualize_all_channels_grid(
+            #     visualize_channels_individually(
             #         batch_dict[key][0], 
             #         f"{base_path}/{name}_{i}", 
             #         global_vmin, 

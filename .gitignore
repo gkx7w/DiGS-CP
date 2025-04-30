@@ -1,6 +1,7 @@
 bev_visualizations/*
 vis_output/*
 opencood/logs/*
+opencood/bev_visualizations/*
 spconv/
 checkpoints/
 build/

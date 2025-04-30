@@ -25,7 +25,7 @@
                 "--hypes_yaml",
                 "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
                 "--model_dir",
-                "/data/gkx/Code/opencood/logs/opv2v_point_pillar_lidar_early_2025_04_26_23_29_54/net_epoch79.pth",
+                "/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
                 // "--diff_model_dir",
                 // "/data/gkx/Code/checkpoints/10_mdd_denoise/net_epoch10.pth"
             ],
