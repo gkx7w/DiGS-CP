@@ -215,6 +215,7 @@ model:
         in_channels: *num_features #8
         out_ch: *num_features #8
         ch: 16 #16
+        flash_attn: True
         ch_mult: [1, 2, 4, 8] #[1, 2, 4, 8]
         num_res_blocks: 2
         attn_resolutions: [16]

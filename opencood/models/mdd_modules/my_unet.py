@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch.nn import Module, ModuleList
 from einops import rearrange, reduce, repeat
 from einops.layers.torch import Rearrange
+from denoising_diffusion_pytorch.attend import Attend
 
 # constants
 
@@ -247,41 +248,7 @@ class CrossAttention(nn.Module):
         output = output.view(input_shape)
         output = self.out_proj(output)
         return output
-# class Attention(Module):
-#     def __init__(
-#         self,
-#         dim,
-#         heads = 4,
-#         dim_head = 32,
-#         num_mem_kv = 4,
-#         flash = False
-#     ):
-#         super().__init__()
-#         self.heads = heads
-#         hidden_dim = dim_head * heads
 
-#         self.norm = RMSNorm(dim)
-#         self.attend = Attend(flash = flash)
-
-#         self.mem_kv = nn.Parameter(torch.randn(2, heads, num_mem_kv, dim_head))
-#         self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias = False)
-#         self.to_out = nn.Conv2d(hidden_dim, dim, 1)
-
-#     def forward(self, x):
-#         b, c, h, w = x.shape
-
-#         x = self.norm(x)
-
-#         qkv = self.to_qkv(x).chunk(3, dim = 1)
-#         q, k, v = map(lambda t: rearrange(t, 'b (h c) x y -> b h (x y) c', h = self.heads), qkv)
-
-#         mk, mv = map(lambda t: repeat(t, 'h n d -> b h n d', b = b), self.mem_kv)
-#         k, v = map(partial(torch.cat, dim = -2), ((mk, k), (mv, v)))
-
-#         out = self.attend(q, k, v)
-
-#         out = rearrange(out, 'b h (x y) d -> b (h d) x y', x = h, y = w)
-#         return self.to_out(out)
 
 class Attention(nn.Module):
     def __init__(self, channels: int, n_head: int,  d_cond=None):
@@ -339,6 +306,91 @@ class Attention(nn.Module):
 
         return self.conv_output(x) + residue_long
 
+class OptimizedAttention(Module):
+    def __init__(
+        self,
+        dim,
+        heads = 4,
+        dim_head = 32,
+        num_mem_kv = 4,
+        flash = False,
+        d_cond = None  # 添加条件输入维度参数
+    ):
+        super().__init__()
+        self.heads = heads
+        hidden_dim = dim_head * heads
+
+        # 保留原来的自注意力组件
+        self.norm = RMSNorm(dim)
+        self.attend = Attend(flash = flash)
+
+        self.mem_kv = nn.Parameter(torch.randn(2, heads, num_mem_kv, dim_head))
+        self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias = False)
+        self.to_out = nn.Conv2d(hidden_dim, dim, 1)
+        
+        # 添加交叉注意力组件
+        self.has_cross_attn = d_cond is not None
+        if self.has_cross_attn:
+            self.cond_norm = RMSNorm(dim)
+            self.to_q_cross = nn.Conv2d(dim, hidden_dim, 1, bias = False)
+            self.to_kv_cross = nn.Linear(d_cond, hidden_dim * 2)
+            self.to_out_cross = nn.Conv2d(hidden_dim, dim, 1)
+            
+        # 添加FFN部分（类似GEGLU）
+        self.ffn_norm = RMSNorm(dim)
+        self.ffn_gate = nn.Sequential(
+            nn.Conv2d(dim, dim * 8, 1),
+            nn.SiLU()
+        )
+        self.ffn_proj = nn.Sequential(
+            nn.Conv2d(dim * 4, dim, 1)
+        )
+
+    def forward(self, x, cond = None):
+        residual_long = x
+        
+        # 第一部分：自注意力
+        x_norm = self.norm(x)
+        
+        # 自注意力
+        b, c, h, w = x_norm.shape
+        qkv = self.to_qkv(x_norm).chunk(3, dim = 1)
+        q, k, v = map(lambda t: rearrange(t, 'b (h c) x y -> b h (x y) c', h = self.heads), qkv)
+
+        mk, mv = map(lambda t: repeat(t, 'h n d -> b h n d', b = b), self.mem_kv)
+        k, v = map(partial(torch.cat, dim = -2), ((mk, k), (mv, v)))
+
+        out = self.attend(q, k, v)
+        out = rearrange(out, 'b h (x y) d -> b (h d) x y', x = h, y = w)
+        x = x + self.to_out(out)  # 残差连接
+        
+        # 第二部分：交叉注意力（如果有条件输入）
+        if self.has_cross_attn and cond is not None:
+            x_norm = self.cond_norm(x)
+            
+            # 从x提取查询
+            q = self.to_q_cross(x_norm)
+            q = rearrange(q, 'b (h c) x y -> b h (x y) c', h = self.heads)
+            
+            # 从条件输入提取键和值
+            kv = self.to_kv_cross(cond)
+            kv = rearrange(kv, 'b n (h d) -> b h n d', h = self.heads * 2)
+            k, v = kv.chunk(2, dim=1)
+            
+            # 计算交叉注意力
+            out = self.attend(q, k, v)
+            out = rearrange(out, 'b h (x y) c -> b (h c) x y', x = h, y = w)
+            x = x + self.to_out_cross(out)  # 残差连接
+
+        # 第三部分：前馈网络（Feed-Forward）
+        x_norm = self.ffn_norm(x)
+        gate = self.ffn_gate(x_norm)
+        gate_chunks = gate.chunk(2, dim=1)
+        x_gate = gate_chunks[0] * gate_chunks[1]  # GEGLU风格激活
+        x = x + self.ffn_proj(x_gate)  # 残差连接
+        
+        return x
+
 # model
 
 class Unet(Module):
@@ -364,6 +416,7 @@ class Unet(Module):
 
         # determine dimensions
         dim = config.model.ch
+        flash_attn = getattr(config.model, 'flash_attn', False)
         self.out_dim = config.model.out_ch
         self.d_cond = getattr(config.model, 'd_cond', None)
         self.n_head = config.model.n_head
@@ -411,7 +464,7 @@ class Unet(Module):
         # prepare blocks
 
         # FullAttention = partial(Attention, flash = flash_attn)
-        FullAttention = partial(Attention, n_head=self.n_head, d_cond=self.d_cond)
+        FullAttention = partial(OptimizedAttention, flash = flash_attn, d_cond=self.d_cond)
         resnet_block = partial(ResnetBlock, time_emb_dim = time_dim, dropout = dropout)
 
         # layers
@@ -423,35 +476,35 @@ class Unet(Module):
         for ind, ((dim_in, dim_out), layer_full_attn, layer_attn_heads, layer_attn_dim_head) in enumerate(zip(in_out, full_attn, attn_heads, attn_dim_head)):
             is_last = ind >= (num_resolutions - 1)
 
-            # attn_klass = FullAttention if layer_full_attn else LinearAttention
+            attn_klass = FullAttention if layer_full_attn else LinearAttention
              #后面加引导的时候，可以尝试在高维做cross attention。那这里的attention要改一下
             attn_klass = FullAttention
             
             self.downs.append(ModuleList([
                 resnet_block(dim_in, dim_in),
                 resnet_block(dim_in, dim_in),
-                attn_klass(dim_in),
-                # attn_klass(dim_in, dim_head = layer_attn_dim_head, heads = layer_attn_heads),
+                # attn_klass(dim_in),
+                attn_klass(dim_in, dim_head = layer_attn_dim_head, heads = layer_attn_heads),
                 Downsample(dim_in, dim_out) if not is_last else nn.Conv2d(dim_in, dim_out, 3, padding = 1)
             ]))
 
         mid_dim = dims[-1]
         self.mid_block1 = resnet_block(mid_dim, mid_dim)
-        self.mid_attn = FullAttention(mid_dim, n_head=self.n_head, d_cond=self.d_cond)
-        # self.mid_attn = FullAttention(mid_dim, heads = attn_heads[-1], dim_head = attn_dim_head[-1])
+        # self.mid_attn = FullAttention(mid_dim, n_head=self.n_head, d_cond=self.d_cond)
+        self.mid_attn = FullAttention(mid_dim, heads = attn_heads[-1], dim_head = attn_dim_head[-1], d_cond=self.d_cond)
         self.mid_block2 = resnet_block(mid_dim, mid_dim)
 
         for ind, ((dim_in, dim_out), layer_full_attn, layer_attn_heads, layer_attn_dim_head) in enumerate(zip(*map(reversed, (in_out, full_attn, attn_heads, attn_dim_head)))):
             is_last = ind == (len(in_out) - 1)
 
-            # attn_klass = FullAttention if layer_full_attn else LinearAttention
-            attn_klass = FullAttention
+            attn_klass = FullAttention if layer_full_attn else LinearAttention
+            # attn_klass = FullAttention
 
             self.ups.append(ModuleList([
                 resnet_block(dim_out + dim_in, dim_out),
                 resnet_block(dim_out + dim_in, dim_out),
-                attn_klass(dim_out),
-                # attn_klass(dim_out, dim_head = layer_attn_dim_head, heads = layer_attn_heads),
+                # attn_klass(dim_out),
+                attn_klass(dim_out, dim_head = layer_attn_dim_head, heads = layer_attn_heads),
                 Upsample(dim_out, dim_in) if not is_last else  nn.Conv2d(dim_out, dim_in, 3, padding = 1)
             ]))
 
