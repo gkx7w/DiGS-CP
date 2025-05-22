@@ -350,7 +350,7 @@ def setup_optimizer(hypes, model):
                                 lr=method_dict['lr'])
 
 
-def setup_lr_schedular(hypes, optimizer, init_epoch=None):
+def setup_lr_schedular(hypes, optimizer, init_epoch=None, data_loader=None):
     """
     Set up the learning rate schedular.
 
@@ -378,6 +378,23 @@ def setup_lr_schedular(hypes, optimizer, init_epoch=None):
         scheduler = MultiStepLR(optimizer,
                                 milestones=milestones,
                                 gamma=gamma)
+    elif lr_schedule_config['core_method'] == 'cosine_warmup':
+        # 使用transformers库中的余弦退火预热调度器
+        from diffusers.optimization import get_cosine_schedule_with_warmup
+        
+        # 从配置获取参数
+        num_warmup_steps = lr_schedule_config.get('num_warmup_steps', 500)
+        num_training_steps = lr_schedule_config.get('num_training_steps', None)
+        
+        # 如果未指定总训练步数，则尝试计算
+        if num_training_steps is None:
+            num_training_steps = len(data_loader) * 10  # 默认10个epoch
+        
+        scheduler = get_cosine_schedule_with_warmup(
+            optimizer=optimizer,
+            num_warmup_steps=num_warmup_steps,
+            num_training_steps=num_training_steps
+        )
 
     else:
         from torch.optim.lr_scheduler import ExponentialLR

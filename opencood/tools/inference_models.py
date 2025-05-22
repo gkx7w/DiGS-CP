@@ -5,7 +5,7 @@ import sys
 sys.path.append("/data/gkx/Code")
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'  
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'  
 import argparse
 import os
 import time
@@ -38,7 +38,7 @@ def test_parser():
     #                     help='Continued training path')
     
     parser.add_argument('--diff_model_dir', type=str,
-                        default="/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
+                        default="/data/gkx/Code/opencood/logs/opv2v_point_pillar_lidar_early_2025_05_21_22_18_59/net_epoch81.pth",
                         help='Continued training path')
 
     parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
@@ -94,7 +94,7 @@ def main():
     # 构建模型文件路径
     directory = os.path.dirname(diff_model_path)
     model_name = os.path.splitext(os.path.basename(diff_model_path))[0]
-    yaml_save_path = directory + "/" + "".join(model_name) + "_AP030507_.yaml"
+    yaml_save_path = directory + "/" + "".join(model_name) + "_AP030507_2iou.yaml"
     
     print(f"评估结果将保存至: {yaml_save_path}")
 

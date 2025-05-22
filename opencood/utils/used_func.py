@@ -147,3 +147,60 @@
 #     for name, param in model.named_parameters():
 #         print(f"{name}: {'可训练' if param.requires_grad else '已冻结'}")
 # check_trainable_params(model,"model")    
+
+
+# class AttentionBlock(nn.Module):
+#     def __init__(self, n_head: int, channels: int, d_cond=None):
+#         super().__init__()
+#         # channels = n_head * n_embd
+#         # 有空把这个num_groups改成超参数
+#         self.groupnorm = nn.GroupNorm(2, channels, eps=1e-6)
+#         self.conv_input = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
+#         self.layernorm_1 = nn.LayerNorm(channels)
+#         self.attention_1 = SelfAttention(n_head, channels, in_proj_bias=False)
+#         # 如果有条件输入d_cond，则使用交叉注意力
+#         if d_cond is not None:
+#             self.layernorm_2 = nn.LayerNorm(channels)
+#             self.attention_2 = CrossAttention(n_head, channels, d_cond, in_proj_bias=False)
+#         else:
+#             self.layernorm_2 = None
+#             self.attention_2 = None
+#         self.layernorm_3 = nn.LayerNorm(channels)
+#         self.linear_geglu_1 = nn.Linear(channels, 4 * channels * 2)
+#         self.linear_geglu_2 = nn.Linear(4 * channels, channels)
+
+#         self.conv_output = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
+    
+#     def forward(self, x, cond=None):
+#         residue_long = x
+#         # 通道分组归一化
+#         x = self.groupnorm(x)
+#         x = self.conv_input(x)
+        
+#         n, c, h, w = x.shape
+#         x = x.view((n, c, h * w))
+#         x = x.transpose(-1, -2)  
+
+#         residue_short = x
+#         x = self.layernorm_1(x)
+#         x = self.attention_1(x)
+#         x += residue_short
+
+#         # 只有当存在条件输入和attention_2时才执行交叉注意力
+#         if self.attention_2 is not None and cond is not None:
+#             residue_short = x
+#             x = self.layernorm_2(x)
+#             x = self.attention_2(x, cond)
+#             x += residue_short
+
+#         residue_short = x
+#         x = self.layernorm_3(x)
+#         x, gate = self.linear_geglu_1(x).chunk(2, dim=-1)
+#         x = x * F.gelu(gate)
+#         x = self.linear_geglu_2(x)
+#         x += residue_short
+
+#         x = x.transpose(-1, -2)
+#         x = x.view((n, c, h, w))    # (n, c, h, w)  
+
+#         return self.conv_output(x) + residue_long

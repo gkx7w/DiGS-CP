@@ -281,7 +281,7 @@ class PillarVFE(nn.Module):
             # statistical_features[:, 1:4] = statistical_features[:, 1:4] * (~single_point_mask)  # 注意这里改为1:4，因为points_count不需要置零
             
             # 将统计特征添加到batch_dict中
-            statistical_features = self.normalize_statistical_features(statistical_features)
+            # statistical_features = self.normalize_statistical_features(statistical_features)
             batch_dict['pillar_features'] = statistical_features
             
             # 在返回之前添加分析

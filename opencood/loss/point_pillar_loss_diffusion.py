@@ -123,6 +123,19 @@ class PointPillarLossDiffusion(nn.Module):
         self.cls = args['stage2']['cls']
         self.reg = args['stage2']['reg']
         self.iou = args['stage2']['iou']
+        self.use_focal_cls = True  # 使用Focal Loss
+        self.adaptive_cls_weight = True  # 自适应分类权重
+        
+        # 回归损失优化选项  
+        self.use_iou_guided_reg = True  # IoU引导的回归损失
+        
+        # IoU损失优化选项
+        self.use_iou_loss = "adaptive"  # 或 "focal_iou"
+        
+        # 动态权重调整
+        self.dynamic_loss_weights = True
+        self.current_epoch = 0
+        self.total_epochs = 100
         # 三种类型：naive,naive+,naive+W3
         self.use_iou_loss = "naive"
         # 两种类型：True,Flase
@@ -133,7 +146,8 @@ class PointPillarLossDiffusion(nn.Module):
     def sigmoid_weight(self, max_weight, epoch):
         return max_weight / 2 * (- (np.tanh(epoch / 4 - 5)) + 1)
 
-    def stage2_loss(self, rcnn_cls,rcnn_iou,rcnn_reg,tgt_cls,tgt_iou,tgt_reg):
+
+    def stage2_loss(self, rcnn_cls, rcnn_iou, rcnn_reg, tgt_cls, tgt_iou, tgt_reg):
         rcnn_cls = rcnn_cls.view(1, -1, 1)
         rcnn_iou = rcnn_iou.view(1, -1, 1)
         rcnn_reg = rcnn_reg.view(1, -1, 7)
@@ -143,59 +157,195 @@ class PointPillarLossDiffusion(nn.Module):
         tgt_reg = tgt_reg.view(1, -1, 7)
 
         pos_norm = tgt_cls.sum()
-        # cls loss
-        loss_cls = weighted_sigmoid_binary_cross_entropy(rcnn_cls, tgt_cls)
+        
+        # ========== 分类损失优化 ==========
+        # 1. 使用Focal Loss替代简单的BCE
+        if hasattr(self, 'use_focal_cls') and self.use_focal_cls:
+            loss_cls = self.focal_cls_loss(rcnn_cls, tgt_cls)
+        else:
+            # 2. 改进的加权BCE，考虑正负样本平衡
+            pos_weight = max(1.0, (tgt_cls == 0).sum().float() / max(pos_norm.float(), 1.0))
+            loss_cls = F.binary_cross_entropy_with_logits(
+                rcnn_cls, tgt_cls, 
+                pos_weight=pos_weight,
+                reduction='mean'
+            )
+        
+        # 3. 添加分类损失的自适应权重
+        if hasattr(self, 'adaptive_cls_weight') and self.adaptive_cls_weight:
+            # 根据分类准确率动态调整权重
+            with torch.no_grad():
+                pred_cls = torch.sigmoid(rcnn_cls) > 0.5
+                cls_acc = (pred_cls == tgt_cls).float().mean()
+                # 准确率低时增加权重
+                adaptive_weight = 2.0 - cls_acc.item()  
+                loss_cls = loss_cls * adaptive_weight
 
-        # regression loss
-        # [deprecated by Yifan Lu] Target resampling : Generate a weights mask to force the regressor concentrate on low iou predictions
-        # sample 50% with iou>0.7 and 50% < 0.7
+        # ========== 回归损失优化 ==========
         weights = torch.ones(tgt_iou.shape, device=tgt_iou.device)
         weights[tgt_cls == 0] = 0
-        # coalign 这边是直接设置为0，没有后续过程
+        
+        # 4. 改进的focal回归损失策略
         if self.use_reg_loss_focal:
             neg = torch.logical_and(tgt_iou < 0.7, tgt_cls != 0)
             pos = torch.logical_and(tgt_iou >= 0.7, tgt_cls != 0)
-            # # 这里不仅仅删除一些正样本，并且对于负样本加量学习！先来个五倍吧
+            
             num_neg = int(neg.sum(dim=1))
             num_pos = int(pos.sum(dim=1))
-            num_pos_smps = max(num_neg, 5)
-            pos_indices = torch.where(pos)[1]
-            not_selsected = torch.randperm(num_pos)[:num_pos - num_pos_smps]
-            # not_selsected_indices = pos_indices[not_selsected]
-            weights[:, pos_indices[not_selsected]] = 0
-            # print("正样本，负样本数量", num_neg, num_pos, weights[weights != 0].shape)
-        loss_reg = weighted_smooth_l1_loss(rcnn_reg, tgt_reg,
-                                        weights=weights / max(weights.sum(),
-                                                                1)).sum()
-
-        # iou loss
-        weights_iou = torch.ones(tgt_iou.shape, device=tgt_iou.device)
-        # TODO: also count the negative samples
-        tgt_iou = 2 * (tgt_iou - 0.5)  # normalize to -1, 1
-        if self.use_iou_loss == "naive":
-            # print("use naive iou loss")
-            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
-                                            weights=tgt_cls).mean()
-        elif self.use_iou_loss == "naive+":
-            # print("use naive+ iou loss")
-            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
-                                            weights=weights_iou).mean()
-        elif self.use_iou_loss == "naive+W3":
-            # print("use naive+W3 iou loss")
-            # 这个操作有点问题捏，这里不是0.7，而是0.4，这组实验需要重新跑
-            weights_iou[tgt_iou < 0.4] = 3
-            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
-                                            weights=weights_iou).mean()
-        else:
-            print("else use naive iou loss")
-            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
-                                            weights=tgt_cls).mean()
-
-        loss_cls_reduced = loss_cls * self.cls['weight']
-        loss_iou_reduced = loss_iou * self.iou['weight']
-        loss_reg_reduced = loss_reg * self.reg['weight']
+            
+            # 5. 动态调整正负样本比例
+            if num_pos > 0 and num_neg > 0:
+                # 根据总体IoU分布调整采样策略
+                avg_iou = tgt_iou[tgt_cls != 0].mean()
+                if avg_iou < 0.6:  # IoU较低时，保留更多负样本学习
+                    num_pos_samples = max(num_neg, 10)
+                else:  # IoU较高时，平衡采样
+                    num_pos_samples = max(num_neg // 2, 5)
+                
+                if num_pos > num_pos_samples:
+                    pos_indices = torch.where(pos)[1]
+                    not_selected = torch.randperm(num_pos)[:num_pos - num_pos_samples]
+                    weights[:, pos_indices[not_selected]] = 0
         
-        return loss_cls_reduced,loss_iou_reduced,loss_reg_reduced
+        # 6. 使用更稳定的回归损失
+        if hasattr(self, 'use_iou_guided_reg') and self.use_iou_guided_reg:
+            # IoU引导的回归损失 - 高IoU样本权重更大
+            iou_weights = torch.clamp(tgt_iou, 0.1, 1.0)  # 避免权重为0
+            weights = weights * iou_weights
+        
+        loss_reg = weighted_smooth_l1_loss(
+            rcnn_reg, tgt_reg,
+            weights=weights / max(weights.sum(), 1)
+        ).sum()
+
+        # ========== IoU损失优化 ==========
+        weights_iou = torch.ones(tgt_iou.shape, device=tgt_iou.device)
+        tgt_iou_normalized = 2 * (tgt_iou - 0.5)  # normalize to -1, 1
+        
+        # 7. 改进的IoU损失策略
+        if self.use_iou_loss == "adaptive":
+            # 自适应IoU损失权重
+            with torch.no_grad():
+                iou_error = torch.abs(rcnn_iou - tgt_iou_normalized)
+                hard_samples = iou_error > iou_error.median()
+                weights_iou[hard_samples] = 2.0  # 难样本加权
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou_normalized, weights=weights_iou).mean()
+        
+        elif self.use_iou_loss == "focal_iou":
+            # Focal IoU Loss - 关注难预测的IoU
+            iou_error = torch.abs(rcnn_iou - tgt_iou_normalized)
+            focal_weight = torch.pow(iou_error + 1e-8, 2.0)  # gamma=2
+            weights_iou = weights_iou * focal_weight
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou_normalized, weights=weights_iou).mean()
+        
+        elif self.use_iou_loss == "naive+W3":
+            weights_iou[tgt_iou_normalized < -0.2] = 3  # 对应原来的0.4
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou_normalized, weights=weights_iou).mean()
+        
+        else:
+            # 默认策略，但加入正样本权重
+            weights_iou = tgt_cls.float()  # 只计算正样本的IoU损失
+            loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou_normalized, weights=weights_iou).mean()
+
+        # ========== 动态损失权重调整 ==========
+        # 8. 根据训练阶段动态调整各损失权重
+        if hasattr(self, 'dynamic_loss_weights') and self.dynamic_loss_weights:
+            # 训练初期更关注分类，后期更关注回归精度
+            epoch_ratio = getattr(self, 'current_epoch', 0) / getattr(self, 'total_epochs', 100)
+            
+            cls_weight_factor = 1.5 - 0.5 * epoch_ratio  # 1.5 -> 1.0
+            reg_weight_factor = 0.5 + 0.5 * epoch_ratio  # 0.5 -> 1.0
+            iou_weight_factor = 0.8 + 0.4 * epoch_ratio  # 0.8 -> 1.2
+        else:
+            cls_weight_factor = reg_weight_factor = iou_weight_factor = 1.0
+
+        # 应用权重
+        loss_cls_reduced = loss_cls * self.cls['weight'] * cls_weight_factor
+        loss_iou_reduced = loss_iou * self.iou['weight'] * iou_weight_factor
+        loss_reg_reduced = loss_reg * self.reg['weight'] * reg_weight_factor
+        
+        return loss_cls_reduced, loss_iou_reduced, loss_reg_reduced
+
+    # ========== 辅助函数 ==========
+    def focal_cls_loss(self, pred, target, alpha=0.25, gamma=2.0):
+        """Focal Loss for classification"""
+        pred_sigmoid = torch.sigmoid(pred)
+        pt = target * pred_sigmoid + (1 - target) * (1 - pred_sigmoid)
+        
+        # 防止数值不稳定
+        pt = torch.clamp(pt, 1e-8, 1.0 - 1e-8)
+        
+        alpha_weight = target * alpha + (1 - target) * (1 - alpha)
+        focal_weight = alpha_weight * torch.pow(1 - pt, gamma)
+        
+        bce_loss = F.binary_cross_entropy_with_logits(pred, target, reduction='none')
+        focal_loss = focal_weight * bce_loss
+        
+        return focal_loss.mean()
+
+    # def stage2_loss(self, rcnn_cls,rcnn_iou,rcnn_reg,tgt_cls,tgt_iou,tgt_reg):
+    #     rcnn_cls = rcnn_cls.view(1, -1, 1)
+    #     rcnn_iou = rcnn_iou.view(1, -1, 1)
+    #     rcnn_reg = rcnn_reg.view(1, -1, 7)
+
+    #     tgt_cls = tgt_cls.view(1, -1, 1)
+    #     tgt_iou = tgt_iou.view(1, -1, 1)
+    #     tgt_reg = tgt_reg.view(1, -1, 7)
+
+    #     pos_norm = tgt_cls.sum()
+    #     # cls loss
+    #     loss_cls = weighted_sigmoid_binary_cross_entropy(rcnn_cls, tgt_cls)
+
+    #     # regression loss
+    #     # [deprecated by Yifan Lu] Target resampling : Generate a weights mask to force the regressor concentrate on low iou predictions
+    #     # sample 50% with iou>0.7 and 50% < 0.7
+    #     weights = torch.ones(tgt_iou.shape, device=tgt_iou.device)
+    #     weights[tgt_cls == 0] = 0
+    #     # coalign 这边是直接设置为0，没有后续过程
+    #     if self.use_reg_loss_focal:
+    #         neg = torch.logical_and(tgt_iou < 0.7, tgt_cls != 0)
+    #         pos = torch.logical_and(tgt_iou >= 0.7, tgt_cls != 0)
+    #         # # 这里不仅仅删除一些正样本，并且对于负样本加量学习！先来个五倍吧
+    #         num_neg = int(neg.sum(dim=1))
+    #         num_pos = int(pos.sum(dim=1))
+    #         num_pos_smps = max(num_neg, 5)
+    #         pos_indices = torch.where(pos)[1]
+    #         not_selsected = torch.randperm(num_pos)[:num_pos - num_pos_smps]
+    #         # not_selsected_indices = pos_indices[not_selsected]
+    #         weights[:, pos_indices[not_selsected]] = 0
+    #         # print("正样本，负样本数量", num_neg, num_pos, weights[weights != 0].shape)
+    #     loss_reg = weighted_smooth_l1_loss(rcnn_reg, tgt_reg,
+    #                                     weights=weights / max(weights.sum(),
+    #                                                             1)).sum()
+
+    #     # iou loss
+    #     weights_iou = torch.ones(tgt_iou.shape, device=tgt_iou.device)
+    #     # TODO: also count the negative samples
+    #     tgt_iou = 2 * (tgt_iou - 0.5)  # normalize to -1, 1
+    #     if self.use_iou_loss == "naive":
+    #         # print("use naive iou loss")
+    #         loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
+    #                                         weights=tgt_cls).mean()
+    #     elif self.use_iou_loss == "naive+":
+    #         # print("use naive+ iou loss")
+    #         loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
+    #                                         weights=weights_iou).mean()
+    #     elif self.use_iou_loss == "naive+W3":
+    #         # print("use naive+W3 iou loss")
+    #         # 这个操作有点问题捏，这里不是0.7，而是0.4，这组实验需要重新跑
+    #         weights_iou[tgt_iou < 0.4] = 3
+    #         loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
+    #                                         weights=weights_iou).mean()
+    #     else:
+    #         print("else use naive iou loss")
+    #         loss_iou = weighted_smooth_l1_loss(rcnn_iou, tgt_iou,
+    #                                         weights=tgt_cls).mean()
+
+    #     loss_cls_reduced = loss_cls * self.cls['weight']
+    #     loss_iou_reduced = loss_iou * self.iou['weight']
+    #     loss_reg_reduced = loss_reg * self.reg['weight']
+        
+    #     return loss_cls_reduced,loss_iou_reduced,loss_reg_reduced
         
     def edge_loss(self, predicted, target):
         # 定义Sobel算子
@@ -309,9 +459,15 @@ class PointPillarLossDiffusion(nn.Module):
         sigma2_sq = F.conv2d(target * target, kernel, padding=pad, groups=channels) - mu2_sq
         sigma12 = F.conv2d(predicted * target, kernel, padding=pad, groups=channels) - mu1_mu2
         
-        # SSIM公式
-        ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2 + eps))
-        ssim_value = ssim_map.mean()
+        # 确保方差非负
+        sigma1_sq = F.relu(sigma1_sq + eps)  # 使用relu确保非负
+        sigma2_sq = F.relu(sigma2_sq + eps)
+        
+        # SSIM公式 - 在每个可能为零的项都添加eps
+        ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1 + eps) * (sigma1_sq + sigma2_sq + C2 + eps))
+        
+        # 确保SSIM值在[-1, 1]范围内
+        ssim_value = torch.clamp(ssim_map.mean(), -1, 1)
         return 1.0 - ssim_value
     
     def cal_diff_loss(self, p_e_batch, g_e_batch,t_e_batch):
@@ -324,13 +480,13 @@ class PointPillarLossDiffusion(nn.Module):
             g_noise = g_e_batch[batch_idx]
             # 计算当前批次的损失
             pixel_loss = F.mse_loss(p_noise, g_noise, reduction='mean')
-            edge_loss = self.edge_loss(p_noise, g_noise)
+            # edge_loss = self.edge_loss(p_noise, g_noise)
             ssim_loss = self.ssim_loss(p_noise, g_noise)
             # 累加总损失
-            diff_loss += pixel_loss
+            diff_loss += pixel_loss + ssim_loss
         # 计算平均损失
         diff_loss = diff_loss / len(p_e_batch)
-        return diff_loss, pixel_loss, 0.05 * edge_loss, ssim_loss
+        return diff_loss, pixel_loss, 0, ssim_loss
         
     def forward(self, output_dict, target_dict, epoch = 1, train = True):
         """
@@ -381,8 +537,8 @@ class PointPillarLossDiffusion(nn.Module):
             self.loss_dict.update({'total_loss': self.total_loss,
                                     'diff_loss': self.diff_loss,
                                     'pixel_loss':pixel_loss.item(),
-                                    'edge_loss':edge_loss.item(),
-                                    'ssim_loss':ssim_loss.item(),
+                                    # 'edge_loss':edge_loss.item(),
+                                    'ssim_loss':ssim_loss,
                                     })
         elif 'pred_out' in output_dict.keys():
             p_e_batch = output_dict['pred_out']  # 批量列表
@@ -403,8 +559,8 @@ class PointPillarLossDiffusion(nn.Module):
                                    'iou_loss': self.iou_loss,
                                    'diff_loss': self.diff_loss,
                                    'pixel_loss':pixel_loss.item(),
-                                   'edge_loss':edge_loss.item(),
-                                   'ssim_loss':ssim_loss.item(), 
+                                #    'edge_loss':edge_loss.item(),
+                                   'ssim_loss':ssim_loss, 
                                     })
     
         return total_loss
@@ -511,14 +667,14 @@ class PointPillarLossDiffusion(nn.Module):
         if pbar is None:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                pixel_loss = self.loss_dict['pixel_loss']
-                edge_loss = self.loss_dict['edge_loss']
+                # pixel_loss = self.loss_dict['pixel_loss']
+                # edge_loss = self.loss_dict['edge_loss']
                 ssim_loss = self.loss_dict['ssim_loss']
                 print("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
-                " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Pixel: %.4f" % (
+                " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Ssim: %.4f" % (
                     epoch, batch_id + 1, batch_len,
                     lr if lr is not None else 0,
-                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss,pixel_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, ssim_loss))
             else:
                 print("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
@@ -528,14 +684,14 @@ class PointPillarLossDiffusion(nn.Module):
         else:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                pixel_loss = self.loss_dict['pixel_loss']
-                edge_loss = self.loss_dict['edge_loss']
+                # pixel_loss = self.loss_dict['pixel_loss']
+                # edge_loss = self.loss_dict['edge_loss']
                 ssim_loss = self.loss_dict['ssim_loss']
                 pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
-                " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Pixel: %.4f" % (
+                " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Ssim: %.4f" % (
                     epoch, batch_id + 1, batch_len,
                     lr if lr is not None else 0,
-                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, pixel_loss))
+                    total_loss, rcnn_loss, cls_loss, reg_loss, iou_loss, diff_loss, ssim_loss))
             else:
                 pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.4f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc Loss: %.4f|| Iou: %.3f" % (
@@ -550,12 +706,12 @@ class PointPillarLossDiffusion(nn.Module):
         if 'diff_loss' in self.loss_dict:
             writer.add_scalar('Reconstruction_loss', diff_loss,
                           epoch*batch_len + batch_id)
-            writer.add_scalar('Pixel_loss', pixel_loss,
-                          epoch*batch_len + batch_id)
+            # writer.add_scalar('Pixel_loss', pixel_loss,
+            #               epoch*batch_len + batch_id)
             # writer.add_scalar('Edge_loss', edge_loss,
             #               epoch*batch_len + batch_id)
-            # writer.add_scalar('Ssim_loss', ssim_loss,
-            #               epoch*batch_len + batch_id)
+            writer.add_scalar('Ssim_loss', ssim_loss,
+                          epoch*batch_len + batch_id)
         writer.add_scalar('Regression_loss', reg_loss,
                           epoch*batch_len + batch_id)
         writer.add_scalar('Cls_loss', cls_loss,

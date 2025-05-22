@@ -9,7 +9,8 @@ from opencood.models.sub_modules.point_pillar_scatter_dec import PointPillarScat
 from opencood.models.sub_modules.base_bev_backbone_resnet import ResNetBEVBackbone
 from opencood.models.sub_modules.base_bev_backbone import BaseBEVBackbone
 from opencood.models.sub_modules.downsample_conv import DownsampleConv
-from opencood.models.mdd_modules.radar_cond_diff_denoise import Cond_Diff_Denoise
+# from opencood.models.mdd_modules.radar_cond_diff_denoise import Cond_Diff_Denoise
+from opencood.models.mdd_modules.my_radar_cond_diff_denoise import Cond_Diff_Denoise
 from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu
 from opencood.utils import common_utils
 from opencood.tools import train_utils
@@ -126,16 +127,19 @@ class PointPillarDiffusionDecDet(nn.Module):
         
         self.mdd = Cond_Diff_Denoise(args['mdd_block'], 32)
         
-        fc_layers = [args['roi_head']['n_fc_neurons']] * 2
-        pre_channel = 256 # 以融合后的解耦因子作为输入
-        self.dp_ratio = args['roi_head']['dp_ratio']
-        self.cls_layers, pre_channel = self._make_fc_layers(pre_channel, fc_layers,
-                                                            output_channels=args['roi_head']['num_cls'])
-        self.iou_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=args['roi_head']['num_cls'])
-        self.reg_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=args['roi_head']['num_cls'] * 7)
-        self._init_weights(weight_init='xavier')
+        # # fc_layers = [args['roi_head']['n_fc_neurons']] * 2
+        # fc_layers = [256,128]
+        # pre_channel = 512 #512 256以融合后的解耦因子作为输入
+        # self.dp_ratio = args['roi_head']['dp_ratio']
+        # self.cls_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
+        #                                                     output_channels=args['roi_head']['num_cls'])
+        # # self.cls_layers, pre_channel = self._make_fc_layers(pre_channel, fc_layers,
+        # #                                                     output_channels=args['roi_head']['num_cls'])
+        # self.iou_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
+        #                                           output_channels=args['roi_head']['num_cls'])
+        # self.reg_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
+                                                #   output_channels=args['roi_head']['num_cls'] * 7)
+        # self._init_weights(weight_init='xavier')
 
     def _init_weights(self, weight_init='xavier'):
         if weight_init == 'kaiming':
@@ -348,14 +352,16 @@ class PointPillarDiffusionDecDet(nn.Module):
                            'gt_x0':batch_dict['gt_x0'],
                            'target':batch_dict['target'],
                            't': batch_dict['t'],}
-            # 可视化特征
+            # # 可视化特征
             # viz_config = [
             #     # ('batch_gt_spatial_features', 'gt_bev'),
             #     ('gt_x0', 'gt_x0'),
+            #     # ('norm_gt_x0', 'norm_gt_x0'),
             #     # ('gt_noise', 'gt_noise'),
             #     # ('pred_out', 'pre_bev'),
-            #     # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
-            #     # ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
+            #     ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
+            #     ('pred_out_inf_no_cond', 'pre_inf_no_cond_bev'),
+            #     # ('pred_out_inf_no_cond_nonorm', 'pre_inf_with_no_bev_nonorm'),
             #     # ('noise', 'noise'),
             #     # ('x', 'x')
             # ]
@@ -373,8 +379,8 @@ class PointPillarDiffusionDecDet(nn.Module):
             #     visualize_channels_individually(
             #         batch_dict[key][0], 
             #         f"{base_path}/{name}_{i}", 
-            #         global_vmin, 
-            #         global_vmax
+            #         # global_vmin, 
+            #         # global_vmax
             #     )
         # 第二阶段预测输出 [42,256]  --> [42,256,1]
         # rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in batch_dict['fused_object_factors']] # [42, 1]
@@ -387,6 +393,7 @@ class PointPillarDiffusionDecDet(nn.Module):
         #                         'rcnn_reg': rcnn_reg,
         #                         }
         # batch_dict['stage2_out'] = output_dict['stage2_out']
-        # output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
+        output_dict['stage2_out'] = batch_dict['stage2_out']
+        output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
 
         return output_dict

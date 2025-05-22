@@ -92,6 +92,10 @@ class Matcher(nn.Module):
                 cur_cluster_id += 1
             clusters = []
             scores = []
+            if cur_cluster_id == 1:  # 没有找到任何聚类
+                # 可以选择默认将所有未分配的点分配到一个聚类
+                cluster_indices[cluster_indices == 0] = 1
+                cur_cluster_id = 2
             for j in range(1, cur_cluster_id):
                 clusters.append(pred_boxes_cat[cluster_indices==j])
                 scores.append(pred_scores_cat[cluster_indices==j])
@@ -113,6 +117,10 @@ class Matcher(nn.Module):
             for c, s in zip(cl, sl): # frame's cluster
                 # reverse direction for non-dominant direction of boxes
                 dirs = c[:, -1]
+                if s.numel() == 0:
+                    print("Empty tensor encountered, skipping fusion for this cluster.")
+                    # 处理空张量情况
+                    continue  # 直接返回，跳过这个聚类
                 max_score_idx = torch.argmax(s)
                 dirs_diff = torch.abs(dirs - dirs[max_score_idx].item())
                 lt_pi = (dirs_diff > pi).int()

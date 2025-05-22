@@ -5,7 +5,7 @@ test_dir: "/datasets/OPV2V/test"
 
 yaml_parser: "load_point_pillar_params"
 train_params:
-  batch_size: &batch_size 2
+  batch_size: &batch_size 8
   epoches: 89
   eval_freq: 2
   save_freq: 1
@@ -212,27 +212,28 @@ model:
 
     mdd_block:
       model:
-        in_channels: *num_features #8
-        out_ch: *num_features #8
-        ch: 16 #16
-        flash_attn: True
-        ch_mult: [1, 2, 4, 8] #[1, 2, 4, 8]
+        in_channels: *num_features #*num_features 1
+        out_ch: *num_features #*num_features
+        ch: 64 #64 16
+        flash_attn: False #True
+        ch_mult: [1, 2, 4] #[1, 2, 4, 8] [1, 1]
         num_res_blocks: 2
-        attn_resolutions: [16]
+        attn_resolutions: 12 #16
+        resolution: 24
         dropout: 0.0
         resamp_with_conv: True
-        # d_cond: 512
-        n_head: 8
+        d_cond: 256 #512
+        n_head: 4 #8
       diffusion:
         beta_schedule: linear
         num_diffusion_timesteps: 1000
-        sampling_timesteps: 250
+        sampling_timesteps: 1000
         # if_normalize: False
         if_normalize: True
         ddim_sampling_eta: 0.0
-        guidance_scale: 1.0
-        # parameterization: 'eps'
-        parameterization: 'x0'
+        guidance_scale: 7.5
+        parameterization: 'eps'
+        # parameterization: 'x0'
     
     anchor_num: *achor_num
 
@@ -277,8 +278,8 @@ loss:
         weight: 1.0
       
 optimizer:
-  core_method: Adam
-  lr: 0.0004
+  core_method: AdamW
+  lr: 1e-4
   args:
     eps: 1e-10
     weight_decay: 1e-4
@@ -288,7 +289,11 @@ optimizer:
 #   gamma: 0.1
 #   step_size: [10, 20]
 
+# lr_scheduler:
+#   core_method: exponential
+#   gamma: 0.8  # 或0.85-0.9之间的值
 lr_scheduler:
-  core_method: exponential
-  gamma: 0.8  # 或0.85-0.9之间的值
+  core_method: 'cosine_warmup'
+  num_warmup_steps: 100
+
 

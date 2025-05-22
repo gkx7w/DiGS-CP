@@ -2,15 +2,15 @@
 
 import sys
 sys.path.append("/data/gkx/Code")
-import torch
-torch.autograd.set_detect_anomaly(True)
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
-import time
 import argparse
 import os
 import statistics
+from torch.cuda.amp import autocast, GradScaler
+import torch
+torch.autograd.set_detect_anomaly(True)
 from torch.utils.data import DataLoader, Subset
 from tensorboardX import SummaryWriter
 import opencood.hypes_yaml.yaml_utils as yaml_utils
@@ -24,6 +24,11 @@ from numpy import cov, trace, iscomplexobj
 from scipy.linalg import sqrtm
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
+from opencood.visualization.simple_vis import visualize_averaged_channels_individual,visualize_all_channels_grid,visualize_channels_individually
+
+# 引入Accelerator
+from accelerate import Accelerator
+from accelerate import AutocastKwargs
 
 # 设置随机种子以确保确定性
 def seed_everything(seed):
@@ -68,11 +73,20 @@ def train_parser():
 def main():
     opt = train_parser()
 
+    # 初始化Accelerator，启用fp16混合精度
+    accelerator = Accelerator(mixed_precision='no')
+    
+    # 初始化GradScaler用于混合精度训练
+    scaler = GradScaler()
+
     #  resume
     # hypes = yaml_utils.load_yaml(opt.hypes_yaml, opt)
 
     #  start
     hypes = yaml_utils.load_resume_yaml(opt.hypes_yaml, opt)
+    # 添加梯度累积参数，如果hypes中没有定义，则默认为1
+    # accumulation_steps = hypes['train_params'].get('accumulation_steps', 4)  # 默认累积4个批次
+    # print(f'Using gradient accumulation with {accumulation_steps} steps')
 
     print('Dataset Building')
     opencood_train_dataset = build_dataset(hypes, visualize=False, train=True)
@@ -102,9 +116,9 @@ def main():
 
     print('Creating Model')
     model = train_utils.create_model(hypes)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # torch.cuda.set_device("cuda:0")
-    # device = torch.device('cuda:0')
+    
+    # 不再需要手动设置设备，Accelerator会处理
+    # device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     # record lowest validation loss checkpoint.
     lowest_val_loss = 1e5
@@ -115,8 +129,8 @@ def main():
 
     # optimizer setup
     optimizer = train_utils.setup_optimizer(hypes, model)
-
-     # 根据不同条件设置需要解冻的层
+    
+    # 根据不同条件设置需要解冻的层
     if opt.model_dir and opt.diff_model_dir: # 两个模型路径都给定的情况
         trainable_layers = [
             'roi_head.factor_encoder',
@@ -132,20 +146,21 @@ def main():
         trainable_layers = [
             'mdd',
             'roi_head.factor_encoder',
-            # 'cls_layers',
-            # 'iou_layers',
-            # 'reg_layers',
+            'cls_layers',
+            'iou_layers',
+            'reg_layers',
             # 'attention_2',
             # 'layernorm_2'
                             ]
         init_epoch = 78
+        diff_epoch = 0 
         print("loading model from", opt.model_dir)
         model = train_utils.load_saved_model_new(opt.model_dir, model)
         
     else: # 从头开始训练的情况
         trainable_layers = []  # 不需要特别解冻任何层
         init_epoch = 0
-
+    
     if trainable_layers:
         for param in model.parameters():
             param.requires_grad = False
@@ -159,9 +174,9 @@ def main():
                 print(f"解冻层: {name}")
         
         print(f"总共解冻 {unfrozen_count} 个参数组")
-
+    
     # 设置学习率调度器
-    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=init_epoch if init_epoch > 0 else None)
+    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else diff_epoch)
     saved_path = train_utils.setup_train(hypes)
 
     if init_epoch > 0:
@@ -169,57 +184,27 @@ def main():
     else:
         print("从头开始训练")
 
-    # we assume gpu is necessary
-    if torch.cuda.is_available():
-        model.to(device)
+    # 使用accelerator准备模型、优化器、数据加载器
+    model, optimizer, train_loader, val_loader = accelerator.prepare(
+        model, optimizer, train_loader, val_loader
+    )
 
     # record training
     writer = SummaryWriter(saved_path)
-
+    
     print('Training start')
     epoches = hypes['train_params']['epoches']
     supervise_single_flag = False if not hasattr(opencood_train_dataset, "supervise_single") else opencood_train_dataset.supervise_single
     # used to help schedule learning rate
 
-    # 定义AverageMeter类
-    class AverageMeter(object):
-        """计算并存储平均值和当前值"""
-        def __init__(self):
-            self.reset()
-
-        def reset(self):
-            self.val = 0
-            self.avg = 0
-            self.sum = 0
-            self.count = 0
-
-        def update(self, val, n=1):
-            self.val = val
-            self.sum += val * n
-            self.count += n
-            self.avg = self.sum / self.count
-    # 然后在训练代码中使用
-    # data_time = AverageMeter()
-    # compute_time = AverageMeter()
-    # end = time.time()
-
-    # 设置梯度累积步数
-    accumulation_steps = 8  # 可以根据需要调整，每4个批次更新一次权重
+    print("batch size: ", hypes['train_params']['batch_size'])
+    # 在训练循环中使用自动混合精度
     for epoch in range(init_epoch, max(epoches, init_epoch)):
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
-        model.zero_grad()
-        optimizer.zero_grad()
-        
         for i, batch_data in enumerate(train_loader):
-            # data_time.update(time.time() - end)
-            # if i < 5744:#3156 5645
-            #     print(i)
-            #     continue
-            
             if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or ('processed_lidar' in batch_data['ego'] and batch_data['ego']['processed_lidar'] == {}):
                 continue
-            
             # the model will be evaluation mode during validation
             model.train()
 
@@ -227,66 +212,91 @@ def main():
                 -1] == "DiscoNetSDCoper" or str(type(model))[8:-2].split(".")[-1] == "SDCoper") and \
                     hypes['model']['args']['activate_stage2']:
                 pass
-                # fixed some param
-                # model.stage1_fix()
-
-            
-            batch_data = train_utils.to_device(batch_data, device)
+                
+            # 添加epoch信息
             batch_data['ego']['epoch'] = epoch
             
-            ouput_dict = model(batch_data['ego'])
+            # 使用autocast进行混合精度计算
+            with autocast():
+                # 模型前向传播
+                ouput_dict = model(batch_data['ego'])
+                
+                if ouput_dict is None:
+                    continue
+                    
+                final_loss = criterion(ouput_dict, batch_data['ego']['label_dict'])
+                
+                if supervise_single_flag:
+                    final_loss += criterion(ouput_dict, batch_data['ego']['label_dict_single'], suffix="_single")
+                    criterion.logging(epoch, i, len(train_loader), writer, optimizer=optimizer, suffix="_single")
             
-            # 可视化
-            # if i > 6760:
-            #     gt_bev_feature = ouput_dict['gt_feature'][0]
-            #     pre_bev_feature = ouput_dict['pred_feature'][0]
-            #     # 可视化gt bev
-            #     visualize_averaged_channels_individual(gt_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/gt_bev_{i}")
-            #     # 可视化预测bev
-            #     visualize_averaged_channels_individual(pre_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/pre_bev_{i}")
-            
-            if ouput_dict is None:
-                continue
-            final_loss = criterion(ouput_dict, batch_data['ego']['label_dict']) / accumulation_steps
-            criterion.logging(epoch, i, len(train_loader), writer)
-
-            if supervise_single_flag:
-                final_loss += criterion(ouput_dict, batch_data['ego']['label_dict_single'], suffix="_single") / accumulation_steps
-                criterion.logging(epoch, i, len(train_loader), writer, suffix="_single")
+            criterion.logging(epoch, i, len(train_loader), writer, optimizer=optimizer)
 
             # back-propagation
-            # without enough data, should'n pass gd_fn
             should_backward = True
-            if (str(type(model))[8:-2].split(".")[-1] == "PointPillarBaselineCompare" or str(type(model))[8:-2].split(".")[-1] == "DiscoNetCompare" or str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt2" or str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt256" or str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevtCompare") and hypes['model']['args']['activate_stage2']:
+            if (str(type(model))[8:-2].split(".")[-1] == "PointPillarBaselineCompare" or 
+                str(type(model))[8:-2].split(".")[-1] == "DiscoNetCompare" or 
+                str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt2" or 
+                str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevt256" or 
+                str(type(model))[8:-2].split(".")[-1] == "FpvrcnnCoBevtCompare") and hypes['model']['args']['activate_stage2']:
                 if ouput_dict["det_scores_fused"] is None or sum([t.shape[0] for t in ouput_dict["det_scores_fused"]]) == 0:
                     should_backward = False
 
             if should_backward:
-                final_loss.backward()
-                # 只在完成指定累积步数后更新权重
-                if (i + 1) % accumulation_steps == 0:
-                    optimizer.step()
-                    model.zero_grad()
-                    optimizer.zero_grad()  # 更新后清零梯度
+                # 使用scaler进行梯度缩放
+                scaler.scale(final_loss).backward()
+                
+                # 更新优化器并更新scaler
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
 
-            
-            # compute_time.update(time.time() - end - data_time.val)
-            # end = time.time()
-            # if i % 10 == 0:
-            #     print(f"Data loading: {data_time.avg:.4f}s, Computing: {compute_time.avg:.4f}s")
-
-
-         # 处理最后不足accumulation_steps的批次
-        if (i + 1) % accumulation_steps != 0 and should_backward:
-            optimizer.step()
-            optimizer.zero_grad()
+        #——————————————————————————————————可视化————————————————————————————————————
+        # 为了可视化，确保我们使用未包装的模型
+        unwrapped_model = accelerator.unwrap_model(model)
         
+        ouput_dict['pred_out_inf_no_cond'] = []
+        for batch_idx in range(len(ouput_dict['gt_x0'])):
+            x_noisy_no_cond = unwrapped_model.mdd.ddim_sample(ouput_dict['gt_x0'][batch_idx].shape, accelerator.device, None, guidance_scale=1)  # x_start=noise,
+            ouput_dict['pred_out_inf_no_cond'].append(x_noisy_no_cond)
+        viz_config = [
+            # ('batch_gt_spatial_features', 'gt_bev'),
+            # ('gt_x0', 'gt_x0'),
+            # ('gt_noise', 'gt_noise'),
+            # ('pred_out', 'pre_bev'),
+            # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
+            ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
+            # ('noise', 'noise'),
+            # ('x', 'x')
+        ]
+        base_path = f"/data/gkx/Code/opencood/bev_visualizations/train_4ch_withcond_eps_det"
+        # 计算全局最小值和最大值
+        features = [ouput_dict[key][0] for key, _ in viz_config]
+        global_vmin, global_vmax = float('inf'), float('-inf')
+        for feature in features:
+            channels = torch.mean(feature, dim=1).detach().cpu().numpy()
+            global_vmin = min(global_vmin, np.min(channels))
+            global_vmax = max(global_vmax, np.max(channels))
+        # 可视化
+        for key, name in viz_config:
+            visualize_channels_individually(
+                ouput_dict[key][0], 
+                f"{base_path}/{name}_{epoch}", 
+                global_vmin, 
+                global_vmax
+            )
+        #——————————————————————————————————可视化————————————————————————————————————
+    
         if epoch % hypes['train_params']['save_freq'] == 0:
-            torch.save(model.state_dict(),
-                       os.path.join(saved_path,
-                                    'net_epoch%d.pth' % (epoch + 1)))
-        scheduler.step(epoch)
+            # 使用accelerator保存模型
+            accelerator.save(
+                unwrapped_model.state_dict(),
+                os.path.join(saved_path, 'net_epoch%d.pth' % (epoch + 1))
+            )
+        scheduler.step()
+        
         opencood_train_dataset.reinitialize()
+        
 
     print('Training Finished, checkpoints saved to %s' % saved_path)
 
@@ -295,7 +305,6 @@ def main():
     bestval_model_list = glob.glob(os.path.join(saved_path, "net_epoch_bestval_at*"))
     
     if len(bestval_model_list) > 1:
-        import numpy as np
         bestval_model_epoch_list = [eval(x.split("/")[-1].lstrip("net_epoch_bestval_at").rstrip(".pth")) for x in bestval_model_list]
         ascending_idx = np.argsort(bestval_model_epoch_list)
         for idx in ascending_idx:
@@ -312,163 +321,12 @@ def main():
         os.system(cmd)
 
 
-# def calculate_fid(act1, act2):
-#     # calculate mean and covariance statistics
-#     mu1, sigma1 = act1.mean(axis=0), cov(act1, rowvar=False)
-#     mu2, sigma2 = act2.mean(axis=0), cov(act2, rowvar=False)
-#     # calculate sum squared difference between means
-#     ssdiff = np.sum((mu1 - mu2)**2.0)
-#     # calculate sqrt of product between cov
-#     # 添加小的对角矩阵以提高数值稳定性
-#     eps = 1e-6
-#     sigma1 = sigma1 + np.eye(sigma1.shape[0]) * eps
-#     sigma2 = sigma2 + np.eye(sigma2.shape[0]) * eps
-    
-#     covmean = sqrtm(sigma1.dot(sigma2))
-    
-#     # check and correct imaginary numbers from sqrt
-#     if iscomplexobj(covmean):
-#         covmean = covmean.real
-#     # calculate score
-#     fid = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
-#     return fid
-
-
-def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=5):
-    """
-    Visualize Bird's Eye View (BEV) features.
-    
-    Args:
-        bev_feature: Tensor of shape [N, C, H, W]
-        save_dir: Directory to save visualizations
-        n_cols: Number of columns in the grid plot
-    """
-    import os
-    os.makedirs(save_dir, exist_ok=True)
-    
-    N, C, H, W = bev_feature.shape
-    
-    # Create a figure for each of the N BEV features
-    for n in range(N):
-        # Get the current BEV feature
-        feature = bev_feature[n]  # Shape: [C, H, W]
-        
-        # Calculate how many rows we need
-        n_rows = (C + n_cols - 1) // n_cols
-        
-        # Create a figure with subplots
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 3, n_rows * 3))
-        fig.suptitle(f'BEV Feature {n+1}/{N}', fontsize=16)
-        
-        # Flatten axes for easy indexing if multiple rows
-        if n_rows > 1:
-            axes = axes.flatten()
-        
-        # Loop through each channel
-        for c in range(C):
-            # Get the current channel
-            channel_data = feature[c].detach().cpu().numpy()  # Shape: [H, W]
-            
-            # Normalize data for better visualization
-            norm = Normalize(vmin=channel_data.min(), vmax=channel_data.max())
-            
-            # Get the corresponding axis
-            if C <= n_cols and n_rows == 1:
-                ax = axes[c] if n_cols > 1 else axes
-            else:
-                ax = axes[c]
-            
-            # Plot the feature as a heatmap
-            im = ax.imshow(channel_data, cmap='viridis', norm=norm)
-            ax.set_title(f'Channel {c}')
-            ax.axis('off')
-            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-        
-        # Hide empty subplots
-        for c in range(C, n_rows * n_cols):
-            if C <= n_cols and n_rows == 1:
-                if c < n_cols:  # Check if we're still within the valid range
-                    if n_cols > 1:
-                        axes[c].axis('off')
-            else:
-                axes[c].axis('off')
-        
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig(f'{save_dir}/bev_feature_{n+1}.png', dpi=200)
-        plt.close(fig)
-
-
-def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz'):
-    import os
-    os.makedirs(save_dir, exist_ok=True)
-    
-    N, C, H, W = bev_feature.shape
-    
-    for n in range(N):
-        # Average across channels
-        feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
-        
-        # Create a new figure for each BEV
-        fig, ax = plt.subplots(figsize=(6, 6))
-        
-        norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
-        im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
-        ax.set_title(f'BEV {n+1} (avg)')
-        ax.axis('off')
-        fig.colorbar(im, ax=ax)
-        
-        # Save individual figure
-        plt.tight_layout()
-        plt.savefig(f'{save_dir}/bev_{n+1}_avg_channels.png', dpi=200)
-        plt.close(fig)
-
-
-# def visualize_averaged_channels(bev_feature, save_dir='./bev_avg_viz'):
-#     """
-#     Visualize the average of all channels for each BEV feature.
-    
-#     Args:
-#         bev_feature: Tensor of shape [N, C, H, W]
-#         save_dir: Directory to save visualizations
-#     """
-#     import os
-#     os.makedirs(save_dir, exist_ok=True)
-    
-#     N, C, H, W = bev_feature.shape
-    
-#     # Create a grid to display all N BEV averages
-#     n_cols = min(7, N)
-#     n_rows = (N + n_cols - 1) // n_cols
-    
-#     fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 3, n_rows * 3))
-#     if n_rows > 1 or n_cols > 1:
-#         axes = axes.flatten()
-    
-#     for n in range(N):
-#         # Average across channels
-#         feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
-        
-#         # Get corresponding axis
-#         if N == 1:
-#             ax = axes
-#         else:
-#             ax = axes[n]
-        
-#         norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
-#         im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
-#         ax.set_title(f'BEV {n+1} (avg)')
-#         ax.axis('off')
-#         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    
-#     # Hide empty subplots
-#     for n in range(N, n_rows * n_cols):
-#         if N > 1:  # Only if axes is a collection
-#             axes[n].axis('off')
-    
-#     plt.tight_layout()
-#     plt.savefig(f'{save_dir}/averaged_channels_all_bevs.png', dpi=200)
-#     plt.close(fig)
-
+def add_gradient_histograms(model, writer, step):
+    for name, param in model.named_parameters():
+        if param.requires_grad and param.grad is not None:
+            writer.add_histogram(f'gradients/{name}', param.grad, step)
+            # 可选：也可以记录参数值的直方图
+            writer.add_histogram(f'weights/{name}', param, step)
 
 
 if __name__ == '__main__':

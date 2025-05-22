@@ -41,7 +41,7 @@ def nonlinearity(x):
 
 
 def Normalize(in_channels):
-    return torch.nn.GroupNorm(num_groups=4, num_channels=in_channels, eps=1e-6, affine=True)
+    return torch.nn.GroupNorm(num_groups=32, num_channels=in_channels, eps=1e-6, affine=True) #16
 
 
 class Upsample(nn.Module):
@@ -144,118 +144,216 @@ class ResnetBlock(nn.Module):
 
         return x+h
 
-# 不用这个，不能加引导条件
-class AttnBlock(nn.Module):
-    def __init__(self, in_channels):
+
+class SelfAttentionBlock(nn.Module):
+    """增强版自注意力块，支持多头实现"""
+    def __init__(self, channels, num_heads=8, attn_drop=0.0):
         super().__init__()
-        self.in_channels = in_channels
-
-        self.norm = Normalize(in_channels)
-        self.q = torch.nn.Conv2d(in_channels,
-                                 in_channels,
-                                 kernel_size=1,
-                                 stride=1,
-                                 padding=0)
-        self.k = torch.nn.Conv2d(in_channels,
-                                 in_channels,
-                                 kernel_size=1,
-                                 stride=1,
-                                 padding=0)
-        self.v = torch.nn.Conv2d(in_channels,
-                                 in_channels,
-                                 kernel_size=1,
-                                 stride=1,
-                                 padding=0)
-        self.proj_out = torch.nn.Conv2d(in_channels,
-                                        in_channels,
-                                        kernel_size=1,
-                                        stride=1,
-                                        padding=0)
-
-    def forward(self, x):
-        h_ = x
-        h_ = self.norm(h_)
-        q = self.q(h_)
-        k = self.k(h_)
-        v = self.v(h_)
-
-        # compute attention
-        b, c, h, w = q.shape
-        q = q.reshape(b, c, h*w)
-        q = q.permute(0, 2, 1)   # b,hw,c
-        k = k.reshape(b, c, h*w)  # b,c,hw
-        w_ = torch.bmm(q, k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
-        w_ = w_ * (int(c)**(-0.5))
-        w_ = torch.nn.functional.softmax(w_, dim=2)
-
-        # attend to values
-        v = v.reshape(b, c, h*w)
-        w_ = w_.permute(0, 2, 1)   # b,hw,hw (first hw of k, second of q)
-        # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
-        h_ = torch.bmm(v, w_)
-        h_ = h_.reshape(b, c, h, w)
-
-        h_ = self.proj_out(h_)
-
-        return x+h_
+        self.channels = channels
+        self.num_heads = num_heads
+        assert channels % num_heads == 0, "channels must be divisible by num_heads"
+        self.head_dim = channels // num_heads
+        self.scale = self.head_dim ** -0.5
         
+        self.norm = Normalize(channels)
+        self.qkv = nn.Conv2d(channels, channels * 3, kernel_size=1, bias=True)
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj = nn.Conv2d(channels, channels, kernel_size=1)
+        
+        # 初始化权重
+        nn.init.xavier_uniform_(self.qkv.weight)
+        nn.init.zeros_(self.qkv.bias)
+        nn.init.xavier_uniform_(self.proj.weight)
+        nn.init.zeros_(self.proj.bias)
+    
+    def forward(self, x):
+        """
+        Args:
+            x: 输入特征图 [B, C, H, W]
+        Returns:
+            输出特征图 [B, C, H, W]
+        """
+        B, C, H, W = x.shape
+        x_norm = self.norm(x)
+        
+        # 生成QKV投影并重塑为多头形式
+        qkv = self.qkv(x_norm)  # [B, 3*C, H, W]
+        qkv = qkv.reshape(B, 3, self.num_heads, self.head_dim, H*W)
+        qkv = qkv.permute(1, 0, 2, 4, 3)  # [3, B, heads, H*W, head_dim]
+        q, k, v = qkv[0], qkv[1], qkv[2]  # 各自形状为 [B, heads, H*W, head_dim]
+        
+        # 高效注意力计算
+        attn = (q @ k.transpose(-2, -1)) * self.scale  # [B, heads, H*W, H*W]
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn)
+        
+        # 应用注意力权重
+        out = (attn @ v)  # [B, heads, H*W, head_dim]
+        out = out.permute(0, 1, 3, 2).reshape(B, C, H, W)
+        
+        # 输出投影
+        out = self.proj(out)
+        
+        return x + out
+
+class CrossAttentionBlock(nn.Module):
+    def __init__(self, num_heads, in_channels, cond_channels, attn_drop=0.):
+        super().__init__()
+        self.channels = in_channels
+        self.cond_dim = cond_channels
+        self.num_heads = num_heads
+        assert self.channels % num_heads == 0, "channels must be divisible by num_heads"
+        self.head_dim = self.channels // num_heads
+        # self.scale = self.head_dim ** -0.5
+        self.scale = nn.Parameter(torch.ones(1) * 2.0)  # 可学习的权重
+        
+        self.norm = Normalize(self.channels)
+        self.q_proj = nn.Conv2d(self.channels, self.channels, kernel_size=1, bias=True)
+        
+        # 分离键值投影以提高效率
+        self.k_proj = nn.Linear(self.cond_dim, self.channels)
+        self.v_proj = nn.Linear(self.cond_dim, self.channels)
+        
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj = nn.Conv2d(self.channels, self.channels, kernel_size=1)
+        
+         # 初始化权重
+        nn.init.xavier_uniform_(self.q_proj.weight)
+        nn.init.zeros_(self.q_proj.bias)
+        nn.init.xavier_uniform_(self.k_proj.weight)
+        nn.init.zeros_(self.k_proj.bias)
+        nn.init.xavier_uniform_(self.v_proj.weight)
+        nn.init.zeros_(self.v_proj.bias)
+        nn.init.xavier_uniform_(self.proj.weight)
+        nn.init.zeros_(self.proj.bias)
+    
+    def forward(self, x, cond):
+        """
+        Args:
+            x: 输入特征图 [B, C, H, W]
+            cond: 条件特征 [B, L, D] 其中L是序列长度，D是条件维度
+        Returns:
+            输出特征图 [B, C, H, W]
+        """
+        B, C, H, W = x.shape
+        
+        # 处理特征图查询
+        x_norm = self.norm(x)
+        q = self.q_proj(x_norm)
+        q = q.reshape(B, self.num_heads, self.head_dim, H*W)
+        q = q.permute(0, 1, 3, 2)  # [B, heads, H*W, head_dim]
+        
+        # 处理条件键值
+        k = self.k_proj(cond)  # [B, L, C]
+        v = self.v_proj(cond)  # [B, L, C]
+        
+        k = k.reshape(B, -1, self.num_heads, self.head_dim).permute(0, 2, 1, 3)  # [B, heads, L, head_dim]
+        v = v.reshape(B, -1, self.num_heads, self.head_dim).permute(0, 2, 1, 3)  # [B, heads, L, head_dim]
+        
+        # 计算注意力
+        attn = (q @ k.transpose(-2, -1)) * self.scale  # [B, heads, H*W, L]
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn)
+        
+        # 应用注意力权重
+        out = (attn @ v)  # [B, heads, H*W, head_dim]
+        out = out.permute(0, 1, 3, 2).reshape(B, C, H, W)
+        
+        # 输出投影
+        out = self.proj(out)
+        
+        return x + out
+
+class FeedForwardBlock(nn.Module):
+    """标准前馈网络块，使用GEGLU激活"""
+    def __init__(self, channels, expansion_factor=8, dropout=0.0):
+        super().__init__()
+        self.channels = channels
+        self.expansion_factor = expansion_factor
+        self.dropout = dropout
+        
+        self.norm = Normalize(channels)
+        self.proj1 = nn.Conv2d(channels, channels * expansion_factor, kernel_size=1)
+        self.proj2 = nn.Conv2d(channels * expansion_factor // 2, channels, kernel_size=1)
+        self.drop = nn.Dropout(dropout)
+        
+        # 初始化权重
+        nn.init.xavier_uniform_(self.proj1.weight)
+        nn.init.zeros_(self.proj1.bias)
+        nn.init.xavier_uniform_(self.proj2.weight)
+        # 0.0近似残差预激活
+        nn.init.zeros_(self.proj2.bias)
+        
+    def geglu(self, x):
+        """GEGLU激活函数"""
+        x, gate = x.chunk(2, dim=1)
+        return x * F.gelu(gate)
+        
+    def forward(self, x):
+        """
+        Args:
+            x: 输入特征图 [B, C, H, W]
+        Returns:
+            输出特征图 [B, C, H, W]
+        """
+        h = self.norm(x)
+        h = self.proj1(h)
+        h = self.geglu(h)
+        h = self.drop(h)
+        h = self.proj2(h)
+        return x + h
 
 class AttentionBlock(nn.Module):
-    def __init__(self, n_head: int, channels: int, d_cond=None):
+    def __init__(self, n_head: int, channels: int, d_cond=None,ff_expansion=8, attn_dropout=0.0, dropout=0.0, ):
         super().__init__()
-        # channels = n_head * n_embd
-        # 有空把这个num_groups改成超参数
-        self.groupnorm = nn.GroupNorm(2, channels, eps=1e-6)
-        self.conv_input = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
-        self.layernorm_1 = nn.LayerNorm(channels)
-        self.attention_1 = SelfAttention(n_head, channels, in_proj_bias=False)
-        # 如果有条件输入d_cond，则使用交叉注意力
-        if d_cond is not None:
-            self.layernorm_2 = nn.LayerNorm(channels)
-            self.attention_2 = CrossAttention(n_head, channels, d_cond, in_proj_bias=False)
-        else:
-            self.layernorm_2 = None
-            self.attention_2 = None
-        self.layernorm_3 = nn.LayerNorm(channels)
-        self.linear_geglu_1 = nn.Linear(channels, 4 * channels * 2)
-        self.linear_geglu_2 = nn.Linear(4 * channels, channels)
-
-        self.conv_output = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
-    
-    def forward(self, x, cond=None):
-        residue_long = x
-        # 通道分组归一化
-        x = self.groupnorm(x)
-        x = self.conv_input(x)
+        super().__init__()
+        self.channels = channels
+        self.cond_dim = d_cond
         
-        n, c, h, w = x.shape
-        x = x.view((n, c, h * w))
-        x = x.transpose(-1, -2)  
-
-        residue_short = x
-        x = self.layernorm_1(x)
-        x = self.attention_1(x)
-        x += residue_short
-
-        # 只有当存在条件输入和attention_2时才执行交叉注意力
-        if self.attention_2 is not None and cond is not None:
-            residue_short = x
-            x = self.layernorm_2(x)
-            x = self.attention_2(x, cond)
-            x += residue_short
-
-        residue_short = x
-        x = self.layernorm_3(x)
-        x, gate = self.linear_geglu_1(x).chunk(2, dim=-1)
-        x = x * F.gelu(gate)
-        x = self.linear_geglu_2(x)
-        x += residue_short
-
-        x = x.transpose(-1, -2)
-        x = x.view((n, c, h, w))    # (n, c, h, w)  
-
-        return self.conv_output(x) + residue_long
-
+        # 自注意力子块
+        self.self_attn = SelfAttentionBlock(
+            channels=channels,
+            num_heads=n_head,
+            attn_drop=attn_dropout
+        )
+        
+        # 条件交叉注意力子块（如果需要）
+        if d_cond is not None:
+            self.cross_attn = CrossAttentionBlock(
+                in_channels=channels,
+                cond_channels=d_cond,
+                num_heads=n_head,
+                attn_drop=attn_dropout
+            )
+        else:
+            self.cross_attn = None
+            
+        # 前馈网络子块
+        self.ff = FeedForwardBlock(
+            channels=channels,
+            expansion_factor=ff_expansion,
+            dropout=dropout
+        )
+        
+    def forward(self, x, cond=None):
+        """
+        Args:
+            x: 输入特征图 [B, C, H, W]
+            cond: 可选条件特征 [B, L, D]，如果self.cond_dim不为None
+        Returns:
+            输出特征图 [B, C, H, W]
+        """
+        # 自注意力
+        x = self.self_attn(x)
+        
+        # 条件交叉注意力（如果有）
+        if self.cross_attn is not None and cond is not None:
+            x = self.cross_attn(x, cond)
+            
+        # 前馈网络
+        x = self.ff(x)
+        
+        return x
 
 class DiffusionUNet(nn.Module):
     def __init__(self, config):
@@ -266,8 +364,8 @@ class DiffusionUNet(nn.Module):
         num_res_blocks = config.model.num_res_blocks
         attn_resolutions = config.model.attn_resolutions
         dropout = config.model.dropout
-        in_channels = config.model.in_channels * 2
-        resolution = 128
+        in_channels = config.model.in_channels
+        resolution = getattr(config.model, 'resolution', 32)
         resamp_with_conv = config.model.resamp_with_conv
 
         self.ch = ch
@@ -310,7 +408,8 @@ class DiffusionUNet(nn.Module):
                                          temb_channels=self.temb_ch,
                                          dropout=dropout))
                 block_in = block_out
-                attn.append(AttentionBlock(n_head = self.n_head,channels = block_in, d_cond=self.d_cond))
+                if curr_res <= attn_resolutions:
+                    attn.append(AttentionBlock(n_head = self.n_head,channels = block_in, d_cond=self.d_cond))
             down = nn.Module()
             down.block = block
             down.attn = attn
@@ -346,7 +445,8 @@ class DiffusionUNet(nn.Module):
                                          temb_channels=self.temb_ch,
                                          dropout=dropout))
                 block_in = block_out
-                attn.append(AttentionBlock(n_head = self.n_head,channels = block_in, d_cond=self.d_cond))
+                if curr_res <= attn_resolutions:
+                    attn.append(AttentionBlock(n_head = self.n_head,channels = block_in, d_cond=self.d_cond))
             up = nn.Module()
             up.block = block
             up.attn = attn
@@ -375,7 +475,8 @@ class DiffusionUNet(nn.Module):
         for i_level in range(self.num_resolutions):
             for i_block in range(self.num_res_blocks):
                 h = self.down[i_level].block[i_block](hs[-1], temb)
-                h = self.down[i_level].attn[i_block](h, cond)
+                if len(self.down[i_level].attn) > 0:
+                    h = self.down[i_level].attn[i_block](h, cond)
                 hs.append(h)
             if i_level != self.num_resolutions-1:
                 hs.append(self.down[i_level].downsample(hs[-1]))
@@ -390,7 +491,8 @@ class DiffusionUNet(nn.Module):
             for i_block in range(self.num_res_blocks+1):
                 t = torch.cat([h, hs.pop()], dim=1)
                 h = self.up[i_level].block[i_block](t, temb)
-                h = self.up[i_level].attn[i_block](h, cond)
+                if len(self.up[i_level].attn) > 0:
+                    h = self.up[i_level].attn[i_block](h, cond)
             if i_level != 0:
                 h = self.up[i_level].upsample(h)
 

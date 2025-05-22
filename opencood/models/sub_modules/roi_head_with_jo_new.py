@@ -12,6 +12,9 @@ from opencood.utils import box_utils
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+from opencood.utils.transformation_utils import x1_to_x2, x_to_world, get_pairwise_transformation, get_pairwise_transformation_from_poselist
+
+
 
 def plot_grid_with_points_all_256_iou_score(x, y, boxes1, boxes2, iou, score, label, title):
     fig, axes = plt.subplots(1, 1, dpi=300)
@@ -205,15 +208,15 @@ class RoIHead(nn.Module):
         pre_channel1 = grid_size * grid_size * grid_size * c_out
         self.fake_shared_fc_layers, pre_channel1 = self._make_fc_layers(pre_channel1,
                                                                         fc_layers)
-        # self.fake_cls_head, pre_channel1 = self._make_fc_layers(pre_channel1,
-        #                                                         fc_layers,
-        #                                                         output_channels=
-        #                                                         self.model_cfg[
-        #                                                             'num_cls'])
-        # self.fake_reg_layers, _ = self._make_fc_layers(pre_channel1, fc_layers,
-        #                                                output_channels=
-        #                                                self.model_cfg[
-        #                                                    'num_cls'] * 7)
+        self.fake_cls_head, pre_channel1 = self._make_fc_layers(pre_channel1,
+                                                                fc_layers,
+                                                                output_channels=
+                                                                self.model_cfg[
+                                                                    'num_cls'])
+        self.fake_reg_layers, _ = self._make_fc_layers(pre_channel1, fc_layers,
+                                                       output_channels=
+                                                       self.model_cfg[
+                                                           'num_cls'] * 7)
 
         pre_channel = grid_size * grid_size * grid_size * c_out
 
@@ -223,7 +226,7 @@ class RoIHead(nn.Module):
         # 新增 mv->fv converter
         # self.convertor = None
         self.convertor, pre_channel = self._make_fc_layers(pre_channel, fc_layers)
-        
+
         self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
                                                             fc_layers,
                                                             output_channels=
@@ -236,35 +239,35 @@ class RoIHead(nn.Module):
                                                   output_channels=
                                                   self.model_cfg[
                                                       'num_cls'] * 7)
-
-        # 新增多头注意力机制和特征增强
-        self.feature_dim = pre_channel  # 使用当前的特征维度
-        self.self_attention = nn.MultiheadAttention(
-            embed_dim=self.feature_dim,
-            num_heads=8,  # 可根据特征维度调整
-            batch_first=True
-        )
-
-        # 特征增强
-        self.feature_enhance = nn.Sequential(
-            nn.Linear(self.feature_dim, self.feature_dim),
-            nn.LayerNorm(self.feature_dim),
-            nn.GELU()
-        )
+        
+        # stage1_align 配置文件
+        if "stage1_align" in model_cfg:
+            # stage1 结果需要保存并使用
+            # self.stage1_result = read_json(self.stage1_result_path)
+            self.stage1_align_args = model_cfg['stage1_align']['args']
         
         
-        # 解耦代码 
-        # self.decoupling = True
-        # self.factor_num = 8
-        # self.factor_dim = 32
-        # self.factor_encoder = nn.modules.ModuleList()
-        # fc_layers = [128,64]
-        # for i in range(self.factor_num):
-        #     self.factor_encoder.append(self._make_fc_layers(pre_channel, fc_layers,
-        #                                           output_channels=
-        #                                            self.factor_dim)[0])
+        # 解耦部分神经网络
+        self.factor_num = 8
+        self.factor_dim = 32
+        self.factor_encoder = nn.modules.ModuleList()
+        fc_layers = [128,64]
+        print(fc_layers)
+        for i in range(self.factor_num):
+            self.factor_encoder.append(self._make_fc_layers(pre_channel, fc_layers,
+                                                  output_channels=
+                                                   self.factor_dim)[0])
 
         self._init_weights(weight_init='xavier')
+
+        # 统计数据
+        self.cnt_refine = []
+        self.all_totalkb = []
+        self.all_totalmb = []
+
+        # 停止记录
+        self.stop_write = False
+
 
     def _init_weights(self, weight_init='xavier'):
         if weight_init == 'kaiming':
@@ -284,7 +287,7 @@ class RoIHead(nn.Module):
                     init_func(m.weight)
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
-        # nn.init.normal_(self.reg_layers[-1].weight, mean=0, std=0.001)
+        nn.init.normal_(self.reg_layers[-1].weight, mean=0, std=0.001)
 
     def _make_fc_layers(self, input_channels, fc_list, output_channels=None):
         fc_layers = []
@@ -493,18 +496,20 @@ class RoIHead(nn.Module):
         return pooled_features
 
 
-    def first_stage_roi_grid_pool(self, batch_dict, rois, empty_roi_mask):
-        # roi list的长度
+    def first_stage_roi_grid_pool(self, batch_dict, rois):
         batch_size = len(rois)
 
         point_coords = batch_dict['point_coords']
         point_features = batch_dict['point_features']
-        # 每个roi的中车辆的数量
+
         label_record_len = [t.shape[0] for t in rois]
         
         mv_len = batch_dict['record_len']
-        rois = torch.cat(rois, dim=0) # [所有车个数(BxN)，7]
-        batch_size = len(label_record_len) #roi list的长度
+        # print("拿gt去产生多视角gt的输出：")
+        # print([t.shape for t in rois])
+
+        rois = torch.cat(rois, dim=0)
+        batch_size = len(label_record_len)
 
         point_features = torch.cat(point_features, dim=0)
         # (BxN, 6x6x6, 3)
@@ -512,20 +517,11 @@ class RoIHead(nn.Module):
             self.get_global_grid_points_of_roi(rois)
 
         xyz = torch.cat(point_coords, dim=0)
-        kpt_mask_flag = batch_dict['kpt_mask_flag']
-        if kpt_mask_flag:
-            xyz_batch_cnt = xyz.new_zeros(batch_size + 1).int()
-        else:
-            xyz_batch_cnt = xyz.new_zeros(batch_size).int()
+        xyz_batch_cnt = xyz.new_zeros(batch_size).int()
 
-        #point_coords不是batch维度的，要把空的box对应的point_coords也mask
-        xyz_batch_id = 0
-        
-        for bs_idx in range(batch_dict['batch_size']): # batch_dict['record_len'] 多batch要改成batch_size，但还有报错3164/6765
-            if empty_roi_mask[bs_idx] or kpt_mask_flag:
-                xyz_batch_cnt[xyz_batch_id] = len(point_coords[bs_idx])
-                kpt_mask_flag = False
-                xyz_batch_id += 1
+
+        for bs_idx in range(batch_size):
+            xyz_batch_cnt[bs_idx] = len(point_coords[bs_idx])
         new_xyz = global_roi_grid_points.view(-1, 3)
         new_xyz_batch_cnt = xyz.new_zeros(batch_size).int()
         for bs_idx in range(batch_size):
@@ -540,8 +536,11 @@ class RoIHead(nn.Module):
             features=point_features.contiguous(),  # weighted point features
         )  # (M1 + M2 ..., C)
 
+        # print("gt_pooled_feature1:",pooled_features.shape)
+        # (BxN, 6x6x6, C)
         pooled_features = pooled_features.view(-1, self.grid_size ** 3,
-                                               pooled_features.shape[-1]) # (BxN, 6x6x6, C)
+                                               pooled_features.shape[-1])
+        # print("gt_pooled_feature2:",pooled_features.shape)
 
         return pooled_features
 
@@ -652,7 +651,6 @@ class RoIHead(nn.Module):
         # print("pooled_feature_fused:", pooled_features.shape)
 
         return pooled_features
-
 
     # 这里包含了给多视角box分配GT
     def assign_targets_mv(self, batch_dict):
@@ -804,7 +802,315 @@ class RoIHead(nn.Module):
         # print(batch_dict['rcnn_label_dict_mv_more']['iou_tgt'].shape)
         return batch_dict
 
+    def get_mv_boxes_feature(self,batch_dict):
+        
+        if 'det_boxes' in batch_dict:
+            dets_list = batch_dict['det_boxes']
+            boxes = []
+            for i, dets in enumerate(dets_list):
+                # 这个是新增的部分
+                dets = dets[:, [0, 1, 2, 5, 4, 3, 6]]  # hwl -> lwh
+                # if len(dets)==0:
+                #     continue
+                boxes.append(dets)
+
+            # print("查看gt和第一阶段框区别：")
+            # print(batch_dict['gt_boxes'].shape)
+            # # print([ t.shape for t in batch_dict['gt_boxes']])
+            # print([ t.shape for t in boxes])
+
+        pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, boxes)
+        # pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, batch_dict['gt_boxes'])
+
+        batch_size_mv = pooled_features_mv.shape[0]
+        pooled_features_mv = pooled_features_mv.permute(0, 2, 1). \
+            contiguous().view(batch_size_mv, -1, self.grid_size,
+                                self.grid_size,
+                                self.grid_size)  # (BxN, C, 6, 6, 6)
+        # 共享特征提取
+        shared_features_mv = self.shared_fc_layers(
+            pooled_features_mv.view(batch_size_mv, -1, 1))
+
+        batch_dict["mv_boxes_feature"] = shared_features_mv
+        return batch_dict
+
+    def decoupling(self, batch_dict):
+        batch_dict = self.get_mv_boxes_feature(batch_dict)
+        shared_features_mv = batch_dict['mv_boxes_feature']
+
+        # 下一步才是解耦，但是这里有一个问题就是需要找到公共物体，
+        # 公共物体的寻找是基于投影+iou找到的，理论上要经过一次matcher_new，
+        # 不然这个融合框问题的 ，这个特征能拼到box+分数，送入融合
+        boxes_factors = []
+        for i in range(self.factor_num):
+            boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
+        print([t.shape for t in boxes_factors])
+        # all box , 32 *8
+        boxes_factors = torch.cat(boxes_factors,dim=1)
+        # 需要用iou来寻找公共物体再融合，当前box没有投影，点也没有投影，先投影再运算
+        # 这些代码，已经存在在matcher 的结果上了，问题就在于找到最终索引就能合并框了
+        cluster_indices,cur_cluster_id =  batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
+        # 寻找公共物体
+        object_factors_batch = []
+        # 可以直接融合，取平均值，因子内融合
+        record_len = [int(l) for l in batch_dict['record_len']]
+        for i, l in enumerate(record_len):
+            object_factors = [] 
+            for j in range(1, cur_cluster_id[i]):
+                object_factors.append(boxes_factors[cluster_indices[i]==j].mean(dim=0).unsqueeze(dim=0))
+            object_factors = torch.cat(object_factors,dim=0)
+        object_factors_batch.append(object_factors)
+        # print([t.shape for t in object_factors])
+        
+        # 这是物体级的feature
+        # 区分，区分每个场景下，特征属于哪个场景
+        # object_factors = torch.cat(object_factors,dim=0)
+        # print("解耦后并融合的物体级因子： 物体数量 ， 8 * 32 ：",[t.shape for t in object_factors_batch])
+        batch_dict["fused_object_factors"] = object_factors_batch
+
+        # 直接用 boxes_fused  22*7 
+        
+        return batch_dict
+
+    def getTopK(self,batch_dict,k):
+        # k是选择手段 
+        max_shape = max([t.shape[0] for t in batch_dict['det_scores']])
+        box_shape =  batch_dict['det_boxes'][0].shape[-1]
+        # 因为历史原因，这一项最后一位始终=1，倒数第二才是真正维度
+        feature_shape = batch_dict["mv_boxes_feature"].shape[-2]
+        device = batch_dict['det_scores'][0].device
+        batch_size = len(batch_dict['det_scores'])
+
+        stage1_scores = torch.zeros([batch_size,max_shape]).to(device)
+        stage1_boxes = torch.zeros([batch_size,max_shape,box_shape]).to(device)
+        stage1_features = torch.zeros([batch_size,max_shape,feature_shape]).to(device)
+        start = 0
+        for i,t in enumerate(batch_dict['det_scores']):
+            num = t.shape[0]
+            if num==0:
+                continue
+            tmp = batch_dict["mv_boxes_feature"][start:start+num].squeeze(-1)
+            
+            if len(tmp.shape) == 1:
+                tmp = tmp.unsqueeze(0)
+            
+            stage1_features[i,:num] = tmp
+            
+            stage1_scores[i,:num] = t
+            stage1_boxes[i,:num] = batch_dict['det_boxes'][i]
+            start+=num
+        # print(stage1_scores.shape,stage1_boxes.shape,stage1_features.shape)        
+        s,b,f = self.topk(stage1_scores,stage1_boxes,stage1_features,k)
+        # print(s.shape,b.shape,f.shape)
+    
+        # 转化为list输出，同时考虑到每个场景下的真实车辆，每个list元素是一个tensor
+        now_shape = [min([t.shape[0],k]) for t in batch_dict['det_scores']]
+        res_s,res_b,res_f = [],[],[]
+        for i in range(batch_size):
+            res_s.append(s[i][:now_shape[i]])
+            res_b.append(b[i][:now_shape[i]])
+            res_f.append(f[i][:now_shape[i]])
+        return res_s,res_b,res_f
+
+    def compute_size(self,tensor_example):
+        # 创建一个示例张量，例如形状为(2, 3, 256, 256)的浮点数张量
+        # 找到非零元素的位置
+        non_zero_elements = tensor_example.nonzero(as_tuple=False)
+
+        # 获取每个元素的字节数，例如float32类型的元素占4个字节
+        bytes_per_element = tensor_example.element_size()
+
+        # 计算非零元素的数量，并乘以每个元素的字节数得到总字节数
+        total_bytes = non_zero_elements.size(0) * bytes_per_element
+
+        # 转换为KB或MB
+        total_kb = total_bytes / 1024
+        total_mb = total_kb / 1024
+        # print(f"非零张量元素的大小为: {total_kb} KB")
+        # print(f"非零张量元素的大小为: {total_mb:.5f} MB")        
+        return total_kb,total_mb
+
+    def topk(self,scores,boxes,features,k):
+        # scores bs n
+        # box bs n m
+        # feature bs n h
+        res_scores,ind = torch.sort(scores,dim=1,descending=True)
+        res_scores = res_scores[:,:k]
+        ind = ind[:,:k]
+        ind1 = ind.unsqueeze(-1).expand(-1, -1, features.size(2))
+        ind2 = ind.unsqueeze(-1).expand(-1, -1, boxes.size(2))
+        res_features = torch.gather(features, 1, ind1)
+        res_boxes = torch.gather(boxes, 1, ind2)
+        return res_scores,res_boxes,res_features
+
+    def selectp(self,features,p):
+        # feature [tensor tensor ...]
+        # 这个shape下的特征=0
+        now_shape = [int(t.shape[0]*p) for t in features]
+        for i,t in enumerate(now_shape):
+            # 多少不含特征
+            features[i][:t,:] = 0
+        return features
+
+    def selects(self,features,scores,s):
+        # feature [tensor tensor ...]
+        # 这个shape下的特征=0
+        for i in range(len(scores)):
+            # 多少不含特征
+            ind = scores[i]>s
+            features[i][ind] = 0
+        return features
+
+    def stage1_align(self, batch_dict,selectk,selectp,selects,abandon_hard_cases=True):
+        self.stage1_align_args["abandon_hard_cases"] = abandon_hard_cases
+        from opencood.models.sub_modules.stage1_align import stage1_alignment_relative_sample_np
+        
+        # 这里获取的就是规则的 数据和特征,取得最大的k个数，
+        s,b,f = self.getTopK(batch_dict,selectk)
+        # 按照比例筛选
+        # f = self.selectp(f,selectp)
+        # 按照分数筛选 
+        f = self.selects(f,s,selects)
+        
+        if not self.stop_write:
+            # 顺便统计一下通讯量大小,通信量跑一次就可以了
+            total_kb,total_mb = 0,0
+            for si,bi,fi in zip(s,b,f):
+                si_kb,si_mb = self.compute_size(si)
+                bi_kb,bi_mb = self.compute_size(bi)
+                fi_kb,fi_mb = self.compute_size(fi)
+                total_kb = total_kb + si_kb +bi_kb +fi_kb
+            
+            # print("总通信量：",total_kb)
+            # self.all_totalkb.append(total_kb)
+
+            # # 知道了这个场景下的通信量，存起来吧
+            # if len(self.all_totalkb)>20:
+            #     # 20次存一下，降低IO时间
+            #     append_list_to_file("/home/ypy/projects/Code/tmp_data/comm/s/05_select.txt",self.all_totalkb)
+            #     self.all_totalkb = []
+        # 此处的通讯量是否 = 中后期融合通信量，不太等于，
+
+        # lwh，先转化为 n 8 3
+        # stage1_boxes = [box_utils.boxes_to_corners_3d(t,"lwh") for t in boxes]
+        # hwl
+        stage1_boxes = [box_utils.boxes_to_corners_3d(t,"hwl") for t in b]
+        # 将分数转化为不确定性
+        stage1_scores = [t.unsqueeze(1).repeat(1,3) for t in s]
+
+        # 特征后续待处理
+        stage1_feature = []
+        for t in f:
+            if len(t.shape) == 1:
+                stage1_feature.append(np.array(t.unsqueeze(0).cpu()))
+            else:
+                stage1_feature.append(np.array(t.cpu()))
+
+        cur_agnet_pose_clean = np.array(batch_dict['lidar_pose_clean'].cpu())
+
+        # 只有大于一辆车才能匹配
+        cur_agnet_pose = np.array(batch_dict['lidar_pose'].cpu())
+        if stage1_boxes is not None and len(stage1_boxes)>1:
+            # 这是单车无噪下的检测结果
+            # 获取有噪声 的 pose
+            diff1 = np.abs(cur_agnet_pose_clean-cur_agnet_pose)
+            
+            # 看到当前有噪声的车在过去无噪声环境下看到的框 
+            pred_corners_list = [ np.array(t.cpu()) for t in stage1_boxes]
+            uncertainty_list = [np.array(t.cpu()) for t in stage1_scores]
+            pred_feature_list = stage1_feature
+
+            # 修正位置  pred_corners_list（观察到的车（car n 8 3）），cur_agnet_pose（有噪声的定位 car 6） uncertainty_list（car n 3）
+            if sum([len(pred_corners) for pred_corners in pred_corners_list]) != 0:
+                refined_pose = stage1_alignment_relative_sample_np(pred_corners_list,
+                                                                cur_agnet_pose, 
+                                                                certainty_tensor_list=batch_dict['det_scores'],
+                                                                pred_feature_list=pred_feature_list,
+                                                                uncertainty_list=uncertainty_list, 
+                                                                **self.stage1_align_args)
+                cur_agnet_pose[:,[0,1,4]] = refined_pose 
+            
+            diff2 = np.abs(cur_agnet_pose_clean - cur_agnet_pose)
+            error,refine = np.sum(diff1),np.sum(diff2)
+            # print("处理前误差： ",error)
+            # print("处理后误差： ",refine)
+            # print("修正概率： ",refine/(error+1e-8))
+            # self.cnt_refine.append(refine/(error+1e-8))
+            # 保存数据
+            # if len(self.cnt_refine)>20:
+            #     # append_list_to_file("/home/ypy/projects/Code/tmp_data/sdcoper_2refine.txt",self.cnt_refine)
+            #     self.cnt_refine = []
+
+        batch_dict['lidar_pose'] = torch.tensor(cur_agnet_pose).to(batch_dict['lidar_pose_clean'].device)
+        # 每个车的坐标被修正，以此计算投影矩阵
+        # 这个矩阵在使用的时候要在投影时候采用，回到matcher_new
+        pairwise_t_matrix = \
+            get_pairwise_transformation_from_poselist(cur_agnet_pose,
+                                            batch_dict['max_cav'],
+                                            batch_dict['proj_first'])
+        return batch_dict,pairwise_t_matrix
+
+    def stage1_refine(self, batch_dict,abandon_hard_cases=True):
+        self.stage1_align_args["abandon_hard_cases"] = abandon_hard_cases
+        
+        from opencood.models.sub_modules.stage1_align import stage1_alignment_relative_sample_np
+        # 获取了第一阶段box，分数，特征
+        # lwh，先转化为 n 8 3
+        # stage1_boxes = [box_utils.boxes_to_corners_3d(t,"lwh") for t in boxes]
+        # hwl
+        stage1_boxes = [box_utils.boxes_to_corners_3d(t,"hwl") for t in batch_dict['det_boxes_refine']]
+        # 将分数转化为不确定性
+        stage1_scores = [t.unsqueeze(1).repeat(1,3) for t in batch_dict['det_scores_refine']]
+
+        # 特征后续待处理
+        start = 0
+        stage1_feature = []
+
+        cur_agnet_pose_clean = np.array(batch_dict['lidar_pose_clean'].cpu())
+
+        # 只有大于一辆车才能匹配
+        cur_agnet_pose = np.array(batch_dict['lidar_pose'].cpu())
+        if stage1_boxes is not None and len(stage1_boxes)>1:
+            # 这是单车无噪下的检测结果
+            # 获取有噪声 的 pose
+            diff1 = np.abs(cur_agnet_pose_clean-cur_agnet_pose)
+            # 看到当前有噪声的车在过去无噪声环境下看到的框 
+            pred_corners_list = [ np.array(t.cpu()) for t in stage1_boxes]
+            uncertainty_list = [np.array(t.cpu()) for t in stage1_scores]
+
+            # 修正位置  pred_corners_list（观察到的车（car n 8 3）），cur_agnet_pose（有噪声的定位 car 6） uncertainty_list（car n 3）
+            if sum([len(pred_corners) for pred_corners in pred_corners_list]) != 0:
+                refined_pose = stage1_alignment_relative_sample_np(pred_corners_list,
+                                                                cur_agnet_pose, 
+                                                                certainty_tensor_list=batch_dict['det_scores_refine'],
+                                                                pred_feature_list=None,
+                                                                uncertainty_list=uncertainty_list, 
+                                                                **self.stage1_align_args)
+                cur_agnet_pose[:,[0,1,4]] = refined_pose 
+            
+            diff2 = np.abs(cur_agnet_pose_clean - cur_agnet_pose)
+            error,refine = np.sum(diff1),np.sum(diff2)
+            # print("处理前误差： ",error)
+            # print("处理后误差： ",refine)
+            # print("修正概率： ",refine/(error+1e-8))
+            # self.cnt_refine.append(refine/(error+1e-8))
+            # 保存数据
+            # if len(self.cnt_refine)>20:
+            #     # append_list_to_file("/home/ypy/projects/Code/tmp_data/sdcoper_2refine.txt",self.cnt_refine)
+            #     self.cnt_refine = []
+
+        batch_dict['lidar_pose'] = torch.tensor(cur_agnet_pose).to(batch_dict['lidar_pose_clean'].device)
+        # 每个车的坐标被修正，以此计算投影矩阵
+        # 这个矩阵在使用的时候要在投影时候采用，回到matcher_new
+        pairwise_t_matrix = \
+            get_pairwise_transformation_from_poselist(cur_agnet_pose,
+                                            batch_dict['max_cav'],
+                                            batch_dict['proj_first'])
+        return batch_dict,pairwise_t_matrix
+
     def forward(self, batch_dict):
+        # 训练部分代码
+
         batch_dict = self.assign_targets(batch_dict)
 
         # 融合后的框 pool 融合后的点 
@@ -817,122 +1123,97 @@ class RoIHead(nn.Module):
                             self.grid_size,
                             self.grid_size)  # (BxN, C, 6, 6, 6)
         shared_features = self.shared_fc_layers(
-            pooled_features.view(batch_size_rcnn, -1, 1)) # (BxN, C)
-        shared_features_sque = shared_features.squeeze()
-        object_factors_batch = []
-        box_idx = 0
-        for i in range(len(batch_dict['boxes_fused'])):
-            object_factors_batch.append(shared_features_sque[box_idx:box_idx + len(batch_dict['boxes_fused'][i])])
-            box_idx += len(batch_dict['boxes_fused'][i])
-        
-        
-        
+            pooled_features.view(batch_size_rcnn, -1, 1))
+        #  shared_features 融合后
+        #  a 11 b 9  fuse 13 
+        #  13   12 25个
+        if self.test_use_convertor:
+            shared_features = self.convertor(shared_features)
+
         rcnn_cls = self.cls_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
+                                                            2).contiguous().squeeze(
             dim=1)  # (B, 1 or 2)
         rcnn_iou = self.iou_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
+                                                            2).contiguous().squeeze(
             dim=1)  # (B, 1)
         rcnn_reg = self.reg_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
+                                                            2).contiguous().squeeze(
             dim=1)  # (B, C)
-        
+            
         batch_dict['stage2_out'] = {
-            'rcnn_cls': rcnn_cls,
-            'rcnn_iou': rcnn_iou,
-            'rcnn_reg': rcnn_reg,
-        }
-
-        
-        # if 'det_boxes' in batch_dict:
-        #     dets_list = batch_dict['det_boxes']
-
-        #     boxes = []
-        #     empty_box_mask = []
-        #     for i, dets in enumerate(dets_list):
-        #         # 这个是新增的部分
-        #         dets = dets[:, [0, 1, 2, 5, 4, 3, 6]]  # hwl -> lwh
-        #         if len(dets)==0: #这里直接continue的话，会导致first_stage_roi_grid_pool中batch_size的大小不对！！无法记录到对应point_coords的数据！！
-        #             empty_box_mask.append(False)
-        #             continue
-        #         empty_box_mask.append(True)
-        #         boxes.append(dets)
-
-        # pooled_features_mv = self.first_stage_roi_grid_pool(batch_dict, boxes, empty_box_mask)
-
-        # batch_size_mv = pooled_features_mv.shape[0] # BxN
-        # pooled_features_mv = pooled_features_mv.permute(0, 2, 1). \
-        #     contiguous().view(batch_size_mv, -1, self.grid_size,
-        #                         self.grid_size,
-        #                         self.grid_size)  # (BxN, C, 6, 6, 6)
-        # # 共享特征提取
-        # shared_features_mv = self.shared_fc_layers(
-        #     pooled_features_mv.view(batch_size_mv, -1, 1)).squeeze() # (BxN, 512)
-
-        # # 解耦
-        # # boxes_factors = []
-        # # for i in range(self.factor_num):
-        # #     boxes_factors.append(self.factor_encoder[i](shared_features_mv).squeeze())
-
-        # # processed_boxes_factors = [factor.unsqueeze(0) if factor.dim() == 1 else factor for factor in boxes_factors]
-        # # # all box , 32 *8
-        # # boxes_factors = torch.cat(processed_boxes_factors,dim=1)
-        
-        # # 寻找公共物体
-        # cluster_indices,cur_cluster_id = batch_dict['cluster_indices'], batch_dict['cur_cluster_id']
-        # object_factors_batch = []
-        # # 可以直接融合，取平均值，因子内融合
-        # record_len = [int(l) for l in batch_dict['record_len']]
-        # # 获取实际batch中box的总数量 [b1中box数量, b2中box数量, ...]
-        # batch_box_len = []
-        # current_idx = 0
-        # for l in record_len:
-        #     total_boxes = 0
-        #     for j in range(l):
-        #         total_boxes += len(dets_list[current_idx + j])
-        #     batch_box_len.append(total_boxes)
-        #     current_idx += l
-        # # 首先计算每个batch的起始索引
-        # start_indices = [0]
-        # for i in range(len(batch_box_len)-1):
-        #     start_indices.append(start_indices[-1] + batch_box_len[i])
-        
-        # for i, l in enumerate(record_len):
-        #     object_factors = []
-        #     start_idx = start_indices[i]
-        #     end_idx = start_idx + batch_box_len[i]
-        #     # 获取当前批次的box特征
-        #     current_boxes_factors = shared_features_mv[start_idx:end_idx] #shared_features_mv
-        #     # 检查current_boxes_factors是否为空
-        #     if len(current_boxes_factors) == 0:
-        #         default_factor = torch.zeros(1, 256, device=shared_features_mv.device) #shared_features_mv
-        #         object_factors_batch.append(default_factor)
-        #         continue
-            
-        #     for j in range(1, cur_cluster_id[i]):
-        #         mask = (cluster_indices[i] == j)
-        #         if cluster_indices[i].shape[0] < current_boxes_factors.shape[0]:
-        #             # 将掩码扩展，保留原始True位置，其余设为False
-        #             mask = torch.zeros(len(current_boxes_factors), dtype=torch.bool, device=cluster_indices[i].device)
-        #             mask[:len(cluster_indices[i])] = (cluster_indices[i] == j)
-        #         object_factors.append(current_boxes_factors[mask].mean(dim=0).unsqueeze(dim=0)) #.mean(dim=0)
-            
-        #     all_features = torch.cat(object_factors, dim=0) #.unsqueeze(0)  # [1, sum(N_i), D]
-        #     attn_output, _ = self.self_attention(all_features, all_features, all_features)
-        #     enhanced_features = self.feature_enhance(attn_output.squeeze(0))
-        #     object_factors_batch.append(enhanced_features)
-        #     # object_factors_batch.append(torch.cat(object_factors,dim=0)) #这里融合没有可优化的参数，故diffusion无法监督融合，监督的还是前面的解耦
-            
-        #     # if len(object_factors) > 0:  # 如果有非背景聚类
-        #     #     object_factors = torch.cat(object_factors,dim=0)
-        #     # else:
-        #     #     print("没有非背景聚类???预测的box被过滤了")
-        #     #     object_factors = None
-            
-        #     # if object_factors is not None:
-        #     #     object_factors_batch.append(object_factors)
-
-        batch_dict["fused_object_factors"] = object_factors_batch # 物体数量, 32 *8
-        
+                'rcnn_cls': rcnn_cls,
+                'rcnn_iou': rcnn_iou,
+                'rcnn_reg': rcnn_reg,
+            }
         return batch_dict
-    
+        
+# 测试，下述代码无bug
+import torch
+import torch.nn.functional as F
+
+
+# 定义 KL 散度函数
+def kl_divergence(logits1, logits2):
+    # 将1维的logits通过sigmoid转换为概率
+    prob1 = logits1.view(-1, 1)
+    prob2 = logits2.view(-1, 1)
+
+    # 将每个目标框的概率值组成二分类的分布 (p, 1-p)
+    prob1 = torch.cat([prob1, 1 - prob1], dim=-1)
+    prob2 = torch.cat([prob2, 1 - prob2], dim=-1)
+
+
+    # 使用KL散度来比较两个分布
+    kl_loss = F.kl_div(prob1.log(), prob2, reduction='sum')
+    return kl_loss
+
+
+def js_divergence(x, y):
+    # 确保x和y的维度一样
+    assert x.size() == y.size()
+    # 计算softmax，将x转换为概率分布，现在已经是概率分布了
+    # p = torch.nn.functional.softmax(x, dim=1)
+    # q = torch.nn.functional.softmax(y, dim=1)
+    prob1 = x.view(-1, 1)
+    prob2 = y.view(-1, 1)
+    # 将每个目标框的概率值组成二分类的分布 (p, 1-p)
+    p = torch.cat([prob1, 1 - prob1], dim=-1)
+    q = torch.cat([prob2, 1 - prob2], dim=-1)
+    p = F.softmax(p, dim=-1)
+    q = F.softmax(q, dim=-1)
+    KL = nn.KLDivLoss(reduction='sum')
+    m = ((q + p) / 2).log()
+    return (KL(m, p) + KL(m, q)) / 2
+
+
+def weighted_sigmoid_binary_cross_entropy(preds, tgts, weights=None,
+                                          class_indices=None):
+    if weights is not None:
+        weights = weights.unsqueeze(-1)
+    if class_indices is not None:
+        weights *= (
+            indices_to_dense_vector(class_indices, preds.shape[2])
+                .view(1, 1, -1)
+                .type_as(preds)
+        )
+    per_entry_cross_ent = nn.functional.binary_cross_entropy_with_logits(preds,
+                                                                         tgts,
+                                                                         weights)
+    return per_entry_cross_ent
+
+
+def append_list_to_file(filepath, data_list):
+    with open(filepath, 'a', encoding='utf-8') as f:  # 使用'a'模式进行追加操作
+        for item in data_list:
+            # 将每个元素转换为字符串并写入新行
+            f.write(f"{item}\n")
+
+# 示例: logits1 和 logits2 是模型输出的1维类别分数
+logits1 = torch.tensor([0.8])  # 例如第一个视角的输出
+logits2 = torch.tensor([0.9])  # 第二个视角的输出
+
+# 计算 KL 散度
+kl_loss = kl_divergence(logits1, logits2)
+js_loss = js_divergence(logits1, logits2)
+# print("KL散度:", kl_loss.item())
+# print("JS散度:", js_loss.item())

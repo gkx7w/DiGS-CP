@@ -123,7 +123,7 @@ def main():
     # 根据不同条件设置需要解冻的层
     if opt.model_dir and opt.diff_model_dir: # 两个模型路径都给定的情况
         trainable_layers = [
-            'roi_head.factor_encoder',
+            'roi_head.feature_enhance',
             'attention_2',
             'layernorm_2']
         init_epoch = 78   
@@ -135,10 +135,12 @@ def main():
     elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
         trainable_layers = [
             'mdd',
-            # 'roi_head.factor_encoder',
-            # 'cls_layers',
-            # 'iou_layers',
-            # 'reg_layers',
+            # "shared_fc_layers",
+            # 'roi_head.feature_enhance',
+            # 'roi_head.self_attention',
+            'cls_layers',
+            'iou_layers',
+            'reg_layers',
             # 'attention_2',
             # 'layernorm_2'
                             ]
@@ -166,7 +168,7 @@ def main():
         print(f"总共解冻 {unfrozen_count} 个参数组")
     
     # 设置学习率调度器
-    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else diff_epoch)
+    scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else diff_epoch,data_loader=train_loader)
     saved_path = train_utils.setup_train(hypes)
 
     if init_epoch > 0:
@@ -247,48 +249,61 @@ def main():
                 # 记录梯度信息
                 # add_gradient_histograms(model, writer, epoch * len(train_loader) + i)
                 optimizer.step()
+                scheduler.step()
                 torch.cuda.empty_cache()
 
         #——————————————————————————————————可视化————————————————————————————————————
-        
-        ouput_dict['pred_out_inf_no_cond'] = []
-        for batch_idx in range(len(ouput_dict['gt_x0'])):
-            x_noisy_no_cond = model.mdd.ddim_sample(ouput_dict['gt_x0'][batch_idx].shape, ouput_dict['gt_x0'][batch_idx].device, None,guidance_scale=1)#x_start=noise,
-            ouput_dict['pred_out_inf_no_cond'].append(x_noisy_no_cond)
-        viz_config = [
-            # ('batch_gt_spatial_features', 'gt_bev'),
-            # ('gt_x0', 'gt_x0'),
-            # ('gt_noise', 'gt_noise'),
-            # ('pred_out', 'pre_bev'),
-            # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
-            ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
-            # ('noise', 'noise'),
-            # ('x', 'x')
-        ]
-        base_path = f"/data/gkx/Code/opencood/bev_visualizations/train"
-        # 计算全局最小值和最大值
-        features = [ouput_dict[key][0] for key, _ in viz_config]
-        global_vmin, global_vmax = float('inf'), float('-inf')
-        for feature in features:
-            channels = torch.mean(feature, dim=1).detach().cpu().numpy()
-            global_vmin = min(global_vmin, np.min(channels))
-            global_vmax = max(global_vmax, np.max(channels))
-        # 可视化
-        for key, name in viz_config:
-            visualize_channels_individually(
-                ouput_dict[key][0], 
-                f"{base_path}/{name}_{epoch}", 
-                global_vmin, 
-                global_vmax
-            )
+        with torch.no_grad():
+            ouput_dict['pred_out_inf_no_cond'] = []
+            for batch_idx in range(len(ouput_dict['gt_x0'])):
+                seed = np.random.randint(0, 2147483647)
+                generator = torch.Generator(device=next(model.mdd.unet.parameters()).device).manual_seed(seed)
+                uncond_result = model.mdd.ddim_sample(
+                            batch_size=ouput_dict['gt_x0'][batch_idx].shape[0],
+                            image_shape=ouput_dict['gt_x0'][batch_idx].shape,
+                            generator=generator,
+                            num_inference_steps=1000,
+                            eta=0.0,
+                            guidance_scale=1.0,  # 设为1.0禁用CFG
+                            x_self_cond=None,    # 设为None以跳过条件应用
+                            output_type="numpy",
+                        )
+                x_noisy_no_cond = uncond_result["images"] if isinstance(uncond_result, dict) else uncond_result[0]
+                # x_noisy_no_cond = model.mdd.ddim_sample(ouput_dict['gt_x0'][batch_idx].shape, ouput_dict['gt_x0'][batch_idx].device, None,guidance_scale=1)#x_start=noise,
+                ouput_dict['pred_out_inf_no_cond'].append(x_noisy_no_cond)
+            viz_config = [
+                # ('batch_gt_spatial_features', 'gt_bev'),
+                # ('gt_x0', 'gt_x0'),
+                # ('gt_noise', 'gt_noise'),
+                # ('pred_out', 'pre_bev'),
+                # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
+                ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
+                # ('noise', 'noise'),
+                # ('x', 'x')
+            ]
+            base_path = f"/data/gkx/Code/opencood/bev_visualizations/train_4ch_withcond_eps_det_plus"
+            # 计算全局最小值和最大值
+            features = [ouput_dict[key][0] for key, _ in viz_config]
+            global_vmin, global_vmax = float('inf'), float('-inf')
+            for feature in features:
+                channels = torch.mean(feature, dim=1).detach().cpu().numpy()
+                global_vmin = min(global_vmin, np.min(channels))
+                global_vmax = max(global_vmax, np.max(channels))
+            # 可视化
+            for key, name in viz_config:
+                visualize_channels_individually(
+                    ouput_dict[key][0], 
+                    f"{base_path}/{name}_{epoch}", 
+                    # global_vmin, 
+                    # global_vmax
+                )
         #——————————————————————————————————可视化————————————————————————————————————
     
         if epoch % hypes['train_params']['save_freq'] == 0:
             torch.save(model.state_dict(),
                        os.path.join(saved_path,
                                     'net_epoch%d.pth' % (epoch + 1)))
-        scheduler.step()
-        
+
         opencood_train_dataset.reinitialize()
         
 
@@ -338,6 +353,8 @@ def main():
 
 def add_gradient_histograms(model, writer, step):
     for name, param in model.named_parameters():
+        if "roi_head.feature_enhance." in name or "roi_head.self_attention." in name:
+            print(f"Found module with roi_head.factor_encoder: {name}")
         if param.requires_grad and param.grad is not None:
             writer.add_histogram(f'gradients/{name}', param.grad, step)
             # 可选：也可以记录参数值的直方图
@@ -478,7 +495,6 @@ def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=
 #     plt.tight_layout()
 #     plt.savefig(f'{save_dir}/averaged_channels_all_bevs.png', dpi=200)
 #     plt.close(fig)
-
 
 
 if __name__ == '__main__':
