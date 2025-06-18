@@ -15,6 +15,7 @@ from PIL import Image
 from opencood.utils.MDD_utils import normalize_statistical_features,denormalize_statistical_features
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
+from torch.cuda.amp import autocast
 
 class Config:
 	def __init__(self, entries: dict={}):
@@ -41,6 +42,7 @@ class Cond_Diff_Denoise(nn.Module):
             self.prediction_type = "v_prediction"
         self.noise_scheduler = DDPMScheduler(num_train_timesteps=1000,prediction_type = self.prediction_type) #sample epsilon v_prediction
         self.unet = DiffusionUNet(self.config)
+        
         self.condition_encoder = nn.Sequential(
             nn.GroupNorm(32, 512),        # 32个组，适合512维
             nn.Linear(512, 256),
@@ -80,7 +82,8 @@ class Cond_Diff_Denoise(nn.Module):
         output_type="pil",
         return_dict=True,
         guidance_scale=1.0,
-        x_self_cond=None,
+        x_self_cond=None,    
+        initial_noise=None,  # 新增参数：自定义初始噪声
     ):
         """
         使用DDIM算法从噪声中生成样本
@@ -88,10 +91,12 @@ class Cond_Diff_Denoise(nn.Module):
         # 获取设备
         device = next(self.unet.parameters()).device
         
-        # 从高斯噪声开始
-        image = randn_tensor(image_shape, generator=generator, device=device)
-        # self.ddim_scheduler = DDIMScheduler.from_config(self.noise_scheduler.config)
-        self.ddim_scheduler = self.noise_scheduler
+        # 使用自定义噪声或生成新噪声
+        if initial_noise is not None:
+            image = initial_noise.to(device)
+        else:
+            image = randn_tensor(image_shape, generator=generator, device=device)
+        
         
         # 设置时间步
         self.ddim_scheduler.set_timesteps(num_inference_steps)
@@ -122,7 +127,11 @@ class Cond_Diff_Denoise(nn.Module):
             # 使用调度器的step方法进行更新
             image = self.ddim_scheduler.step(
                 model_output, t, image, generator=generator).prev_sample #use_clipped_model_output=use_clipped_model_output, eta=eta,
-        
+            
+            # # DDIM采样步骤
+            # image = self.ddim_scheduler.step(
+            #     model_output, t, image, eta=eta, use_clipped_model_output=use_clipped_model_output, generator=generator
+            # ).prev_sample
         # 后处理
         # image = (image / 2 + 0.5).clamp(0, 1)
         image = denormalize_statistical_features(image, self.norm_params)
@@ -302,6 +311,7 @@ class Cond_Diff_Denoise(nn.Module):
         #----------------------------------------评测----------------------------
         # inf = True
         inf = False
+    
         x_noisy_with_cond_list = []
         x_noisy_with_cond_nonorm_list = []
         x_noisy_no_cond_list = []
@@ -342,14 +352,13 @@ class Cond_Diff_Denoise(nn.Module):
             
                 if self.if_normalize:
                     # x_start = self.normalize_to_minus1_1(gt_features) #[:,-1:,:,:]
-                    x_start, self.norm_params = normalize_statistical_features(gt_features) #[:,-1:,:,:]
+                    x_start, self.norm_params = normalize_statistical_features(gt_features[:,-1:,:,:]) #[:,-1:,:,:]
                 else:
-                    x_start = gt_features#[:,-1:,:,:]
-                batch_gt_x0.append(gt_features)#[:,-1:,:,:]
+                    x_start = gt_features[:,-1:,:,:]#[:,-1:,:,:]
+                batch_gt_x0.append(gt_features[:,-1:,:,:])#[:,-1:,:,:]
                 batch_norm_gt_x0.append(x_start)
                 latent_shape = x_start.shape
-            
-            
+                
                 noise = torch.randn(x_start.shape, device=x_start.device)
                 batch_gt_noise.append(noise)
                 bs = x_start.shape[0]
@@ -362,18 +371,19 @@ class Cond_Diff_Denoise(nn.Module):
                 batch_t.append(timesteps)
 
                 # Add noise to the clean images according to the noise magnitude at each timestep
-                # (this is the forward diffusion process)
                 noisy_images = self.noise_scheduler.add_noise(x_start, noise, timesteps)
 
+                
+                box_cond = self.condition_encoder(box_cond)
                 cond_drop_prob = 0.2 #.2
                 # 随机决定是否丢弃条件
                 keep_cond = torch.rand(1).item() >= cond_drop_prob
                 x_self_cond = box_cond if keep_cond else None
-                x_self_cond = self.condition_encoder(x_self_cond) if x_self_cond is not None else None
                 
                 # Predict the noise residual
                 # noise_pred = model(noisy_images, timesteps, return_dict=False)[0]
-                model_out = self.unet(noisy_images, timesteps, x_self_cond)
+                with autocast(enabled=True): 
+                    model_out = self.unet(noisy_images, timesteps, x_self_cond).float()
             
                 #----------------------------------------评测----------------------------
                 if inf:
@@ -381,12 +391,14 @@ class Cond_Diff_Denoise(nn.Module):
                     self.gt_np = normalize_to_0_1(x_start).cpu().numpy()
                     #----------------------------------------评测----------------------------
                     with torch.inference_mode():
-                        t = torch.full((x_start.shape[0],), 250, device=x_start.device, dtype=torch.long)
+                        t = torch.full((x_start.shape[0],), 100, device=x_start.device, dtype=torch.long)
                         noise = torch.randn(x_start.shape, device=x_start.device)
                         noise = self.noise_scheduler.add_noise(x_start, noise, t)#[:,-1:,:,:]
                         noise_list.append(noise)
                         
                         # x_noisy = self.diffusion_inference(noise, box_cond, self.sampling_timesteps)
+                        # self.ddim_scheduler = DDIMScheduler.from_config(self.noise_scheduler.config)
+                        self.ddim_scheduler = self.noise_scheduler
                         seed = np.random.randint(0, 2147483647)
                         generator = torch.Generator(device=next(self.unet.parameters()).device).manual_seed(seed)
                         generator_nocond = torch.Generator(device=next(self.unet.parameters()).device).manual_seed(seed)
@@ -401,6 +413,7 @@ class Cond_Diff_Denoise(nn.Module):
                             guidance_scale=self.guidance_scale,  # > 1.0 启用CFG
                             x_self_cond=x_self_cond,
                             output_type="numpy",
+                            initial_noise=noise,  # 传入自定义噪声
                         )
                         x_noisy = x_noisy["images"] if isinstance(x_noisy, dict) else x_noisy[0]
                         x_noisy_with_cond_list.append(x_noisy)
@@ -427,6 +440,7 @@ class Cond_Diff_Denoise(nn.Module):
                             guidance_scale=1.0,  # 设为1.0禁用CFG
                             x_self_cond=None,    # 设为None以跳过条件应用
                             output_type="numpy",
+                            initial_noise=noise,  # 传入自定义噪声
                         )
                         x_noisy_no_cond = uncond_result["images"] if isinstance(uncond_result, dict) else uncond_result[0]
                         # x_noisy_no_cond = self.diffusion_inference(noise, None, self.sampling_timesteps)
@@ -483,21 +497,9 @@ class Cond_Diff_Denoise(nn.Module):
             data_dict['gt_noise'] = batch_gt_noise
             data_dict['gt_x0'] = batch_gt_x0
             data_dict['norm_gt_x0'] = batch_norm_gt_x0
-            
             data_dict['t'] = batch_t
             data_dict['target'] = self.parameterization
-
-            # if self.noise_scheduler.config.prediction_type == "epsilon":
-            #     target = noise
-            # elif self.noise_scheduler.config.prediction_type == "sample":
-            #     target = x_start
-            # elif self.noise_scheduler.config.prediction_type == "v_prediction":
-            #     target = self.noise_scheduler.get_velocity(x_start, noise, timesteps)
-            # if inference_flag:
-            #     with torch.no_grad():
-            #         self.generate_comparison_samples(bs,x_self_cond = x_self_cond)
-                
-            
+           
         return data_dict
 
 

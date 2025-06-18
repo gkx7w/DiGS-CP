@@ -5,7 +5,7 @@ test_dir: "/datasets/OPV2V/test"
 
 yaml_parser: "load_point_pillar_params"
 train_params:
-  batch_size: &batch_size 8
+  batch_size: &batch_size 1
   epoches: 89
   eval_freq: 2
   save_freq: 1
@@ -41,7 +41,7 @@ preprocess: &preprocess
     max_points_per_voxel_car: &T_car 16
     max_voxel_train: 32000
     max_voxel_test: 70000
-    max_hwl: &max_hwl [1.98,2.36,5.63]
+    max_hwl: &max_hwl [1.98,2.36,5.63] #[1.98,2.36,5.63]
     use_hwl: true
   # lidar range for each individual cav. Format: xyzxyz minmax
   cav_lidar_range: &cav_lidar [-140.8, -40, -3, 140.8, 40, 1]
@@ -212,8 +212,8 @@ model:
 
     mdd_block:
       model:
-        in_channels: *num_features #*num_features 1
-        out_ch: *num_features #*num_features
+        in_channels: 1 #*num_features 1
+        out_ch: 1 #*num_features
         ch: 64 #64 16
         flash_attn: False #True
         ch_mult: [1, 2, 4] #[1, 2, 4, 8] [1, 1]
@@ -222,7 +222,7 @@ model:
         resolution: 24
         dropout: 0.0
         resamp_with_conv: True
-        d_cond: 256 #512
+        d_cond: 256 #256 512
         n_head: 4 #8
       diffusion:
         beta_schedule: linear
@@ -236,6 +236,8 @@ model:
         # parameterization: 'x0'
     
     anchor_num: *achor_num
+
+    dete_hidden: 512
 
 loss:
   core_method: point_pillar_loss_diffusion

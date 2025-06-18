@@ -204,3 +204,145 @@
 #         x = x.view((n, c, h, w))    # (n, c, h, w)  
 
 #         return self.conv_output(x) + residue_long
+
+
+
+                # box_cond_aspects = encoded_cond.squeeze(-1)  # [B, 8]
+                # aspects = []
+                # for i, proj in enumerate(self.aspect_projectors):
+                #     aspect_input = box_cond_aspects[:, i:i+1]  # [B, 1] 保持batch维度
+                #     aspect_output = proj(aspect_input)  # [B, 256]
+                #     aspects.append(aspect_output) # (batch, 256)
+                # aspects = torch.stack(aspects, dim=1)  # [B, 8, 256]
+                # image_norm = F.normalize(image_features, p=2, dim=-1)
+                # aspects_norm = F.normalize(aspects, p=2, dim=-1)
+                # similarity_matrix = torch.bmm(aspects_norm, aspects_norm.transpose(1, 2))
+                # batch_similarity_matrix.append(similarity_matrix)
+                
+                # image_expanded = image_norm.unsqueeze(1)
+                # similarity_scores = torch.sum(image_expanded * aspects_norm, dim=-1)
+                
+                # if strategy == "gumbel":
+                #     # Epoch 0-5: Gumbel Softmax with decreasing tau
+                #     tau = max(0.5, 2.0 - (self.current_epoch / 5) * 1.5)
+                #     selected_aspect, gumbel_scores = self.gumbel_selection(similarity_scores, aspects, tau=tau)
+                # elif strategy == "mixed":
+                #     # Epoch 6: 50%概率使用Gumbel, 50%使用硬选择
+                #     if torch.rand(1).item() < 0.5:
+                #         selected_aspect, gumbel_scores = self.gumbel_selection(similarity_scores, aspects, tau=0.3)
+                #     else:
+                #         selected_aspect, one_hot_selection = self.hard_selection(similarity_scores, aspects)
+                # else:  # strategy == "hard"
+                #     # Epoch 7-9: 纯硬选择 后续拓展维度可选top-k个
+                #     selected_aspect, one_hot_selection = self.hard_selection(similarity_scores, aspects)
+                
+                # box_cond = selected_aspect
+                
+                
+                
+                # encoded_cond = self.cond_encoder(box_cond.unsqueeze(-1))  # [B, 8, 1]
+                # encoded_cond = encoded_cond.squeeze(-1)  # [B, 8]
+                
+                # # 生成Q, K, V
+                # Q = self.query_proj(image_features)      # [B, feature_dim] - GT作为查询
+                # K = self.key_proj(encoded_cond)   # [B, feature_dim] - 复杂特征作为键
+                # V = self.value_proj(encoded_cond) # [B, feature_dim] - 复杂特征作为值
+                
+                # b = encoded_cond.size(0)
+                # # 重塑为多头 [B, num_heads, head_dim]
+                # Q = Q.view(b, self.num_heads, self.head_dim)
+                # K = K.view(b, self.num_heads, self.head_dim)
+                # V = V.view(b, self.num_heads, self.head_dim)
+                
+                # # 计算注意力分数
+                # attention_scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale  # [B, num_heads, 1]
+                # attention_weights = F.softmax(attention_scores, dim=-1)
+                # attention_weights = self.dropout(attention_weights)
+                
+                # # 应用注意力
+                # attended_values = torch.matmul(attention_weights, V)  # [B, num_heads, head_dim]
+                
+                # # 合并多头
+                # attended_values = attended_values.view(b, self.feature_dim)
+                
+                # # 输出投影
+                # output = self.output_proj(attended_values)
+                
+                # # 残差连接 + 层归一化
+                # encoded_cond = self.layer_norm(encoded_cond + output)
+                
+                # batch_box_cond.append(encoded_cond)
+                # box_cond = encoded_cond
+                # box_cond = image_features
+                
+                
+                
+                
+                #########提取与输入相关的cond          
+                # x_flat = gt_features[:,:-1,:,:] #[:,-1:,:,:]
+                # # with torch.no_grad():
+                # image_features = self.cond_fc_layers(x_flat.view(x_flat.size(0), -1))  # [B, 256]
+                # # batch_image_features.append(image_features)
+                # box_cond = image_features
+                
+                
+                ############尝试用输入转化为特征作为cond看看有没有用
+                # input_dim = 10 * 24 * 56  # 1344
+                # self.cond_fc_layers = nn.Sequential(
+                #     nn.Linear(input_dim, 1024),
+                #     nn.ReLU(inplace=True),
+                #     nn.Dropout(0.3),
+                #     nn.Linear(1024, 512),
+                #     nn.ReLU(inplace=True),
+                #     nn.Dropout(0.2),
+                #     nn.Linear(512, 256)
+                # )
+                
+                
+        #                 if 'similarity_matrix' in output_dict.keys() and len(output_dict['similarity_matrix']) > 0:
+        #     diversity_loss = 0
+        #     batch_similarity_matrix = output_dict['similarity_matrix']
+        #     for batch_idx in range(len(batch_similarity_matrix)):
+        #         similarity_matrix = batch_similarity_matrix[batch_idx]
+        #         num_aspects = similarity_matrix.shape[1]
+        #         # 鼓励非对角线元素接近0（不同aspect应该不相似）
+        #         mask = torch.eye(num_aspects).to(similarity_matrix.device)
+        #         off_diagonal = similarity_matrix * (1 - mask)
+        #         diversity_loss += torch.mean(torch.abs(off_diagonal))
+        #     diversity_loss_avg = diversity_loss / len(batch_similarity_matrix)
+        #     total_loss += diversity_loss_avg
+        #     self.diversity_loss = diversity_loss_avg.item()
+        #     self.total_loss = total_loss.item()
+        #     self.loss_dict.update({'total_loss': self.total_loss,
+        #                         'diversity_loss': self.diversity_loss})
+            
+        # if 'image_features' in output_dict.keys() and len(output_dict['image_features']) > 0:
+        #     alignment_loss = 0
+        #     mse_loss = 0
+        #     cosine_loss = 0
+
+        #     batch_image_features = output_dict['image_features']
+        #     batch_box_cond = output_dict['box_cond']
+        #     for batch_idx in range(len(batch_image_features)):
+        #         image_features = batch_image_features[batch_idx]
+        #         box_cond = batch_box_cond[batch_idx]
+
+        #         # 1. MSE损失
+        #         mse_loss = F.mse_loss(image_features, box_cond)
+                
+        #         # 2. 余弦相似度损失
+        #         image_norm = F.normalize(image_features, p=2, dim=-1)
+        #         box_norm = F.normalize(box_cond, p=2, dim=-1)
+        #         cos_sim = F.cosine_similarity(image_norm, box_norm, dim=-1)
+        #         cosine_loss = (1 - cos_sim.mean())
+                
+        #         combined_loss = 0.5 * mse_loss + 0.5 * cosine_loss
+        #         alignment_loss += combined_loss
+                
+        #     alignment_loss_avg = alignment_loss / len(batch_image_features)
+        #     total_loss += alignment_loss_avg
+        #     self.alignment_loss = alignment_loss_avg.item()
+        #     self.total_loss = total_loss.item()
+        #     self.loss_dict.update({'total_loss': self.total_loss,
+        #                         'alignment_loss': self.alignment_loss})
+ 

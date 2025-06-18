@@ -11,9 +11,9 @@ class PointPillarScatter(nn.Module):
         self.model_cfg = model_cfg
         self.num_bev_features = self.model_cfg['num_features']
         self.max_hwl = self.model_cfg['max_hwl']
-        self.nx, self.ny, self.nz = model_cfg['grid_size']  # [28, 24, 1] or [704, 200, 1] 
+        self.nx, self.ny, self.nz = model_cfg['grid_size']  # [56, 24, 1] or [704, 200, 1] 
         self.voxel_size = model_cfg['voxel_size'] 
-        self.lidar_range = model_cfg['lidar_range']  
+        self.lidar_range = model_cfg['lidar_range'] 
 
         assert self.nz == 1
 

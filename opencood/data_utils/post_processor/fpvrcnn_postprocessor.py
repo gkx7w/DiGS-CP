@@ -193,11 +193,11 @@ class FpvrcnnPostprocessor(VoxelPostprocessor):
         # use other score
         # rcnn_score = label_dict['rois_scores_stage1']
 
-        rcnn_score = rcnn_iou
+        # rcnn_score = rcnn_iou
 
         # rcnn_score = label_dict['rois_scores_stage1'] * rcnn_iou**4
 
-        # rcnn_score = rcnn_cls
+        rcnn_score = rcnn_cls
 
         rcnn_reg = output_dict['rcnn_reg'].view(-1, 7)
         rois_anchor = label_dict['rois_anchor'] # lwh order

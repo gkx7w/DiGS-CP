@@ -179,7 +179,7 @@ class PointPillarLossDiffusion(nn.Module):
                 cls_acc = (pred_cls == tgt_cls).float().mean()
                 # 准确率低时增加权重
                 adaptive_weight = 2.0 - cls_acc.item()  
-                loss_cls = loss_cls * adaptive_weight
+            loss_cls = loss_cls * adaptive_weight
 
         # ========== 回归损失优化 ==========
         weights = torch.ones(tgt_iou.shape, device=tgt_iou.device)
@@ -267,7 +267,7 @@ class PointPillarLossDiffusion(nn.Module):
         return loss_cls_reduced, loss_iou_reduced, loss_reg_reduced
 
     # ========== 辅助函数 ==========
-    def focal_cls_loss(self, pred, target, alpha=0.25, gamma=2.0):
+    def focal_cls_loss(self, pred, target, alpha=0.75, gamma=2.0):
         """Focal Loss for classification"""
         pred_sigmoid = torch.sigmoid(pred)
         pt = target * pred_sigmoid + (1 - target) * (1 - pred_sigmoid)
@@ -486,7 +486,7 @@ class PointPillarLossDiffusion(nn.Module):
             diff_loss += pixel_loss + ssim_loss
         # 计算平均损失
         diff_loss = diff_loss / len(p_e_batch)
-        return diff_loss, pixel_loss, 0, ssim_loss
+        return diff_loss, pixel_loss, ssim_loss
         
     def forward(self, output_dict, target_dict, epoch = 1, train = True):
         """
@@ -529,7 +529,7 @@ class PointPillarLossDiffusion(nn.Module):
             elif output_dict['target'] == 'x0':
                 g_e_batch = output_dict["gt_x0"]
             t_e_batch = output_dict['t']
-            diff_loss, pixel_loss, edge_loss, ssim_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
+            diff_loss, pixel_loss, ssim_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = rcnn_loss + diff_loss
 
             self.total_loss = total_loss.item()
@@ -537,7 +537,6 @@ class PointPillarLossDiffusion(nn.Module):
             self.loss_dict.update({'total_loss': self.total_loss,
                                     'diff_loss': self.diff_loss,
                                     'pixel_loss':pixel_loss.item(),
-                                    # 'edge_loss':edge_loss.item(),
                                     'ssim_loss':ssim_loss,
                                     })
         elif 'pred_out' in output_dict.keys():
@@ -547,7 +546,7 @@ class PointPillarLossDiffusion(nn.Module):
             elif output_dict['target'] == 'x0':
                 g_e_batch = output_dict["gt_x0"]
             t_e_batch = output_dict['t']
-            diff_loss, pixel_loss, edge_loss, ssim_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
+            diff_loss, pixel_loss, ssim_loss = self.cal_diff_loss(p_e_batch, g_e_batch,t_e_batch)
             total_loss = diff_loss
 
             self.total_loss = total_loss.item()
@@ -559,10 +558,10 @@ class PointPillarLossDiffusion(nn.Module):
                                    'iou_loss': self.iou_loss,
                                    'diff_loss': self.diff_loss,
                                    'pixel_loss':pixel_loss.item(),
-                                #    'edge_loss':edge_loss.item(),
                                    'ssim_loss':ssim_loss, 
                                     })
-    
+            
+   
         return total_loss
 
     def cls_loss_func(self, input: torch.Tensor,
@@ -667,8 +666,6 @@ class PointPillarLossDiffusion(nn.Module):
         if pbar is None:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                # pixel_loss = self.loss_dict['pixel_loss']
-                # edge_loss = self.loss_dict['edge_loss']
                 ssim_loss = self.loss_dict['ssim_loss']
                 print("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Ssim: %.4f" % (
@@ -684,8 +681,6 @@ class PointPillarLossDiffusion(nn.Module):
         else:
             if 'diff_loss' in self.loss_dict:
                 diff_loss = self.loss_dict['diff_loss']
-                # pixel_loss = self.loss_dict['pixel_loss']
-                # edge_loss = self.loss_dict['edge_loss']
                 ssim_loss = self.loss_dict['ssim_loss']
                 pbar.set_description("[epoch %d][%d/%d], LR: %.6f || Loss: %.3f || Rcnn: %.3f|| Cls: %.3f"
                 " || Loc: %.3f || Iou: %.3f || Diff: %.4f|| Ssim: %.4f" % (
@@ -704,12 +699,6 @@ class PointPillarLossDiffusion(nn.Module):
             writer.add_scalar('Learning_rate', lr, epoch*batch_len + batch_id)
         
         if 'diff_loss' in self.loss_dict:
-            writer.add_scalar('Reconstruction_loss', diff_loss,
-                          epoch*batch_len + batch_id)
-            # writer.add_scalar('Pixel_loss', pixel_loss,
-            #               epoch*batch_len + batch_id)
-            # writer.add_scalar('Edge_loss', edge_loss,
-            #               epoch*batch_len + batch_id)
             writer.add_scalar('Ssim_loss', ssim_loss,
                           epoch*batch_len + batch_id)
         writer.add_scalar('Regression_loss', reg_loss,

@@ -239,6 +239,7 @@ class PillarVFE(nn.Module):
             squared_diff = (centered_points * points_mask.float()) ** 2  # [M, 16, 3]
             # 使用sum和voxel_num_points计算方差
             variance = squared_diff.sum(dim=1) / voxel_num_points.unsqueeze(-1).float()  # [M, 3]
+            std_dev = torch.sqrt(variance + 1e-8) 
             
             # 3. 计算最大点间距离 Diameter [M, 1]
             # 使用广播计算所有点对之间的距离
@@ -272,8 +273,13 @@ class PillarVFE(nn.Module):
             # 将voxel_num_points转换为浮点数并增加维度 [M, 1]
             points_count = voxel_num_points.float().unsqueeze(-1)
             
+            # 4. 新增特征：点密度 (Point Density) [M, 1]
+            # 定义为体素内点数与最大点数的比值
+            point_density = voxel_num_points.float() / 16
+            point_density = point_density.unsqueeze(-1) # [M, 1]
+            
             # 拼接所有特征 [M, 4]
-            statistical_features = torch.cat([mean_relative_offsets, points_count], dim=1)
+            statistical_features = torch.cat([mean_relative_offsets,points_count], dim=1)  #mean_relative_offsets
             # 拼接所有特征 [M, 8] (原来是[M, 7])
             # statistical_features = torch.cat([mean_relative_offsets, variance, max_distances, points_count], dim=1)
             # # 处理只有一个点的情况（方差和最大距离应为0）！！导致生成了很多0

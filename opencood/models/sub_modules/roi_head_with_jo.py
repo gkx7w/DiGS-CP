@@ -203,8 +203,8 @@ class RoIHead(nn.Module):
 
         # 还是用伪分类头和公共提取模块
         pre_channel1 = grid_size * grid_size * grid_size * c_out
-        self.fake_shared_fc_layers, pre_channel1 = self._make_fc_layers(pre_channel1,
-                                                                        fc_layers)
+        # self.fake_shared_fc_layers, pre_channel1 = self._make_fc_layers(pre_channel1,
+        #                                                                 fc_layers)
         # self.fake_cls_head, pre_channel1 = self._make_fc_layers(pre_channel1,
         #                                                         fc_layers,
         #                                                         output_channels=
@@ -224,33 +224,20 @@ class RoIHead(nn.Module):
         # self.convertor = None
         self.convertor, pre_channel = self._make_fc_layers(pre_channel, fc_layers)
         
-        self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
-                                                            fc_layers,
-                                                            output_channels=
-                                                            self.model_cfg[
-                                                                'num_cls'])
-        self.iou_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=
-                                                  self.model_cfg['num_cls'])
-        self.reg_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
-                                                  output_channels=
-                                                  self.model_cfg[
-                                                      'num_cls'] * 7)
+        # self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
+        #                                                     fc_layers,
+        #                                                     output_channels=
+        #                                                     self.model_cfg[
+        #                                                         'num_cls'])
+        # self.iou_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
+        #                                           output_channels=
+        #                                           self.model_cfg['num_cls'])
+        # self.reg_layers, _ = self._make_fc_layers(pre_channel, fc_layers,
+        #                                           output_channels=
+        #                                           self.model_cfg[
+        #                                               'num_cls'] * 7)
 
-        # 新增多头注意力机制和特征增强
-        self.feature_dim = pre_channel  # 使用当前的特征维度
-        self.self_attention = nn.MultiheadAttention(
-            embed_dim=self.feature_dim,
-            num_heads=8,  # 可根据特征维度调整
-            batch_first=True
-        )
-
-        # 特征增强
-        self.feature_enhance = nn.Sequential(
-            nn.Linear(self.feature_dim, self.feature_dim),
-            nn.LayerNorm(self.feature_dim),
-            nn.GELU()
-        )
+        
         
         
         # 解耦代码 
@@ -817,31 +804,31 @@ class RoIHead(nn.Module):
                             self.grid_size,
                             self.grid_size)  # (BxN, C, 6, 6, 6)
         shared_features = self.shared_fc_layers(
-            pooled_features.view(batch_size_rcnn, -1, 1)) # (BxN, C)
-        shared_features_sque = shared_features.squeeze()
+            pooled_features.view(batch_size_rcnn, -1, 1)).squeeze(-1) # (BxN, C)
+        
         object_factors_batch = []
         box_idx = 0
         for i in range(len(batch_dict['boxes_fused'])):
-            object_factors_batch.append(shared_features_sque[box_idx:box_idx + len(batch_dict['boxes_fused'][i])])
+            object_factors_batch.append(shared_features[box_idx:box_idx + len(batch_dict['boxes_fused'][i])])
             box_idx += len(batch_dict['boxes_fused'][i])
         
         
         
-        rcnn_cls = self.cls_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
-            dim=1)  # (B, 1 or 2)
-        rcnn_iou = self.iou_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
-            dim=1)  # (B, 1)
-        rcnn_reg = self.reg_layers(shared_features).transpose(1,
-                                                              2).contiguous().squeeze(
-            dim=1)  # (B, C)
+        # rcnn_cls = self.cls_layers(shared_features).transpose(1,
+        #                                                       2).contiguous().squeeze(
+        #     dim=1)  # (B, 1 or 2)
+        # rcnn_iou = self.iou_layers(shared_features).transpose(1,
+        #                                                       2).contiguous().squeeze(
+        #     dim=1)  # (B, 1)
+        # rcnn_reg = self.reg_layers(shared_features).transpose(1,
+        #                                                       2).contiguous().squeeze(
+        #     dim=1)  # (B, C)
         
-        batch_dict['stage2_out'] = {
-            'rcnn_cls': rcnn_cls,
-            'rcnn_iou': rcnn_iou,
-            'rcnn_reg': rcnn_reg,
-        }
+        # batch_dict['stage2_out'] = {
+        #     'rcnn_cls': rcnn_cls,
+        #     'rcnn_iou': rcnn_iou,
+        #     'rcnn_reg': rcnn_reg,
+        # }
 
         
         # if 'det_boxes' in batch_dict:
