@@ -185,7 +185,7 @@ class FpvrcnnLoss(nn.Module):
 
         return loss
 
-    def logging(self, epoch, batch_id, batch_len, writer=None):
+    def logging(self, epoch, batch_id, batch_len, writer=None, optimizer=None):
         """
         Print out  the loss function for current iteration.
         Parameters

@@ -280,22 +280,22 @@ class SDCoper2(nn.Module):
         mv_feature = self.backbone.decode_multiscale_feature(feature_list)
         # print("合并后单车特征尺度：",mv_feature.shape)
 
-        # fused_feature_list = []
-        # for i, fuse_module in enumerate(self.fusion_net):
-        #     fused_feature_list.append(fuse_module(feature_list[i], record_len, normalized_affine_matrix))
-        # fused_feature = self.backbone.decode_multiscale_feature(fused_feature_list)
+        fused_feature_list = []
+        for i, fuse_module in enumerate(self.fusion_net):
+            fused_feature_list.append(fuse_module(feature_list[i], record_len, normalized_affine_matrix))
+        fused_feature = self.backbone.decode_multiscale_feature(fused_feature_list)
 
-        # print("融合后特征列表尺度：",[t.shape for t in fused_feature_list])
-        # print("融合后特征尺度：",fused_feature.shape)
+        print("融合后特征列表尺度：",[t.shape for t in fused_feature_list])
+        print("融合后特征尺度：",fused_feature.shape)
 
-        # for i, t in enumerate(feature_list):
-        #     #  对特征投影 ，但是当下，没有对框投影，但是又对点投影了，所以精度有问题，
-        #     #  真实情况应该是，第一阶段不应该涉及任何投影，在第二阶段才能投影
-        #     out = normalized_affine_bev(t, normalized_affine_matrix, record_len)
-        #     batch_dict["spatial_features_%dx" % 2 ** (i + 1)] = out
+        for i, t in enumerate(feature_list):
+            #  对特征投影 ，但是当下，没有对框投影，但是又对点投影了，所以精度有问题，
+            #  真实情况应该是，第一阶段不应该涉及任何投影，在第二阶段才能投影
+            out = normalized_affine_bev(t, normalized_affine_matrix, record_len)
+            batch_dict["spatial_features_%dx" % 2 ** (i + 1)] = out
 
-        # batch_dict['spatial_features'] = normalized_affine_bev(batch_dict['spatial_features'],
-        #                                                            normalized_affine_matrix, record_len)
+        batch_dict['spatial_features'] = normalized_affine_bev(batch_dict['spatial_features'],
+                                                                   normalized_affine_matrix, record_len)
         
         # 不涉及任何投影
         for i, t in enumerate(feature_list):
@@ -307,10 +307,10 @@ class SDCoper2(nn.Module):
                      
         
         if self.shrink_flag:
-            # fused_feature = self.shrink_conv(fused_feature)
-            mv_feature = self.shrink_conv(mv_feature)
+            fused_feature = self.shrink_conv(fused_feature)
+            # mv_feature = self.shrink_conv(mv_feature)
 
-        batch_dict['stage1_out'] = self.head(mv_feature)
+        batch_dict['stage1_out'] = self.head(fused_feature) #mv_feature
 
         data_dict, output_dict = {}, {}
         data_dict['ego'], output_dict['ego'] = batch_dict, batch_dict

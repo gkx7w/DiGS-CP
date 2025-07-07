@@ -2,13 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "pointpillar_early_diffusion",
+            "name": "pointpillardiffusion",
             "type": "debugpy",
             "request": "launch",
             "program": "/data/gkx/Code/opencood/tools/train.py",
             "args": [
                 "--hypes_yaml",
-                "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diffusion.yaml"
+                "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_diffusion.yaml"
             ],
             "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件
@@ -17,22 +17,22 @@
             }
         },
         {
-            "name": "pointpillar_early_diffusion_dec",
+            "name": "pointpillar_diffusion_dec",
             "type": "debugpy",
             "request": "launch",
             "program": "/data/gkx/Code/opencood/tools/train.py",
             "args": [
                 "--hypes_yaml",
-                "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
+                "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_diff_dec.yaml",
                 "--model_dir",
-                "/data/gkx/Code/opencood/logs/opv2v_point_pillar_lidar_early_2025_06_17_15_21_42/net_epoch89.pth",
+                "/data/gkx/Code/checkpoints/opv2v/fisrt_no_fuse_best/net_epoch80.pth",
                 // "--diff_model_dir",
                 // "/data/gkx/Code/checkpoints/10_mdd_denoise/net_epoch10.pth"
             ],
             "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件
             "env": {
-                "CUDA_VISIBLE_DEVICES": "1"
+                "CUDA_VISIBLE_DEVICES": "0"
             }
         },
         {
@@ -45,6 +45,57 @@
                 "/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/SDCoper/SDCoper.yaml",
                 "--model_dir",
                 "/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
+            ],
+            "cwd": "/data/gkx/Code",
+            "justMyCode": false, // 允许步入第三方库和引用文件
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "dair_sdcoper",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/data/gkx/Code/opencood/tools/train.py",
+            "args": [
+                "--hypes_yaml",
+                "/data/gkx/Code/opencood/hypes_yaml/dairv2x/lidar_only_with_noise/SDCoper.yaml",
+                "--model_dir",
+                "/data/gkx/Code/checkpoints/dair_v2x/sdcoper_dairv2x/net_epoch22.pth",
+            ],
+            "cwd": "/data/gkx/Code",
+            "justMyCode": false, // 允许步入第三方库和引用文件
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1"
+            }
+        },
+        {
+            "name": "dair_diff_dec",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/data/gkx/Code/opencood/tools/train.py",
+            "args": [
+                "--hypes_yaml",
+                "/data/gkx/Code/opencood/hypes_yaml/dairv2x/lidar_only_with_noise/diffusion/diff_dec.yaml",
+                "--model_dir",
+                "/data/gkx/Code/checkpoints/dair_v2x/sdcoper_dairv2x/net_epoch22.pth",
+            ],
+            "cwd": "/data/gkx/Code",
+            "justMyCode": false, // 允许步入第三方库和引用文件
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "v2xvit_diff_dec",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/data/gkx/Code/opencood/tools/train.py",
+            "args": [
+                "--hypes_yaml",
+                "/data/gkx/Code/opencood/hypes_yaml/v2xset/diffusion/v2xset_pointpillar_diff_dec.yaml",
+                "--model_dir",
+                "/data/gkx/Code/checkpoints/opv2v/train_1channel_traincond_cls_eps_det/net_epoch89.pth",
             ],
             "cwd": "/data/gkx/Code",
             "justMyCode": false, // 允许步入第三方库和引用文件

@@ -489,8 +489,8 @@ class DiffusionUNet(nn.Module):
         # upsampling
         for i_level in reversed(range(self.num_resolutions)):
             for i_block in range(self.num_res_blocks+1):
-                t = torch.cat([h, hs.pop()], dim=1)
-                h = self.up[i_level].block[i_block](t, temb)
+                h_cat = torch.cat([h, hs.pop()], dim=1)
+                h = self.up[i_level].block[i_block](h_cat, temb)
                 if len(self.up[i_level].attn) > 0:
                     h = self.up[i_level].attn[i_block](h, cond)
             if i_level != 0:

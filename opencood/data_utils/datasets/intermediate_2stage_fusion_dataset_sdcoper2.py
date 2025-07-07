@@ -278,7 +278,6 @@ def getIntermediate2stageFusionDataset(cls):
                                     selected_cav_base['params'][
                                         'lidar_pose'][1] - ego_lidar_pose[
                                         1]) ** 2)
-
                 # if distance is too far, we will just skip this agent
                 if distance > self.params['comm_range']:
                     too_far.append(cav_id)
@@ -286,12 +285,11 @@ def getIntermediate2stageFusionDataset(cls):
 
                 lidar_pose_clean_list.append(selected_cav_base['params']['lidar_pose_clean'])
                 lidar_pose_list.append(selected_cav_base['params']['lidar_pose']) # 6dof pose
-                cav_id_list.append(cav_id)   
+                cav_id_list.append(cav_id)
 
             for cav_id in too_far:
                 base_data_dict.pop(cav_id)
-
-            
+                
             pairwise_t_matrix = \
                 get_pairwise_transformation(base_data_dict,
                                                 self.max_cav,
@@ -335,7 +333,7 @@ def getIntermediate2stageFusionDataset(cls):
                 if self.visualize and len(projected_lidar_stack) == 0:
                     projected_lidar_stack.append(
                         selected_cav_processed['projected_lidar'])
-                
+       
                 single_label_list.append(selected_cav_processed['single_label_dict'])
 
             # 4. 将所有车辆的点云数据堆叠在一起（完成点云融合）
@@ -347,9 +345,9 @@ def getIntermediate2stageFusionDataset(cls):
                                                     projected_lidar_stack})
             # generate single view label (no coop) label
             label_dict_no_coop = single_label_list # [{cav1_label}, {cav2_label}...]
-
             
-            # exclude all repetitive objects    
+            
+            # exclude all repetitive objects
             unique_indices = \
                 [object_id_stack.index(x) for x in set(object_id_stack)]
             object_stack = np.vstack(object_stack)
@@ -380,12 +378,12 @@ def getIntermediate2stageFusionDataset(cls):
                     gt_box_center=object_bbx_center,
                     anchors=self.anchor_box,
                     mask=mask)
-
+ 
             label_dict = {
                 'stage1': label_dict_no_coop, # list 
                 'stage2': label_dict_coop # dict
             }
-
+            
             processed_data_dict['ego'].update(
                 {'object_bbx_center': object_bbx_center,
                 'object_bbx_mask': mask,
@@ -413,7 +411,6 @@ def getIntermediate2stageFusionDataset(cls):
         def collate_batch_train(self, batch):
             # Intermediate fusion is different the other two
             output_dict = {'ego': {}}
-
             object_bbx_center = []
             object_bbx_mask = []
             object_ids = []
@@ -465,8 +462,6 @@ def getIntermediate2stageFusionDataset(cls):
                 if self.visualize:
                     origin_lidar.append(ego_dict['origin_lidar'])
 
-
-
             # convert to numpy, (B, max_num, 7)
             object_bbx_center = torch.from_numpy(np.array(object_bbx_center))
             object_bbx_mask = torch.from_numpy(np.array(object_bbx_mask))
@@ -492,7 +487,6 @@ def getIntermediate2stageFusionDataset(cls):
                                     label_dict_cavs_list]
             label_no_coop_torch_dict = \
                                     self.post_processor.collate_batch(label_dict_no_coop_cavs_batch_list)
-
             label_torch_dict = \
                 self.post_processor.collate_batch(label_dict_list)
 
@@ -505,19 +499,19 @@ def getIntermediate2stageFusionDataset(cls):
 
             # object id is only used during inference, where batch size is 1.
             # so here we only get the first element.
-            output_dict['ego'].update({ 'object_bbx_center': object_bbx_center,
-                                        'object_bbx_mask': object_bbx_mask,
-                                        'record_len': record_len,
+            output_dict['ego'].update({'object_bbx_center': object_bbx_center,
+                                    'object_bbx_mask': object_bbx_mask,
+                                    'record_len': record_len,
                                         'label_dict': {
                                             'stage1': label_no_coop_torch_dict,
                                             'stage2': label_torch_dict,
                                         },
-                                        'object_ids': object_ids[0],
-                                        'pairwise_t_matrix': pairwise_t_matrix,
-                                        'lidar_pose_clean': lidar_pose_clean,
-                                        'lidar_pose': lidar_pose,
-                                        'proj_first': self.proj_first,
-                                        'anchor_box': self.anchor_box_torch})
+                                    'object_ids': object_ids[0],
+                                    'pairwise_t_matrix': pairwise_t_matrix,
+                                    'lidar_pose_clean': lidar_pose_clean,
+                                    'lidar_pose': lidar_pose,
+                                    'proj_first': self.proj_first,
+                                    'anchor_box': self.anchor_box_torch})
 
             if self.load_lidar_file:
                 coords = []
@@ -563,7 +557,6 @@ def getIntermediate2stageFusionDataset(cls):
                 origin_lidar_for_vsa_noproject = torch.from_numpy(origin_lidar_for_vsa_noproject)
                 output_dict['ego'].update({'origin_lidar_for_vsa_noproject': origin_lidar_for_vsa_noproject})
                 
-                
                 coords_ori = []
                 for batch_idx, points in enumerate(origin_lidar):
                     batch_indices = np.full((points.shape[0], 1), batch_idx)
@@ -573,7 +566,8 @@ def getIntermediate2stageFusionDataset(cls):
                 origin_lidar_for_diff = np.concatenate(coords_ori, axis=0)
                 origin_lidar_for_diff = torch.from_numpy(origin_lidar_for_diff)
                 output_dict['ego'].update({'origin_lidar_for_diff': origin_lidar_for_diff})
-
+            
+            
             if self.visualize:
                 origin_lidar = \
                     np.array(downsample_lidar_minimum(pcd_np_list=origin_lidar))
@@ -601,7 +595,7 @@ def getIntermediate2stageFusionDataset(cls):
 
             output_dict['ego'].update({'transformation_matrix':
                                         transformation_matrix_torch,
-                                        'transformation_matrix_clean':
+                                       'transformation_matrix_clean':
                                         transformation_matrix_clean_torch,})
 
             output_dict['ego'].update({
@@ -610,7 +604,6 @@ def getIntermediate2stageFusionDataset(cls):
             })
 
             return output_dict
-
 
         def post_process(self, data_dict, output_dict):
             """
@@ -636,6 +629,5 @@ def getIntermediate2stageFusionDataset(cls):
             gt_box_tensor = self.post_processor.generate_gt_bbx(data_dict)
 
             return pred_box_tensor, pred_score, gt_box_tensor
-
 
     return Intermediate2stageFusionDataset

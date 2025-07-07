@@ -2,6 +2,8 @@ bev_visualizations/*
 vis_output/*
 opencood/logs/*
 opencood/bev_visualizations/*
+opencood/vis_output/*
 spconv/
 checkpoints/
 build/
+pypcd-master/

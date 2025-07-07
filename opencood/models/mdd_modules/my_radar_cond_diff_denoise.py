@@ -34,6 +34,7 @@ class Cond_Diff_Denoise(nn.Module):
         self.guidance_scale = getattr(self.config.diffusion, 'guidance_scale', 1.0)  # 默认值为1.0
         self.ddim_sampling_eta = getattr(self.config.diffusion, 'ddim_sampling_eta', 0.0)  # 默认值为0.0
         self.sampling_timesteps = getattr(self.config.diffusion, 'sampling_timesteps', 3) # default num sampling timesteps to number of timesteps at training
+        self.traing = getattr(self.config.diffusion, 'training', True)  # 是否为训练模式
         if self.parameterization == "eps":
             self.prediction_type = "epsilon"
         elif self.parameterization == "x0":
@@ -49,6 +50,18 @@ class Cond_Diff_Denoise(nn.Module):
             nn.GELU(),
             nn.GroupNorm(16, 256),        # 16个组，适合256维
         )
+        
+        ############尝试用输入转化为特征作为cond看看有没有用
+        # input_dim = 4 * 24 * 56  # 1344
+        # self.cond_fc_layers = nn.Sequential(
+        #     nn.Linear(input_dim, 1024),
+        #     nn.ReLU(inplace=True),
+        #     nn.Dropout(0.3),
+        #     nn.Linear(1024, 512),
+        #     nn.ReLU(inplace=True),
+        #     nn.Dropout(0.2),
+        #     nn.Linear(512, 256)
+        # )
 
     def normalize_to_minus1_1(self, x):
         return x * 2 - 1
@@ -298,6 +311,10 @@ class Cond_Diff_Denoise(nn.Module):
         box_masks = data_dict['voxel_gt_mask']
         # 解耦后的融合特征为条件，无则为none
         cond = data_dict.get('fused_object_factors', None)
+        # 统计通信量
+        # total_bytes = sum(tensor.nbytes for tensor in cond)
+        # average_bytes = total_bytes / len(cond)
+        # print(f"平均通信量: {average_bytes:.2f} B")
         if cond is not None and len(cond) == 0:
             cond = None
         combined_pred = cond
@@ -320,7 +337,7 @@ class Cond_Diff_Denoise(nn.Module):
         noise_list = []
         x_list = []
         
-        if self.training:
+        if self.traing:
             # 对每个batch处理
             for batch_idx, gt_features in enumerate(batch_gt_spatial_features):
                 batch_mask = coords[:, 0] == batch_idx
@@ -352,7 +369,8 @@ class Cond_Diff_Denoise(nn.Module):
             
                 if self.if_normalize:
                     # x_start = self.normalize_to_minus1_1(gt_features) #[:,-1:,:,:]
-                    x_start, self.norm_params = normalize_statistical_features(gt_features[:,-1:,:,:]) #[:,-1:,:,:]
+                    x_start, self.norm_params = normalize_statistical_features(gt_features) #[:,-1:,:,:]
+                    x_start = x_start[:,-1:,:,:]
                 else:
                     x_start = gt_features[:,-1:,:,:]#[:,-1:,:,:]
                 batch_gt_x0.append(gt_features[:,-1:,:,:])#[:,-1:,:,:]
@@ -373,7 +391,6 @@ class Cond_Diff_Denoise(nn.Module):
                 # Add noise to the clean images according to the noise magnitude at each timestep
                 noisy_images = self.noise_scheduler.add_noise(x_start, noise, timesteps)
 
-                
                 box_cond = self.condition_encoder(box_cond)
                 cond_drop_prob = 0.2 #.2
                 # 随机决定是否丢弃条件
@@ -413,7 +430,7 @@ class Cond_Diff_Denoise(nn.Module):
                             guidance_scale=self.guidance_scale,  # > 1.0 启用CFG
                             x_self_cond=x_self_cond,
                             output_type="numpy",
-                            initial_noise=noise,  # 传入自定义噪声
+                            # initial_noise=noise,  # 传入自定义噪声
                         )
                         x_noisy = x_noisy["images"] if isinstance(x_noisy, dict) else x_noisy[0]
                         x_noisy_with_cond_list.append(x_noisy)
@@ -440,7 +457,7 @@ class Cond_Diff_Denoise(nn.Module):
                             guidance_scale=1.0,  # 设为1.0禁用CFG
                             x_self_cond=None,    # 设为None以跳过条件应用
                             output_type="numpy",
-                            initial_noise=noise,  # 传入自定义噪声
+                            # initial_noise=noise,  # 传入自定义噪声
                         )
                         x_noisy_no_cond = uncond_result["images"] if isinstance(uncond_result, dict) else uncond_result[0]
                         # x_noisy_no_cond = self.diffusion_inference(noise, None, self.sampling_timesteps)
@@ -501,7 +518,7 @@ class Cond_Diff_Denoise(nn.Module):
             data_dict['target'] = self.parameterization
            
         return data_dict
-
+        
 
 def compute_frechet_distance(array1, array2, channel_wise=True, eps=1e-6):
     """计算两个NumPy数组之间的Fréchet距离

@@ -191,7 +191,7 @@ class FpvrcnnPostprocessor(VoxelPostprocessor):
             rcnn_score = rcnn_cls
 
         # use other score
-        # rcnn_score = label_dict['rois_scores_stage1']
+        # rcnn_score = label_dict['rois_scores_stage1'] 
 
         # rcnn_score = rcnn_iou
 

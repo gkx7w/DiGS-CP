@@ -38,11 +38,11 @@ def test_parser():
     #                     help='Continued training path')
     
     parser.add_argument('--diff_model_dir', type=str,
-                        default="/data/gkx/Code/opencood/logs/opv2v_point_pillar_lidar_early_2025_06_17_15_21_42/net_epoch89.pth",
+                        default="/data/gkx/Code/checkpoints/opv2v/train_1channel_traincond_cls_eps_det/net_epoch89.pth",
                         help='Continued training path')
 
-    parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
-                        help='data generation yaml file needed ')
+    parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/Code/opencood/hypes_yaml/v2xset/diffusion/v2xset_pointpillar_diff_dec.yaml",
+                        help='data generation yaml file needed ') #/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml
     
     parser.add_argument('--also_laplace', action='store_true',
                         help="whether to use laplace to simulate noise. Otherwise Gaussian")

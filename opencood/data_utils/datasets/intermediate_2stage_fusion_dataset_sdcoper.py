@@ -280,10 +280,10 @@ def getIntermediate2stageFusionDataset(cls):
                 # check if the cav is within the communication range with ego
                 distance = \
                     math.sqrt((selected_cav_base['params']['lidar_pose'][0] -
-                               ego_lidar_pose[0]) ** 2 + (
-                                      selected_cav_base['params'][
-                                          'lidar_pose'][1] - ego_lidar_pose[
-                                          1]) ** 2)
+                            ego_lidar_pose[0]) ** 2 + (
+                                    selected_cav_base['params'][
+                                        'lidar_pose'][1] - ego_lidar_pose[
+                                        1]) ** 2)
 
                 # if distance is too far, we will just skip this agent
                 if distance > self.params['comm_range']:
@@ -291,16 +291,16 @@ def getIntermediate2stageFusionDataset(cls):
                     continue
 
                 lidar_pose_clean_list.append(selected_cav_base['params']['lidar_pose_clean'])
-                lidar_pose_list.append(selected_cav_base['params']['lidar_pose'])  # 6dof pose
+                lidar_pose_list.append(selected_cav_base['params']['lidar_pose']) # 6dof pose
                 cav_id_list.append(cav_id)
 
             for cav_id in too_far:
                 base_data_dict.pop(cav_id)
-
+                
             pairwise_t_matrix = \
                 get_pairwise_transformation(base_data_dict,
-                                            self.max_cav,
-                                            self.proj_first)
+                                                self.max_cav,
+                                                self.proj_first)
 
             lidar_poses = np.array(lidar_pose_list).reshape(-1, 6)  # [N_cav, 6]
             lidar_poses_clean = np.array(lidar_pose_clean_list).reshape(-1, 6)  # [N_cav, 6]
@@ -340,12 +340,13 @@ def getIntermediate2stageFusionDataset(cls):
                 #         selected_cav_processed['projected_lidar'])
                 projected_lidar_stack.append(
                     selected_cav_processed['projected_lidar'])
-
+       
                 single_label_list.append(selected_cav_processed['single_label_dict'])
 
             # generate single view label (no coop) label
-            label_dict_no_coop = single_label_list  # [{cav1_label}, {cav2_label}...]
-
+            label_dict_no_coop = single_label_list # [{cav1_label}, {cav2_label}...]
+            
+            
             # exclude all repetitive objects
             unique_indices = \
                 [object_id_stack.index(x) for x in set(object_id_stack)]
@@ -530,7 +531,7 @@ def getIntermediate2stageFusionDataset(cls):
                 object_bbx_center.append(ego_dict['object_bbx_center'])
                 object_bbx_mask.append(ego_dict['object_bbx_mask'])
                 object_ids.append(ego_dict['object_ids'])
-                lidar_pose_list.append(ego_dict['lidar_poses'])  # ego_dict['lidar_pose'] is np.ndarray [N,6]
+                lidar_pose_list.append(ego_dict['lidar_poses']) # ego_dict['lidar_pose'] is np.ndarray [N,6]
                 lidar_pose_clean_list.append(ego_dict['lidar_poses_clean'])
                 if self.load_lidar_file:
                     processed_lidar_list.append(ego_dict['processed_lidar'])
@@ -539,8 +540,7 @@ def getIntermediate2stageFusionDataset(cls):
                     vsa_lidar_project.append(ego_dict['vsa_lidar_project'])
                     vsa_lidar_noproject.append(ego_dict['vsa_lidar_noproject'])
                 if self.load_camera_file:
-                    image_inputs_list.append(
-                        ego_dict['image_inputs'])  # different cav_num, ego_dict['image_inputs'] is dict.
+                    image_inputs_list.append(ego_dict['image_inputs']) # different cav_num, ego_dict['image_inputs'] is dict.
 
                 record_len.append(ego_dict['cav_num'])
                 label_dict_no_coop_batch_list.append(ego_dict['label_dict']['stage1'])
@@ -684,9 +684,9 @@ def getIntermediate2stageFusionDataset(cls):
                 torch.from_numpy(np.identity(4)).float()
 
             output_dict['ego'].update({'transformation_matrix':
-                                           transformation_matrix_torch,
+                                        transformation_matrix_torch,
                                        'transformation_matrix_clean':
-                                           transformation_matrix_clean_torch, })
+                                        transformation_matrix_clean_torch,})
 
             output_dict['ego'].update({
                 "sample_idx": batch[0]['ego']['sample_idx'],

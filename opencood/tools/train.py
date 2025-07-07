@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 import argparse
 import os
 import statistics
-
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import torch
 # torch.autograd.set_detect_anomaly(True)
 from torch.utils.data import DataLoader, Subset
@@ -188,7 +188,6 @@ def main():
     epoches = hypes['train_params']['epoches']
     supervise_single_flag = False if not hasattr(opencood_train_dataset, "supervise_single") else opencood_train_dataset.supervise_single
     # used to help schedule learning rate
-
     print("batch size: ", hypes['train_params']['batch_size'])
     for epoch in range(init_epoch, max(epoches, init_epoch)):
         for param_group in optimizer.param_groups:
@@ -206,14 +205,14 @@ def main():
                 -1] == "DiscoNetSDCoper" or str(type(model))[8:-2].split(".")[-1] == "SDCoper") and \
                     hypes['model']['args']['activate_stage2']:
                 pass
-                # fixed some param
-                # model.stage1_fix()
+            # fixed some param
+            model.stage1_fix()
 
             model.zero_grad()
             optimizer.zero_grad()
             batch_data = train_utils.to_device(batch_data, device)
             batch_data['ego']['epoch'] = epoch
-            
+
             ouput_dict = model(batch_data['ego'])
             
             # 可视化

@@ -223,6 +223,14 @@ class RoIHead(nn.Module):
         # 新增 mv->fv converter
         # self.convertor = None
         self.convertor, pre_channel = self._make_fc_layers(pre_channel, fc_layers)
+
+        # 对融合条件编码
+        # self.condition_encoder = nn.Sequential(
+        #     nn.GroupNorm(32, 512),        # 32个组，适合512维
+        #     nn.Linear(512, 256),
+        #     nn.GELU(),
+        #     nn.GroupNorm(16, 256),        # 16个组，适合256维
+        # )
         
         # self.cls_layers, pre_channel = self._make_fc_layers(pre_channel,
         #                                                     fc_layers,
@@ -809,6 +817,7 @@ class RoIHead(nn.Module):
         object_factors_batch = []
         box_idx = 0
         for i in range(len(batch_dict['boxes_fused'])):
+            # object_factors_batch.append(self.condition_encoder(shared_features[box_idx:box_idx + len(batch_dict['boxes_fused'][i])]))
             object_factors_batch.append(shared_features[box_idx:box_idx + len(batch_dict['boxes_fused'][i])])
             box_idx += len(batch_dict['boxes_fused'][i])
         

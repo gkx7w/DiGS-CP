@@ -488,7 +488,7 @@ class PointPillarLossDiffusion(nn.Module):
         diff_loss = diff_loss / len(p_e_batch)
         return diff_loss, pixel_loss, ssim_loss
         
-    def forward(self, output_dict, target_dict, epoch = 1, train = True):
+    def forward(self, output_dict, target_dict):
         """
         Parameters
         ----------

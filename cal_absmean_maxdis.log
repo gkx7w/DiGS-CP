@@ -1,0 +1,1047 @@
+nohup: ignoring input
+Dataset Building
+Postprocessor Stage2 ReDetect:  False
+Dataset dir: /datasets/OPV2V/train
+too many cavs reinitialize
+Postprocessor Stage2 ReDetect:  False
+Dataset dir: /datasets/OPV2V/validate
+too many cavs reinitialize
+too many cavs reinitialize
+Creating Model
+Postprocessor Stage2 ReDetect:  False
+is_resnet
+loading model from /data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth
+
+==== Parameters in Model but not in Checkpoint ====
+Missing in checkpoint: roi_head.condition_encoder.0.weight
+Missing in checkpoint: roi_head.condition_encoder.0.bias
+Missing in checkpoint: roi_head.condition_encoder.1.weight
+Missing in checkpoint: roi_head.condition_encoder.1.bias
+Missing in checkpoint: roi_head.condition_encoder.3.weight
+Missing in checkpoint: roi_head.condition_encoder.3.bias
+Missing in checkpoint: mdd.unet.temb.dense.0.weight
+Missing in checkpoint: mdd.unet.temb.dense.0.bias
+Missing in checkpoint: mdd.unet.temb.dense.1.weight
+Missing in checkpoint: mdd.unet.temb.dense.1.bias
+Missing in checkpoint: mdd.unet.conv_in.weight
+Missing in checkpoint: mdd.unet.conv_in.bias
+Missing in checkpoint: mdd.unet.down.0.block.0.norm1.weight
+Missing in checkpoint: mdd.unet.down.0.block.0.norm1.bias
+Missing in checkpoint: mdd.unet.down.0.block.0.conv1.weight
+Missing in checkpoint: mdd.unet.down.0.block.0.conv1.bias
+Missing in checkpoint: mdd.unet.down.0.block.0.temb_proj.weight
+Missing in checkpoint: mdd.unet.down.0.block.0.temb_proj.bias
+Missing in checkpoint: mdd.unet.down.0.block.0.norm2.weight
+Missing in checkpoint: mdd.unet.down.0.block.0.norm2.bias
+Missing in checkpoint: mdd.unet.down.0.block.0.conv2.weight
+Missing in checkpoint: mdd.unet.down.0.block.0.conv2.bias
+Missing in checkpoint: mdd.unet.down.0.block.1.norm1.weight
+Missing in checkpoint: mdd.unet.down.0.block.1.norm1.bias
+Missing in checkpoint: mdd.unet.down.0.block.1.conv1.weight
+Missing in checkpoint: mdd.unet.down.0.block.1.conv1.bias
+Missing in checkpoint: mdd.unet.down.0.block.1.temb_proj.weight
+Missing in checkpoint: mdd.unet.down.0.block.1.temb_proj.bias
+Missing in checkpoint: mdd.unet.down.0.block.1.norm2.weight
+Missing in checkpoint: mdd.unet.down.0.block.1.norm2.bias
+Missing in checkpoint: mdd.unet.down.0.block.1.conv2.weight
+Missing in checkpoint: mdd.unet.down.0.block.1.conv2.bias
+Missing in checkpoint: mdd.unet.down.0.downsample.conv.weight
+Missing in checkpoint: mdd.unet.down.0.downsample.conv.bias
+Missing in checkpoint: mdd.unet.down.1.block.0.norm1.weight
+Missing in checkpoint: mdd.unet.down.1.block.0.norm1.bias
+Missing in checkpoint: mdd.unet.down.1.block.0.conv1.weight
+Missing in checkpoint: mdd.unet.down.1.block.0.conv1.bias
+Missing in checkpoint: mdd.unet.down.1.block.0.temb_proj.weight
+Missing in checkpoint: mdd.unet.down.1.block.0.temb_proj.bias
+Missing in checkpoint: mdd.unet.down.1.block.0.norm2.weight
+Missing in checkpoint: mdd.unet.down.1.block.0.norm2.bias
+Missing in checkpoint: mdd.unet.down.1.block.0.conv2.weight
+Missing in checkpoint: mdd.unet.down.1.block.0.conv2.bias
+Missing in checkpoint: mdd.unet.down.1.block.0.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.down.1.block.0.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.down.1.block.1.norm1.weight
+Missing in checkpoint: mdd.unet.down.1.block.1.norm1.bias
+Missing in checkpoint: mdd.unet.down.1.block.1.conv1.weight
+Missing in checkpoint: mdd.unet.down.1.block.1.conv1.bias
+Missing in checkpoint: mdd.unet.down.1.block.1.temb_proj.weight
+Missing in checkpoint: mdd.unet.down.1.block.1.temb_proj.bias
+Missing in checkpoint: mdd.unet.down.1.block.1.norm2.weight
+Missing in checkpoint: mdd.unet.down.1.block.1.norm2.bias
+Missing in checkpoint: mdd.unet.down.1.block.1.conv2.weight
+Missing in checkpoint: mdd.unet.down.1.block.1.conv2.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.scale
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.ff.norm.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.ff.norm.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.ff.proj1.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.ff.proj1.bias
+Missing in checkpoint: mdd.unet.down.1.attn.0.ff.proj2.weight
+Missing in checkpoint: mdd.unet.down.1.attn.0.ff.proj2.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.scale
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.ff.norm.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.ff.norm.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.ff.proj1.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.ff.proj1.bias
+Missing in checkpoint: mdd.unet.down.1.attn.1.ff.proj2.weight
+Missing in checkpoint: mdd.unet.down.1.attn.1.ff.proj2.bias
+Missing in checkpoint: mdd.unet.down.1.downsample.conv.weight
+Missing in checkpoint: mdd.unet.down.1.downsample.conv.bias
+Missing in checkpoint: mdd.unet.down.2.block.0.norm1.weight
+Missing in checkpoint: mdd.unet.down.2.block.0.norm1.bias
+Missing in checkpoint: mdd.unet.down.2.block.0.conv1.weight
+Missing in checkpoint: mdd.unet.down.2.block.0.conv1.bias
+Missing in checkpoint: mdd.unet.down.2.block.0.temb_proj.weight
+Missing in checkpoint: mdd.unet.down.2.block.0.temb_proj.bias
+Missing in checkpoint: mdd.unet.down.2.block.0.norm2.weight
+Missing in checkpoint: mdd.unet.down.2.block.0.norm2.bias
+Missing in checkpoint: mdd.unet.down.2.block.0.conv2.weight
+Missing in checkpoint: mdd.unet.down.2.block.0.conv2.bias
+Missing in checkpoint: mdd.unet.down.2.block.0.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.down.2.block.0.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.down.2.block.1.norm1.weight
+Missing in checkpoint: mdd.unet.down.2.block.1.norm1.bias
+Missing in checkpoint: mdd.unet.down.2.block.1.conv1.weight
+Missing in checkpoint: mdd.unet.down.2.block.1.conv1.bias
+Missing in checkpoint: mdd.unet.down.2.block.1.temb_proj.weight
+Missing in checkpoint: mdd.unet.down.2.block.1.temb_proj.bias
+Missing in checkpoint: mdd.unet.down.2.block.1.norm2.weight
+Missing in checkpoint: mdd.unet.down.2.block.1.norm2.bias
+Missing in checkpoint: mdd.unet.down.2.block.1.conv2.weight
+Missing in checkpoint: mdd.unet.down.2.block.1.conv2.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.scale
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.ff.norm.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.ff.norm.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.ff.proj1.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.ff.proj1.bias
+Missing in checkpoint: mdd.unet.down.2.attn.0.ff.proj2.weight
+Missing in checkpoint: mdd.unet.down.2.attn.0.ff.proj2.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.scale
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.ff.norm.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.ff.norm.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.ff.proj1.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.ff.proj1.bias
+Missing in checkpoint: mdd.unet.down.2.attn.1.ff.proj2.weight
+Missing in checkpoint: mdd.unet.down.2.attn.1.ff.proj2.bias
+Missing in checkpoint: mdd.unet.mid.block_1.norm1.weight
+Missing in checkpoint: mdd.unet.mid.block_1.norm1.bias
+Missing in checkpoint: mdd.unet.mid.block_1.conv1.weight
+Missing in checkpoint: mdd.unet.mid.block_1.conv1.bias
+Missing in checkpoint: mdd.unet.mid.block_1.temb_proj.weight
+Missing in checkpoint: mdd.unet.mid.block_1.temb_proj.bias
+Missing in checkpoint: mdd.unet.mid.block_1.norm2.weight
+Missing in checkpoint: mdd.unet.mid.block_1.norm2.bias
+Missing in checkpoint: mdd.unet.mid.block_1.conv2.weight
+Missing in checkpoint: mdd.unet.mid.block_1.conv2.bias
+Missing in checkpoint: mdd.unet.mid.att.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.mid.att.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.mid.att.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.mid.att.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.mid.att.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.mid.att.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.scale
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.mid.att.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.mid.att.ff.norm.weight
+Missing in checkpoint: mdd.unet.mid.att.ff.norm.bias
+Missing in checkpoint: mdd.unet.mid.att.ff.proj1.weight
+Missing in checkpoint: mdd.unet.mid.att.ff.proj1.bias
+Missing in checkpoint: mdd.unet.mid.att.ff.proj2.weight
+Missing in checkpoint: mdd.unet.mid.att.ff.proj2.bias
+Missing in checkpoint: mdd.unet.mid.block_2.norm1.weight
+Missing in checkpoint: mdd.unet.mid.block_2.norm1.bias
+Missing in checkpoint: mdd.unet.mid.block_2.conv1.weight
+Missing in checkpoint: mdd.unet.mid.block_2.conv1.bias
+Missing in checkpoint: mdd.unet.mid.block_2.temb_proj.weight
+Missing in checkpoint: mdd.unet.mid.block_2.temb_proj.bias
+Missing in checkpoint: mdd.unet.mid.block_2.norm2.weight
+Missing in checkpoint: mdd.unet.mid.block_2.norm2.bias
+Missing in checkpoint: mdd.unet.mid.block_2.conv2.weight
+Missing in checkpoint: mdd.unet.mid.block_2.conv2.bias
+Missing in checkpoint: mdd.unet.up.0.block.0.norm1.weight
+Missing in checkpoint: mdd.unet.up.0.block.0.norm1.bias
+Missing in checkpoint: mdd.unet.up.0.block.0.conv1.weight
+Missing in checkpoint: mdd.unet.up.0.block.0.conv1.bias
+Missing in checkpoint: mdd.unet.up.0.block.0.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.0.block.0.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.0.block.0.norm2.weight
+Missing in checkpoint: mdd.unet.up.0.block.0.norm2.bias
+Missing in checkpoint: mdd.unet.up.0.block.0.conv2.weight
+Missing in checkpoint: mdd.unet.up.0.block.0.conv2.bias
+Missing in checkpoint: mdd.unet.up.0.block.0.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.0.block.0.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.0.block.1.norm1.weight
+Missing in checkpoint: mdd.unet.up.0.block.1.norm1.bias
+Missing in checkpoint: mdd.unet.up.0.block.1.conv1.weight
+Missing in checkpoint: mdd.unet.up.0.block.1.conv1.bias
+Missing in checkpoint: mdd.unet.up.0.block.1.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.0.block.1.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.0.block.1.norm2.weight
+Missing in checkpoint: mdd.unet.up.0.block.1.norm2.bias
+Missing in checkpoint: mdd.unet.up.0.block.1.conv2.weight
+Missing in checkpoint: mdd.unet.up.0.block.1.conv2.bias
+Missing in checkpoint: mdd.unet.up.0.block.1.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.0.block.1.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.0.block.2.norm1.weight
+Missing in checkpoint: mdd.unet.up.0.block.2.norm1.bias
+Missing in checkpoint: mdd.unet.up.0.block.2.conv1.weight
+Missing in checkpoint: mdd.unet.up.0.block.2.conv1.bias
+Missing in checkpoint: mdd.unet.up.0.block.2.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.0.block.2.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.0.block.2.norm2.weight
+Missing in checkpoint: mdd.unet.up.0.block.2.norm2.bias
+Missing in checkpoint: mdd.unet.up.0.block.2.conv2.weight
+Missing in checkpoint: mdd.unet.up.0.block.2.conv2.bias
+Missing in checkpoint: mdd.unet.up.0.block.2.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.0.block.2.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.1.block.0.norm1.weight
+Missing in checkpoint: mdd.unet.up.1.block.0.norm1.bias
+Missing in checkpoint: mdd.unet.up.1.block.0.conv1.weight
+Missing in checkpoint: mdd.unet.up.1.block.0.conv1.bias
+Missing in checkpoint: mdd.unet.up.1.block.0.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.1.block.0.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.1.block.0.norm2.weight
+Missing in checkpoint: mdd.unet.up.1.block.0.norm2.bias
+Missing in checkpoint: mdd.unet.up.1.block.0.conv2.weight
+Missing in checkpoint: mdd.unet.up.1.block.0.conv2.bias
+Missing in checkpoint: mdd.unet.up.1.block.0.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.1.block.0.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.1.block.1.norm1.weight
+Missing in checkpoint: mdd.unet.up.1.block.1.norm1.bias
+Missing in checkpoint: mdd.unet.up.1.block.1.conv1.weight
+Missing in checkpoint: mdd.unet.up.1.block.1.conv1.bias
+Missing in checkpoint: mdd.unet.up.1.block.1.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.1.block.1.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.1.block.1.norm2.weight
+Missing in checkpoint: mdd.unet.up.1.block.1.norm2.bias
+Missing in checkpoint: mdd.unet.up.1.block.1.conv2.weight
+Missing in checkpoint: mdd.unet.up.1.block.1.conv2.bias
+Missing in checkpoint: mdd.unet.up.1.block.1.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.1.block.1.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.1.block.2.norm1.weight
+Missing in checkpoint: mdd.unet.up.1.block.2.norm1.bias
+Missing in checkpoint: mdd.unet.up.1.block.2.conv1.weight
+Missing in checkpoint: mdd.unet.up.1.block.2.conv1.bias
+Missing in checkpoint: mdd.unet.up.1.block.2.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.1.block.2.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.1.block.2.norm2.weight
+Missing in checkpoint: mdd.unet.up.1.block.2.norm2.bias
+Missing in checkpoint: mdd.unet.up.1.block.2.conv2.weight
+Missing in checkpoint: mdd.unet.up.1.block.2.conv2.bias
+Missing in checkpoint: mdd.unet.up.1.block.2.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.1.block.2.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.scale
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.ff.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.ff.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.ff.proj1.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.ff.proj1.bias
+Missing in checkpoint: mdd.unet.up.1.attn.0.ff.proj2.weight
+Missing in checkpoint: mdd.unet.up.1.attn.0.ff.proj2.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.scale
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.ff.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.ff.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.ff.proj1.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.ff.proj1.bias
+Missing in checkpoint: mdd.unet.up.1.attn.1.ff.proj2.weight
+Missing in checkpoint: mdd.unet.up.1.attn.1.ff.proj2.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.scale
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.ff.norm.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.ff.norm.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.ff.proj1.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.ff.proj1.bias
+Missing in checkpoint: mdd.unet.up.1.attn.2.ff.proj2.weight
+Missing in checkpoint: mdd.unet.up.1.attn.2.ff.proj2.bias
+Missing in checkpoint: mdd.unet.up.1.upsample.conv.weight
+Missing in checkpoint: mdd.unet.up.1.upsample.conv.bias
+Missing in checkpoint: mdd.unet.up.2.block.0.norm1.weight
+Missing in checkpoint: mdd.unet.up.2.block.0.norm1.bias
+Missing in checkpoint: mdd.unet.up.2.block.0.conv1.weight
+Missing in checkpoint: mdd.unet.up.2.block.0.conv1.bias
+Missing in checkpoint: mdd.unet.up.2.block.0.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.2.block.0.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.2.block.0.norm2.weight
+Missing in checkpoint: mdd.unet.up.2.block.0.norm2.bias
+Missing in checkpoint: mdd.unet.up.2.block.0.conv2.weight
+Missing in checkpoint: mdd.unet.up.2.block.0.conv2.bias
+Missing in checkpoint: mdd.unet.up.2.block.0.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.2.block.0.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.2.block.1.norm1.weight
+Missing in checkpoint: mdd.unet.up.2.block.1.norm1.bias
+Missing in checkpoint: mdd.unet.up.2.block.1.conv1.weight
+Missing in checkpoint: mdd.unet.up.2.block.1.conv1.bias
+Missing in checkpoint: mdd.unet.up.2.block.1.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.2.block.1.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.2.block.1.norm2.weight
+Missing in checkpoint: mdd.unet.up.2.block.1.norm2.bias
+Missing in checkpoint: mdd.unet.up.2.block.1.conv2.weight
+Missing in checkpoint: mdd.unet.up.2.block.1.conv2.bias
+Missing in checkpoint: mdd.unet.up.2.block.1.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.2.block.1.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.2.block.2.norm1.weight
+Missing in checkpoint: mdd.unet.up.2.block.2.norm1.bias
+Missing in checkpoint: mdd.unet.up.2.block.2.conv1.weight
+Missing in checkpoint: mdd.unet.up.2.block.2.conv1.bias
+Missing in checkpoint: mdd.unet.up.2.block.2.temb_proj.weight
+Missing in checkpoint: mdd.unet.up.2.block.2.temb_proj.bias
+Missing in checkpoint: mdd.unet.up.2.block.2.norm2.weight
+Missing in checkpoint: mdd.unet.up.2.block.2.norm2.bias
+Missing in checkpoint: mdd.unet.up.2.block.2.conv2.weight
+Missing in checkpoint: mdd.unet.up.2.block.2.conv2.bias
+Missing in checkpoint: mdd.unet.up.2.block.2.nin_shortcut.weight
+Missing in checkpoint: mdd.unet.up.2.block.2.nin_shortcut.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.scale
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.ff.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.ff.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.ff.proj1.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.ff.proj1.bias
+Missing in checkpoint: mdd.unet.up.2.attn.0.ff.proj2.weight
+Missing in checkpoint: mdd.unet.up.2.attn.0.ff.proj2.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.scale
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.ff.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.ff.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.ff.proj1.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.ff.proj1.bias
+Missing in checkpoint: mdd.unet.up.2.attn.1.ff.proj2.weight
+Missing in checkpoint: mdd.unet.up.2.attn.1.ff.proj2.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.self_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.self_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.self_attn.qkv.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.self_attn.qkv.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.self_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.self_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.scale
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.q_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.q_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.k_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.k_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.v_proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.v_proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.proj.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.cross_attn.proj.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.ff.norm.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.ff.norm.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.ff.proj1.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.ff.proj1.bias
+Missing in checkpoint: mdd.unet.up.2.attn.2.ff.proj2.weight
+Missing in checkpoint: mdd.unet.up.2.attn.2.ff.proj2.bias
+Missing in checkpoint: mdd.unet.up.2.upsample.conv.weight
+Missing in checkpoint: mdd.unet.up.2.upsample.conv.bias
+Missing in checkpoint: mdd.unet.norm_out.weight
+Missing in checkpoint: mdd.unet.norm_out.bias
+Missing in checkpoint: mdd.unet.conv_out.weight
+Missing in checkpoint: mdd.unet.conv_out.bias
+Missing in checkpoint: dete_convertor.0.weight
+Missing in checkpoint: dete_convertor.0.bias
+Missing in checkpoint: dete_convertor.2.weight
+Missing in checkpoint: dete_convertor.2.bias
+Missing in checkpoint: diff_fc_layers.0.weight
+Missing in checkpoint: diff_fc_layers.0.bias
+Missing in checkpoint: diff_fc_layers.3.weight
+Missing in checkpoint: diff_fc_layers.3.bias
+Missing in checkpoint: diff_fc_layers.6.weight
+Missing in checkpoint: diff_fc_layers.6.bias
+Missing in checkpoint: cls_layers.0.weight
+Missing in checkpoint: cls_layers.3.weight
+Missing in checkpoint: cls_layers.6.weight
+Missing in checkpoint: cls_layers.6.bias
+Missing in checkpoint: iou_layers.0.weight
+Missing in checkpoint: iou_layers.3.weight
+Missing in checkpoint: iou_layers.6.weight
+Missing in checkpoint: iou_layers.6.bias
+Missing in checkpoint: reg_layers.0.weight
+Missing in checkpoint: reg_layers.3.weight
+Missing in checkpoint: reg_layers.6.weight
+Missing in checkpoint: reg_layers.6.bias
+
+==== Parameters Successfully Loaded ====
+Loaded: pillar_vfe.pfn_layers.0.linear.weight, Shape: torch.Size([64, 10])
+Loaded: pillar_vfe.pfn_layers.0.norm.weight, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.bias, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.running_mean, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.running_var, Shape: torch.Size([64])
+Loaded: pillar_vfe.pfn_layers.0.norm.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.0.conv1.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.0.bn1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.0.conv2.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.0.bn2.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.0.downsample.0.weight, Shape: torch.Size([64, 64, 1, 1])
+Loaded: backbone.resnet.layer0.0.downsample.1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.0.downsample.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.1.conv1.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.1.bn1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.1.conv2.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.1.bn2.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.1.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.2.conv1.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.2.bn1.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer0.2.conv2.weight, Shape: torch.Size([64, 64, 3, 3])
+Loaded: backbone.resnet.layer0.2.bn2.weight, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.bias, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.running_mean, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.running_var, Shape: torch.Size([64])
+Loaded: backbone.resnet.layer0.2.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.0.conv1.weight, Shape: torch.Size([128, 64, 3, 3])
+Loaded: backbone.resnet.layer1.0.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.0.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.0.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.0.downsample.0.weight, Shape: torch.Size([128, 64, 1, 1])
+Loaded: backbone.resnet.layer1.0.downsample.1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.0.downsample.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.1.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.1.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.1.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.1.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.1.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.2.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.2.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.2.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.2.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.2.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.3.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.3.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.3.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.3.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.3.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.4.conv1.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.4.bn1.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer1.4.conv2.weight, Shape: torch.Size([128, 128, 3, 3])
+Loaded: backbone.resnet.layer1.4.bn2.weight, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.bias, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.running_mean, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.running_var, Shape: torch.Size([128])
+Loaded: backbone.resnet.layer1.4.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.0.conv1.weight, Shape: torch.Size([256, 128, 3, 3])
+Loaded: backbone.resnet.layer2.0.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.0.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.0.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.0.downsample.0.weight, Shape: torch.Size([256, 128, 1, 1])
+Loaded: backbone.resnet.layer2.0.downsample.1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.0.downsample.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.1.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.1.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.1.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.1.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.1.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.2.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.2.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.2.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.2.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.2.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.3.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.3.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.3.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.3.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.3.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.4.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.4.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.4.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.4.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.4.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.5.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.5.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.5.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.5.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.5.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.6.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.6.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.6.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.6.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.6.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.7.conv1.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.7.bn1.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.resnet.layer2.7.conv2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: backbone.resnet.layer2.7.bn2.weight, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.bias, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.running_mean, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.running_var, Shape: torch.Size([256])
+Loaded: backbone.resnet.layer2.7.bn2.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.deblocks.0.0.weight, Shape: torch.Size([64, 128, 1, 1])
+Loaded: backbone.deblocks.0.1.weight, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.bias, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.deblocks.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.deblocks.1.0.weight, Shape: torch.Size([128, 128, 2, 2])
+Loaded: backbone.deblocks.1.1.weight, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.bias, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.deblocks.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: backbone.deblocks.2.0.weight, Shape: torch.Size([256, 128, 4, 4])
+Loaded: backbone.deblocks.2.1.weight, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.bias, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.running_mean, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.running_var, Shape: torch.Size([128])
+Loaded: backbone.deblocks.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: shrink_conv.layers.0.double_conv.0.weight, Shape: torch.Size([256, 384, 3, 3])
+Loaded: shrink_conv.layers.0.double_conv.0.bias, Shape: torch.Size([256])
+Loaded: shrink_conv.layers.0.double_conv.2.weight, Shape: torch.Size([256, 256, 3, 3])
+Loaded: shrink_conv.layers.0.double_conv.2.bias, Shape: torch.Size([256])
+Loaded: head.conv_box.weight, Shape: torch.Size([14, 256, 1, 1])
+Loaded: head.conv_box.bias, Shape: torch.Size([14])
+Loaded: head.conv_cls.weight, Shape: torch.Size([2, 256, 1, 1])
+Loaded: head.conv_cls.bias, Shape: torch.Size([2])
+Loaded: head.conv_iou.weight, Shape: torch.Size([2, 256, 1, 1])
+Loaded: head.conv_dir.weight, Shape: torch.Size([4, 256, 1, 1])
+Loaded: head.conv_dir.bias, Shape: torch.Size([4])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.0.weight, Shape: torch.Size([16, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.0.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.weight, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.running_mean, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.running_var, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.0.weight, Shape: torch.Size([16, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.0.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.weight, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.running_mean, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.running_var, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.0.weight, Shape: torch.Size([32, 128])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.0.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.weight, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.running_mean, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.running_var, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.0.weight, Shape: torch.Size([64, 256])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_q.3.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.0.weight, Shape: torch.Size([16, 16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.0.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.weight, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.bias, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.running_mean, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.running_var, Shape: torch.Size([16])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.0.weight, Shape: torch.Size([32, 32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.0.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.weight, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.running_mean, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.running_var, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.0.weight, Shape: torch.Size([64, 64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.0.weight, Shape: torch.Size([128, 128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.0.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.weight, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.running_mean, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.running_var, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.stacked_q.3.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.0.weight, Shape: torch.Size([32, 512])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.weight, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.bias, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.running_mean, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.running_var, Shape: torch.Size([32])
+Loaded: rmpa.msa_point_feature_fusion.point_feature_fusion.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.0.weight, Shape: torch.Size([64, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.0.weight, Shape: torch.Size([64, 64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.0.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.weight, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.bias, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.running_mean, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.running_var, Shape: torch.Size([64])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.0.weight, Shape: torch.Size([128, 128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.0.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.weight, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.bias, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.running_mean, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.running_var, Shape: torch.Size([128])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.2.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.0.weight, Shape: torch.Size([256, 256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.0.bias, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.weight, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.bias, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.running_mean, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.running_var, Shape: torch.Size([256])
+Loaded: rmpa.msa_point_feature_fusion.deal_k.3.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.0.weight, Shape: torch.Size([64, 35, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.3.weight, Shape: torch.Size([64, 64, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.0.4.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.0.weight, Shape: torch.Size([64, 35, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.1.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.3.weight, Shape: torch.Size([64, 64, 1, 1])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.weight, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.bias, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.running_mean, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.running_var, Shape: torch.Size([64])
+Loaded: roi_head.roi_grid_pool_layer.mlps.1.4.num_batches_tracked, Shape: torch.Size([])
+Loaded: roi_head.shared_fc_layers.0.weight, Shape: torch.Size([1024, 27648, 1])
+Loaded: roi_head.shared_fc_layers.3.weight, Shape: torch.Size([512, 1024, 1])
+Loaded: roi_head.convertor.0.weight, Shape: torch.Size([1024, 512, 1])
+Loaded: roi_head.convertor.3.weight, Shape: torch.Size([512, 1024, 1])
+
+Number of parameters successfully loaded: 363/854
+model data =  tensor(10470448.)
+解冻层: reg_layers.0.weight
+解冻层: reg_layers.3.weight
+解冻层: reg_layers.6.weight
+解冻层: reg_layers.6.bias
+总共解冻 4 个参数组
+从第 78 个epoch恢复训练
+Training start
+batch size:  8
+learning rate 0.000000
+Step 0:
+  当前全局max_log_absmean: [0.048424478620290756, 0.04821837693452835, 0.6554811000823975]
+  当前全局max_log_max_dist: 1.0489320755004883
+/datasets/OPV2V/train/2021_09_09_22_21_11/6273/000164.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_24_12_19_30/4066/000139.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_22_10_10_40/7655/000081.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_09_02_56/440/000100.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_16_22_26_54/659/000297.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_19_11_02/1188/000098.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000073.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_16_22_26_54/659/000199.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_23_21_21/6871/000587.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_23_21_21/6871/000265.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_13_20_58/1252/000668.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_13_20_58/1252/000722.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000141.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_17_07_55/407/000203.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000773.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_20_16_20_46/1729/000258.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_21_38_28/1179/000230.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_22_21_11/6273/000264.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000161.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000129.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_19_15_07_39/1599/000068.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_19_15_07_39/1599/000068.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_16_22_26_54/659/000605.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000133.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_23_21_21/6871/000733.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_21_38_28/1179/000302.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_13_20_58/1252/000078.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_22_09_43_53/6854/000203.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_20_16_20_46/1729/000206.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_10_47_16/5606/000328.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000163.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_23_21_21/6871/000661.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_21_15_41_04/4172/000130.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_11_06_41/2485/000126.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_22_10_46_58/3661/000083.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_22_10_10_40/7655/000103.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_16_22_26_54/659/000217.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_21_21_35_56/2845/000290.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_21_21_35_56/2845/000192.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_20_21_00_19/1867/000150.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_22_08_39_02/3864/000228.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_19_11_02/1188/000230.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_24_09_58_32/727/000082.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_16_22_26_54/659/000423.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_19_27_57/12598/000072.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_20_21_00_19/1867/000218.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_21_22_21_37/2996/000173.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_21_38_28/1179/000160.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000079.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_21_38_28/1179/000458.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_10_47_16/5606/000092.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_23_21_21/6871/000279.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_13_20_58/1252/000516.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_24_09_58_32/727/000240.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_23_21_21/6871/000273.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_22_09_43_53/6854/000113.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_22_10_10_40/7655/000069.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000139.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_20_21_00_19/1867/000110.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_13_20_58/1252/000486.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_20_21_00_19/1867/000088.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000081.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_24_12_19_30/4066/000517.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_24_12_19_30/4066/000517.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_09_13_20_58/1252/000538.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_24_12_19_30/4066/000069.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_20_16_20_46/1729/000228.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000175.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_09_10_12_07_11/243/000109.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_22_31_01/957/000266.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_22_31_01/957/000176.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_23_11_22_46/6721/000345.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_19_11_02/1188/000172.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_21_38_28/1179/000072.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_24_12_19_30/4066/000359.yaml
+所有box都没有点云？？
+/datasets/OPV2V/train/2021_08_18_23_23_19/1465/000262.yaml
+所有box都没有点云？？
+too many cavs reinitialize
+Training Finished, checkpoints saved to /data/gkx/Code/opencood/tools/../logs/opv2v_point_pillar_lidar_early_2025_06_24_11_48_28
+==================================================
+最终统计结果:
+max_log_mean_offset_0: 0.048776
+max_log_mean_offset_1: 0.048779
+max_log_mean_offset_2: 0.671800
+max_log_max_dist: 1.086902
+==================================================

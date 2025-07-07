@@ -228,8 +228,8 @@ class PillarVFE(nn.Module):
             # 计算每个点到质心的相对偏移
             relative_offsets = valid_points - points_mean.unsqueeze(1)  # [M, 16, 3]
             
-            # 计算有效点的平均相对偏移（使用mask确保只考虑有效点）
-            mean_relative_offsets = (relative_offsets * points_mask.float()).sum(dim=1) / \
+            # 计算有效点的绝对平均偏移（使用mask确保只考虑有效点）
+            mean_relative_offsets = (torch.abs(relative_offsets) * points_mask.float()).sum(dim=1) / \
                                 voxel_num_points.unsqueeze(-1).float()  # [M, 3]
             
             # 2. 计算点云方差 Variance [M, 3]
@@ -273,15 +273,10 @@ class PillarVFE(nn.Module):
             # 将voxel_num_points转换为浮点数并增加维度 [M, 1]
             points_count = voxel_num_points.float().unsqueeze(-1)
             
-            # 4. 新增特征：点密度 (Point Density) [M, 1]
-            # 定义为体素内点数与最大点数的比值
-            point_density = voxel_num_points.float() / 16
-            point_density = point_density.unsqueeze(-1) # [M, 1]
-            
             # 拼接所有特征 [M, 4]
-            statistical_features = torch.cat([mean_relative_offsets,points_count], dim=1)  #mean_relative_offsets
-            # 拼接所有特征 [M, 8] (原来是[M, 7])
-            # statistical_features = torch.cat([mean_relative_offsets, variance, max_distances, points_count], dim=1)
+            statistical_features = torch.cat([std_dev, points_count], dim=1)
+            # statistical_features = torch.cat([mean_relative_offsets, std_dev, max_distances, points_count], dim=1)  #mean_relative_offsets
+    
             # # 处理只有一个点的情况（方差和最大距离应为0）！！导致生成了很多0
             # single_point_mask = (voxel_num_points == 1).unsqueeze(-1)  # [M, 1]
             # statistical_features[:, 1:4] = statistical_features[:, 1:4] * (~single_point_mask)  # 注意这里改为1:4，因为points_count不需要置零
@@ -289,10 +284,6 @@ class PillarVFE(nn.Module):
             # 将统计特征添加到batch_dict中
             # statistical_features = self.normalize_statistical_features(statistical_features)
             batch_dict['pillar_features'] = statistical_features
-            
-            # 在返回之前添加分析
-            if False:  # 可以选择只在训练时分析
-                self.analyze_features(statistical_features)
         
             # features = features.view(features.size(0), 8, 20) # 将 [N, 16, 10] 重塑为 [N, 8, 20]
             # features = features.mean(dim=1) # 在第二维(dim=1)上取平均，结果为 [N, 20]

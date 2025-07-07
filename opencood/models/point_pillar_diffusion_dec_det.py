@@ -75,6 +75,7 @@ class PointPillarDiffusionDecDet(nn.Module):
         self.voxel_size = args['voxel_size']
         self.train_stage2 = args['activate_stage2']
         self.is_inference = args.get('is_inference', False)
+        self.use_diff = args.get('use_diffusion', False)
         
         self.pre_processor = SpVoxelPreprocessor(args["preprocess"], train = True)
         self.post_processor = FpvrcnnPostprocessor(args['post_processer'], train=True)
@@ -94,7 +95,6 @@ class PointPillarDiffusionDecDet(nn.Module):
             print("not_resnet")
             self.backbone = BaseBEVBackbone(args['base_bev_backbone'],
                                             64)  
-        
         # self.voxel_preprocessor = build_preprocessor(args['preprocess'], train=True)
         # self.fusion_net = nn.ModuleList()
         # for i in range(len(args['base_bev_backbone']['layer_nums'])):
@@ -148,6 +148,7 @@ class PointPillarDiffusionDecDet(nn.Module):
                                                   output_channels=args['roi_head']['num_cls'] * 7)
         self._init_weights(weight_init='xavier')
 
+
     def _init_weights(self, weight_init='xavier'):
         if weight_init == 'kaiming':
             init_func = nn.init.kaiming_normal_
@@ -186,6 +187,23 @@ class PointPillarDiffusionDecDet(nn.Module):
                           bias=True))
         fc_layers = nn.Sequential(*fc_layers)
         return fc_layers, pre_channel    
+    
+    def stage1_fix(self):
+        # 固定参数
+        modules_to_fix = [
+            self.pillar_vfe, self.scatter_dec, self.backbone, self.head,
+        ] #self.rmpa, self.roi_head, self.scatter, self.mdd
+        
+        if self.compression:
+            modules_to_fix.append(self.naive_compressor)
+        if self.shrink_flag:
+            modules_to_fix.append(self.shrink_conv)
+        
+        for module in modules_to_fix:
+            # 固定BN层
+            for submodule in module.modules():
+                if isinstance(submodule, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+                    submodule.eval()
     
     def get_processed_lidar(self, batch_dict):
         processed_lidar_batch = []
@@ -353,7 +371,7 @@ class PointPillarDiffusionDecDet(nn.Module):
             # 得到低层BEV特征 [B,C,H,W] 
             batch_dict = self.pillar_vfe(batch_dict, stage='diff')
             batch_dict = self.scatter(batch_dict) # torch.Size([B, 10, 24, 28])
-                
+
             # 将box抠出来的bev特征输入到mdd中
             # batch_dict['spatial_features'] = torch.randn(1, 10, 50, 50).to(voxel_features.device)
             batch_dict = self.mdd(batch_dict)
@@ -363,11 +381,11 @@ class PointPillarDiffusionDecDet(nn.Module):
                            'target':batch_dict['target'],
                            't': batch_dict['t'],
                            }
-            # # 可视化特征
+            # 可视化特征
             # viz_config = [
             #     # ('batch_gt_spatial_features', 'gt_bev'),
             #     ('gt_x0', 'gt_x0'),
-            #     # ('norm_gt_x0', 'norm_gt_x0'),
+            #     ('norm_gt_x0', 'norm_gt_x0'),
             #     # ('gt_noise', 'gt_noise'),
             #     # ('pred_out', 'pre_bev'),
             #     ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
@@ -393,18 +411,18 @@ class PointPillarDiffusionDecDet(nn.Module):
             #         # global_vmin, 
             #         # global_vmax
             #     )
-        # 第二阶段预测输出 [42,256]  --> [42,256,1]
-        transformed_factors = [self.dete_convertor(factor) for factor in batch_dict['fused_object_factors']]
-        rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in transformed_factors] # [42, 7]
-        rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in transformed_factors] # [42, 1]
-        rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in transformed_factors] # [42, 1]
-        rcnn_cls, rcnn_reg, rcnn_iou = [torch.cat(x, dim=0) for x in [rcnn_cls, rcnn_reg, rcnn_iou]]
-        output_dict['stage2_out'] = {
-                                'rcnn_cls': rcnn_cls,
-                                'rcnn_iou': rcnn_iou,
-                                'rcnn_reg': rcnn_reg,
-                                }
-        batch_dict['stage2_out'] = output_dict['stage2_out']
-        output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
+        # 第二阶段预测输出 [42,256]  --> [42,256,1]    
+        # transformed_factors = [self.dete_convertor(factor) for factor in batch_dict['fused_object_factors']]
+        # rcnn_reg = [self.reg_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in transformed_factors] # [42, 7]
+        # rcnn_iou = [self.iou_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in transformed_factors] # [42, 1]
+        # rcnn_cls = [self.cls_layers(factor.unsqueeze(dim = 2)).transpose(1,2).contiguous().squeeze(dim=1) for factor in transformed_factors] # [42, 1]
+        # rcnn_cls, rcnn_reg, rcnn_iou = [torch.cat(x, dim=0) for x in [rcnn_cls, rcnn_reg, rcnn_iou]]
+        # output_dict['stage2_out'] = {
+        #                         'rcnn_cls': rcnn_cls,
+        #                         'rcnn_iou': rcnn_iou,
+        #                         'rcnn_reg': rcnn_reg,
+        #                         }
+        # batch_dict['stage2_out'] = output_dict['stage2_out']
+        # output_dict['rcnn_label_dict'] = batch_dict['rcnn_label_dict']
 
         return output_dict

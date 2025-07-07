@@ -394,6 +394,7 @@ def calculate_fid(real_features, gen_features):
 
     return fid
 
+
 def normalize_statistical_features(features):
     """
         使用语义一致的归一化，确保：
@@ -401,7 +402,12 @@ def normalize_statistical_features(features):
         2. 归一化方式反映数据的实际意义
     """
     norm_features = features.clone()
-    params = {}
+    params = {
+        'max_log_std_0': 0.0488,
+        'max_log_std_1': 0.0488, 
+        'max_log_std_2': 0.6762,
+        'max_log_points': 2.8332
+    }
     
      # 检查是否是单通道输入
     if features.shape[1] == 1:
@@ -434,51 +440,39 @@ def normalize_statistical_features(features):
         
         return norm_features, params
     
+
     # === 几何特征（前3个通道）===
     for i in range(3):
-        channel = features[:, i]
+        std_channel = features[:, i]
+        points_channel = features[:, 3]
         
-        # 找出0和非0值
-        zero_mask = (channel == 0)
-        non_zero = channel[~zero_mask]
+        # 只区分两种情况：
+        invalid_mask = (points_channel == 0) | (std_channel == -1.0)  # 无效情况（点数0或单点）
+        zero_std_mask = (std_channel == 0.0) & (points_channel > 1)   # 真实方差0（多点重合）
+        positive_mask = (std_channel > 0.0)                           # 正常正值
         
-        if len(non_zero) > 0:
-            # 对非零值应用标准化
-            min_val = non_zero.min()
-            max_val = non_zero.max()
-            params[f'min_{i}'] = min_val.item()
-            params[f'max_{i}'] = max_val.item()
+        if positive_mask.any():
+            log_std = torch.log1p(std_channel[positive_mask])
+            max_log_std = params[f'max_log_std_{i}']
             
-            # 如果有足够的数值范围，进行归一化
-            if max_val - min_val > 1e-10:
-                # 创建临时张量存储归一化结果
-                normalized = torch.zeros_like(channel)
-                
-                # 只对非零值应用归一化，确保0映射到0（中间值）
-                normalized[~zero_mask] = -1.0 + 2.0 * (non_zero - min_val) / (max_val - min_val)
-                
-                # 确保0值映射到特定值
-                normalized[zero_mask] = -1
-                
-                norm_features[:, i] = normalized
-            else:
-                # 如果非零值范围很小，简化处理
-                normalized = torch.zeros_like(channel)
-                normalized[~zero_mask] = 0.5  # 非零值映射到一个适中的正值
-                norm_features[:, i] = normalized
-        else:
-            # 全是0的情况
-            norm_features[:, i] = torch.zeros_like(channel)
+            if max_log_std > 0:
+                normalized_vals = -0.5 + 1.5 * log_std / max_log_std  # 映射到(-0.5, 1]
+                 # 确保不会超出范围
+                normalized_vals = torch.clamp(normalized_vals, max=1.0)
+                norm_features[positive_mask, i] = normalized_vals
+        
+        # 简化的特殊值映射：
+        norm_features[invalid_mask, i] = -1.0      # 所有无效情况 -> -1
+        norm_features[zero_std_mask, i] = -0.5     # 真实方差0 -> -0.5
     
     # === 点数通道（第4个通道）===
     points = features[:, 3]
     zero_mask = (points == 0)
     
-    # 点数映射：0 -> -1, max -> +1, 其他按比例
+    # 点数映射：1 -> -1, max -> +1, 其他按比例
     if torch.max(points) > 0:
         log_points = torch.log1p(points)  # log(1+x)
-        max_log = log_points.max()
-        params['max_log_points'] = max_log.item()
+        max_log = params['max_log_points']
         
         if max_log > 0:
             # 归一化到[-1, 1]，确保0点映射到-1
@@ -541,42 +535,30 @@ def denormalize_statistical_features(normalized_features, normalization_params):
         
         return denormalized_features
     
-    # === 几何特征通道（前3个通道）===
-    for i in range(3):
-        channel = normalized_features[:, i]
-        
-        # 识别不同的值区域
-        zero_value_mask = (channel == -1.0)  # 被映射到-1.0的原始零值
-        
-        # 检查是否有归一化参数
-        if f'min_{i}' in normalization_params and f'max_{i}' in normalization_params:
-            min_val = normalization_params[f'min_{i}']
-            max_val = normalization_params[f'max_{i}']
-            
-            # 检查是否有足够的数值范围
-            if max_val - min_val > 1e-10:
-                # 创建临时张量存储反归一化结果
-                denorm_channel = torch.zeros_like(channel)
-                
-                # 将表示原始零值的-1.0映射回0
-                denorm_channel[zero_value_mask] = 0.0
-                
-                # 将非零值（现在在[-1,1]之外的值）映射回原始范围
-                non_zero_mask = ~zero_value_mask
-                if non_zero_mask.any():
-                    # 从[-1,1]反归一化到原始范围
-                    denorm_channel[non_zero_mask] = min_val + (
-                        (channel[non_zero_mask] + 1.0) / 2.0) * (max_val - min_val)
-                
-                denormalized_features[:, i] = denorm_channel
-            else:
-                # 如果原始数据范围很小
-                denormalized_features[:, i] = torch.zeros_like(channel)
-                denormalized_features[:, i][~zero_value_mask] = min_val
-        else:
-            # 如果没有提供参数，保持0值
-            denormalized_features[:, i] = torch.zeros_like(channel)
     
+    # === 反归一化前3个通道（标准差）===
+    for i in range(3):
+        normalized = normalized_features[:, i]
+        max_log_std = normalization_params[f'max_log_std_{i}']
+        
+        # 识别特殊值(使用适当容差)
+        invalid_mask = normalized < -0.9           # 小于-0.9的为无效标记
+        zero_mask = torch.abs(normalized + 0.5) < 0.05  # 接近-0.5的为真实0
+        normal_mask = normalized > -0.45           # 大于-0.45的为正常值
+        
+        # 初始化输出
+        denormalized_features[:, i] = 0.0
+        
+        # 反归一化正常值
+        if normal_mask.any() and max_log_std > 0:
+            # 逆变换: normalized = -0.5 + 1.5 * log_std / max_log_std
+            # 所以: log_std = (normalized + 0.5) * max_log_std / 1.5
+            log_std = (normalized[normal_mask] + 0.5) * max_log_std / 1.5
+            log_std = torch.clamp(log_std, min=0.0)  # 确保非负
+            std_vals = torch.expm1(log_std)
+            std_vals = torch.clamp(std_vals, min=0.0)  # 确保非负
+            denormalized_features[normal_mask, i] = std_vals
+        
     # === 点数通道（第4个通道）===
     if 'max_log_points' in normalization_params:
         max_log = normalization_params['max_log_points']
@@ -603,3 +585,323 @@ def denormalize_statistical_features(normalized_features, normalization_params):
         denormalized_features[:, 3][normalized_features[:, 3] > -0.99] = 1.0  # 非-1值设为至少1个点
     
     return denormalized_features
+
+# def normalize_statistical_features(features):
+#     """
+#     使用语义一致的归一化，确保：
+#     1. 零值在所有通道都有一致的表示
+#     2. 归一化方式反映数据的实际意义
+    
+#     特征通道说明：
+#     - 0-2: 绝对偏移平均值 (mean_relative_offsets) [M, 3]
+#     - 3-5: 标准差 (std_dev) [M, 3] 
+#     - 6: 最大距离 (max_distances) [M, 1]
+#     - 7: 点数 (points_count) [M, 1]
+#     """
+#     norm_features = features.clone()
+#     params = {
+#         # 绝对偏移平均值的最大log值
+#         'max_log_mean_offset_0': 0.048776,
+#         'max_log_mean_offset_1': 0.048779, 
+#         'max_log_mean_offset_2': 0.671800,
+#         # 标准差的最大log值
+#         'max_log_std_0': 0.0488,
+#         'max_log_std_1': 0.0488, 
+#         'max_log_std_2': 0.6762,
+#         # 最大距离的最大log值
+#         'max_log_max_dist': 1.086902, 
+#         # 点数的最大log值
+#         'max_log_points': 2.8332
+#     }
+    
+#     # 检查是否是单通道输入
+#     if features.shape[1] == 1:
+#         # 单通道情况 - 将其视为点数通道
+#         points = features[:, 0]
+#         zero_mask = (points == 0)
+        
+#         # 点数映射：0 -> -1, max -> +1, 其他按比例
+#         if torch.max(points) > 0:
+#             log_points = torch.log1p(points)  # log(1+x)
+#             max_log = log_points.max()
+#             params['max_log_points'] = max_log.item()
+            
+#             if max_log > 0:
+#                 # 归一化到[-1, 1]，确保0点映射到-1
+#                 normalized = -1.0 + 2.0 * log_points / max_log
+#                 # 额外检查确保0点确实映射到-1
+#                 normalized[zero_mask] = -1.0
+#                 # 保存归一化结果
+#                 norm_features[:, 0] = normalized
+#             else:
+#                 # 如果log后最大值为0
+#                 norm_features[:, 0] = torch.zeros_like(points)
+#                 norm_features[:, 0][zero_mask] = -1.0
+#         else:
+#             # 所有点数都是0
+#             norm_features[:, 0] = torch.full_like(points, -1.0)
+        
+#         return norm_features, params
+    
+#     # 获取点数通道用于判断有效性
+#     points_channel = features[:, 7]  # 现在点数在第8个通道（索引7）
+    
+#     # === 绝对偏移平均值（前3个通道）===
+#     for i in range(3):
+#         mean_offset_channel = features[:, i]
+        
+#         # 判断不同情况：
+#         invalid_mask = (points_channel == 0)  # 无效情况（点数0）
+#         zero_offset_mask = (mean_offset_channel == 0.0) & (points_channel > 0)  # 真实偏移0
+#         positive_mask = (mean_offset_channel > 0.0)  # 正常正值
+        
+#         if positive_mask.any():
+#             log_offset = torch.log1p(mean_offset_channel[positive_mask])
+#             max_log_offset = params[f'max_log_mean_offset_{i}']
+            
+#             if max_log_offset > 0:
+#                 normalized_vals = -0.5 + 1.5 * log_offset / max_log_offset  # 映射到(-0.5, 1]
+#                 # 确保不会超出范围
+#                 normalized_vals = torch.clamp(normalized_vals, max=1.0)
+#                 norm_features[positive_mask, i] = normalized_vals
+        
+#         # 特殊值映射：
+#         norm_features[invalid_mask, i] = -1.0      # 无效情况 -> -1
+#         norm_features[zero_offset_mask, i] = -0.5  # 真实偏移0 -> -0.5
+    
+#     # === 标准差（3-5通道）===
+#     for i in range(3):
+#         std_channel = features[:, i + 3]  # 标准差在3-5通道
+        
+#         # 判断不同情况：
+#         invalid_mask = (points_channel == 0) | (std_channel == -1.0)  # 无效情况
+#         zero_std_mask = (std_channel == 0.0) & (points_channel > 1)   # 真实方差0（多点重合）
+#         positive_mask = (std_channel > 0.0)                           # 正常正值
+        
+#         if positive_mask.any():
+#             log_std = torch.log1p(std_channel[positive_mask])
+#             max_log_std = params[f'max_log_std_{i}']
+            
+#             if max_log_std > 0:
+#                 normalized_vals = -0.5 + 1.5 * log_std / max_log_std  # 映射到(-0.5, 1]
+#                 # 确保不会超出范围
+#                 normalized_vals = torch.clamp(normalized_vals, max=1.0)
+#                 norm_features[positive_mask, i + 3] = normalized_vals
+        
+#         # 特殊值映射：
+#         norm_features[invalid_mask, i + 3] = -1.0      # 无效情况 -> -1
+#         norm_features[zero_std_mask, i + 3] = -0.5     # 真实方差0 -> -0.5
+    
+#     # === 最大距离（第6通道，索引6）===
+#     max_dist_channel = features[:, 6]
+    
+#     # 判断不同情况：
+#     invalid_mask = (points_channel == 0)  # 无效情况（点数0）
+#     zero_dist_mask = (max_dist_channel == 0.0) & (points_channel > 0)  # 真实距离0
+#     positive_mask = (max_dist_channel > 0.0)  # 正常正值
+    
+#     if positive_mask.any():
+#         log_dist = torch.log1p(max_dist_channel[positive_mask])
+#         max_log_dist = params['max_log_max_dist']
+        
+#         if max_log_dist > 0:
+#             normalized_vals = -0.5 + 1.5 * log_dist / max_log_dist  # 映射到(-0.5, 1]
+#             # 确保不会超出范围
+#             normalized_vals = torch.clamp(normalized_vals, max=1.0)
+#             norm_features[positive_mask, 6] = normalized_vals
+    
+#     # 特殊值映射：
+#     norm_features[invalid_mask, 6] = -1.0      # 无效情况 -> -1
+#     norm_features[zero_dist_mask, 6] = -0.5    # 真实距离0 -> -0.5
+    
+#     # === 点数通道（第7通道，索引7）===
+#     points = features[:, 7]
+#     zero_mask = (points == 0)
+    
+#     # 点数映射：0 -> -1, max -> +1, 其他按比例
+#     if torch.max(points) > 0:
+#         log_points = torch.log1p(points)  # log(1+x)
+#         max_log = params['max_log_points']
+        
+#         if max_log > 0:
+#             # 归一化到[-1, 1]，确保0点映射到-1
+#             norm_features[:, 7] = -1.0 + 2.0 * log_points / max_log
+            
+#             # 额外检查确保0点确实映射到-1
+#             if not torch.all(norm_features[zero_mask, 7] == -1.0):
+#                 norm_features[zero_mask, 7] = -1.0
+#         else:
+#             # 所有点数都是0
+#             norm_features[:, 7] = torch.full_like(points, -1.0)
+#     else:
+#         # 所有点数都是0
+#         norm_features[:, 7] = torch.full_like(points, -1.0)
+    
+#     return norm_features, params
+
+# def denormalize_statistical_features(normalized_features, normalization_params):
+#     """
+#     将语义一致的归一化特征反归一化回原始范围
+    
+#     输入:
+#         normalized_features [M, 8] - 归一化到[-1, 1]范围的特征
+#         normalization_params - 归一化时保存的参数字典
+    
+#     输出:
+#         反归一化后的特征 [M, 8]
+        
+#     特征通道说明：
+#     - 0-2: 绝对偏移平均值 (mean_relative_offsets) [M, 3]
+#     - 3-5: 标准差 (std_dev) [M, 3] 
+#     - 6: 最大距离 (max_distances) [M, 1]
+#     - 7: 点数 (points_count) [M, 1]
+#     """
+#     # 复制一份特征，避免修改原始数据
+#     denormalized_features = normalized_features.clone()
+    
+#     # 检查是否是单通道输入
+#     if normalized_features.shape[1] == 1:
+#         # 单通道情况 - 将其视为点数通道
+#         points_normalized = normalized_features[:, 0]
+        
+#         if 'max_log_points' in normalization_params:
+#             max_log = normalization_params['max_log_points']
+            
+#             # 找出映射到-1的零值（原始点数为0的位置）
+#             zero_points_mask = (points_normalized <= -0.99)  # 允许一点数值误差
+            
+#             # 对非零点数进行反归一化
+#             if not torch.all(zero_points_mask):
+#                 # 将[-1,1]映射回[0,max_log]的log空间
+#                 log_points = ((points_normalized + 1.0) / 2.0) * max_log
+                
+#                 # 从log空间映射回原始点数
+#                 denorm_points = torch.expm1(log_points)  # exp(x)-1是log1p的逆运算
+                
+#                 # 保存反归一化结果
+#                 denormalized_features[:, 0] = denorm_points
+                
+#                 # 确保原始零点数被准确恢复
+#                 denormalized_features[:, 0][zero_points_mask] = 0.0
+#             else:
+#                 # 所有值都是零点
+#                 denormalized_features[:, 0] = torch.zeros_like(points_normalized)
+#         else:
+#             # 如果没有参数，将所有-1值视为0点数
+#             denormalized_features[:, 0] = torch.zeros_like(points_normalized)
+#             denormalized_features[:, 0][points_normalized > -0.99] = 1.0  # 非-1值设为至少1个点
+        
+#         return denormalized_features
+    
+#     # === 反归一化绝对偏移平均值（前3个通道）===
+#     for i in range(3):
+#         normalized = normalized_features[:, i]
+#         param_key = f'max_log_mean_offset_{i}'
+        
+#         if param_key in normalization_params:
+#             max_log_offset = normalization_params[param_key]
+            
+#             # 识别特殊值(使用适当容差)
+#             invalid_mask = normalized < -0.9           # 小于-0.9的为无效标记
+#             zero_mask = torch.abs(normalized + 0.5) < 0.05  # 接近-0.5的为真实0
+#             normal_mask = normalized > -0.45           # 大于-0.45的为正常值
+            
+#             # 初始化输出
+#             denormalized_features[:, i] = 0.0
+            
+#             # 反归一化正常值
+#             if normal_mask.any() and max_log_offset > 0:
+#                 # 逆变换: normalized = -0.5 + 1.5 * log_offset / max_log_offset
+#                 # 所以: log_offset = (normalized + 0.5) * max_log_offset / 1.5
+#                 log_offset = (normalized[normal_mask] + 0.5) * max_log_offset / 1.5
+#                 log_offset = torch.clamp(log_offset, min=0.0)  # 确保非负
+#                 offset_vals = torch.expm1(log_offset)
+#                 offset_vals = torch.clamp(offset_vals, min=0.0)  # 确保非负
+#                 denormalized_features[normal_mask, i] = offset_vals
+#         else:
+#             # 如果没有对应参数，设为0
+#             denormalized_features[:, i] = torch.zeros_like(normalized)
+    
+#     # === 反归一化标准差（3-5通道）===
+#     for i in range(3):
+#         normalized = normalized_features[:, i + 3]  # 标准差在3-5通道
+#         param_key = f'max_log_std_{i}'
+        
+#         if param_key in normalization_params:
+#             max_log_std = normalization_params[param_key]
+            
+#             # 识别特殊值(使用适当容差)
+#             invalid_mask = normalized < -0.9           # 小于-0.9的为无效标记
+#             zero_mask = torch.abs(normalized + 0.5) < 0.05  # 接近-0.5的为真实0
+#             normal_mask = normalized > -0.45           # 大于-0.45的为正常值
+            
+#             # 初始化输出
+#             denormalized_features[:, i + 3] = 0.0
+            
+#             # 反归一化正常值
+#             if normal_mask.any() and max_log_std > 0:
+#                 # 逆变换: normalized = -0.5 + 1.5 * log_std / max_log_std
+#                 # 所以: log_std = (normalized + 0.5) * max_log_std / 1.5
+#                 log_std = (normalized[normal_mask] + 0.5) * max_log_std / 1.5
+#                 log_std = torch.clamp(log_std, min=0.0)  # 确保非负
+#                 std_vals = torch.expm1(log_std)
+#                 std_vals = torch.clamp(std_vals, min=0.0)  # 确保非负
+#                 denormalized_features[normal_mask, i + 3] = std_vals
+#         else:
+#             # 如果没有对应参数，设为0
+#             denormalized_features[:, i + 3] = torch.zeros_like(normalized)
+    
+#     # === 反归一化最大距离（第6通道）===
+#     normalized = normalized_features[:, 6]
+#     param_key = 'max_log_max_dist'
+    
+#     if param_key in normalization_params:
+#         max_log_dist = normalization_params[param_key]
+        
+#         # 识别特殊值(使用适当容差)
+#         invalid_mask = normalized < -0.9           # 小于-0.9的为无效标记
+#         zero_mask = torch.abs(normalized + 0.5) < 0.05  # 接近-0.5的为真实0
+#         normal_mask = normalized > -0.45           # 大于-0.45的为正常值
+        
+#         # 初始化输出
+#         denormalized_features[:, 6] = 0.0
+        
+#         # 反归一化正常值
+#         if normal_mask.any() and max_log_dist > 0:
+#             # 逆变换: normalized = -0.5 + 1.5 * log_dist / max_log_dist
+#             # 所以: log_dist = (normalized + 0.5) * max_log_dist / 1.5
+#             log_dist = (normalized[normal_mask] + 0.5) * max_log_dist / 1.5
+#             log_dist = torch.clamp(log_dist, min=0.0)  # 确保非负
+#             dist_vals = torch.expm1(log_dist)
+#             dist_vals = torch.clamp(dist_vals, min=0.0)  # 确保非负
+#             denormalized_features[normal_mask, 6] = dist_vals
+#     else:
+#         # 如果没有对应参数，设为0
+#         denormalized_features[:, 6] = torch.zeros_like(normalized)
+    
+#     # === 反归一化点数通道（第7通道）===
+#     if 'max_log_points' in normalization_params:
+#         max_log = normalization_params['max_log_points']
+        
+#         # 从[-1,1]映射回原始点数
+#         points_normalized = normalized_features[:, 7]
+        
+#         # 找出映射到-1的零值（原始点数为0的位置）
+#         zero_points_mask = (points_normalized <= -0.99)  # 允许一点数值误差
+        
+#         # 对非零点数进行反归一化
+#         if not torch.all(zero_points_mask):
+#             # 将[-1,1]映射回[0,max_log]的log空间
+#             log_points = ((points_normalized + 1.0) / 2.0) * max_log
+            
+#             # 从log空间映射回原始点数
+#             denormalized_features[:, 7] = torch.expm1(log_points)  # exp(x)-1是log1p的逆运算
+        
+#         # 确保原始零点数被准确恢复
+#         denormalized_features[:, 7][zero_points_mask] = 0.0
+#     else:
+#         # 如果没有参数，将所有-1值视为0点数
+#         denormalized_features[:, 7] = torch.zeros_like(normalized_features[:, 7])
+#         denormalized_features[:, 7][normalized_features[:, 7] > -0.99] = 1.0  # 非-1值设为至少1个点
+    
+#     return denormalized_features

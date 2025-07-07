@@ -38,7 +38,7 @@ class SpVoxelPreprocessor(BasePreprocessor):
             self.voxel_size_car = self.params['args']['voxel_size_car']
             self.max_points_per_voxel_car = self.params['args']['max_points_per_voxel_car']
             max_h, max_w, max_l = self.max_hwl
-            self.gt_range = [-max_l/2, -max_w/2, -1, max_l/2, max_w/2, 1] #z轴不能为0
+            self.gt_range = [-max_l/2, -max_w/2, -1.5, max_l/2, max_w/2, 1.5] #z轴不能为0
             grid_size = (np.array(self.gt_range[3:6]) -
                      np.array(self.gt_range[0:3])) / np.array(self.voxel_size_car)
         else:

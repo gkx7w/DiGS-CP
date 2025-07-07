@@ -182,6 +182,18 @@ def load_saved_model_new(saved_path, model):
     for k in model_dict.keys():
         if k not in checkpoint.keys():
             print(f"Missing in checkpoint: {k}")
+        
+    # 过滤掉dete_convertor相关的权重
+    # skip_dete_convertor = True  # 设置为True以跳过dete_convertor参数
+    # if skip_dete_convertor:
+    #     print("\n==== Skipping dete_convertor parameters ====")
+    #     filtered_checkpoint = {}
+    #     for k, v in checkpoint.items():
+    #         if 'dete_convertor' not in k:  # 跳过包含dete_convertor的权重
+    #             filtered_checkpoint[k] = v
+    #         else:
+    #             print(f"Skipped: {k}")
+    #     checkpoint = filtered_checkpoint
             
     # 检查哪些参数被加载了
     print("\n==== Parameters Successfully Loaded ====")
