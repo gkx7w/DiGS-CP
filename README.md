@@ -27,10 +27,10 @@ data and install DiGS-CP. The installation is totally the same as OpenCOOD, exce
 mkdir a `dataset` folder under DiGS-CP. Put your OPV2V, V2XSet, DAIR-V2X data in this folder. You just need to put in the dataset you want to use.
 
 ```
-DiGS-CP-CPper/dataset
+DiGS-CP/dataset
 
 . 
-├── my_dair_v2x 
+├── dair_v2x 
 │   ├── v2x_c
 │   ├── v2x_i
 │   └── v2x_v
@@ -84,4 +84,5 @@ DiGS-CP/
 
 ## 📝 Citation
 If you find this work useful for your research, please cite our paper.
+
 
