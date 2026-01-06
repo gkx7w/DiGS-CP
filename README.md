@@ -47,11 +47,13 @@ DiGS-CP-CPper/dataset
 ```
 ## 🚀 Quick Start
 1. Training
+
 To train DiGS-CP on OPV2V dataset:
 ```bash
 python opencood/train.py --hypes_yaml hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_diff.yaml --model_dir checkpoints/opv2v/OPV2V_best_epoch.pth
 ```
 2. Evaluation
+
 To evaluate the model performance:
 ```bash
 python -u opencood/tools/inference_models.py
@@ -82,3 +84,4 @@ DiGS-CP/
 
 ## 📝 Citation
 If you find this work useful for your research, please cite our paper.
+
