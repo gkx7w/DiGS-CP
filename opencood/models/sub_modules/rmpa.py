@@ -66,17 +66,13 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
         c_in = 0
         c_in_list = []
 
-        # print("当前的key",self.model_cfg['features_source'].keys())
-
         for k,v in self.model_cfg['features_source'].items():
             if k != "raw_points":
                 c_in += v
                 c_in_list.append(v)
 
-
         self.msa_points_fusion = True
 
-        # print("msa points fusion:",c_in,c_in_list,self.model_cfg['num_out_features'])
         if not self.msa_points_fusion:
             self.vsa_point_feature_fusion = nn.Sequential(
                 nn.Linear(c_in, self.model_cfg['num_out_features'], bias=False),
@@ -89,8 +85,6 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
 
         self.num_point_features = self.model_cfg['num_out_features']
         self.num_point_features_before_fusion = c_in
-
-    #     测试
         self.c_in = c_in
 
     def interpolate_from_bev_features(self, keypoints, bev_features, batch_size, bev_stride):
@@ -111,11 +105,8 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
         return point_bev_features
 
     def get_sampled_points(self, batch_dict):
-
-        print("4096")
         batch_size = batch_dict['batch_size']
 
-        # print("不同points shape: ",batch_dict['origin_lidar_for_vsa_project'].shape,batch_dict['origin_lidar_for_vsa_project'].shape,batch_dict['origin_lidar_for_vsa_noproject'].shape)
         if self.model_cfg['point_source'] == 'raw_points':
             src_points = batch_dict['origin_lidar_for_vsa_project'][:, 1:]
             batch_indices = batch_dict['origin_lidar_for_vsa_project'][:, 0].long()
@@ -139,7 +130,6 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
             bs_mask = (batch_indices == bs_idx)
             sampled_points = src_points[bs_mask].unsqueeze(dim=0)  # (1, N, 3)
 
-            # print("每辆车的点运数量",sampled_points.shape)
             # sample points with FPS
             # some cropped pcd may have very few points, select various number
             # of points to ensure similar sample density
@@ -164,9 +154,6 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
 
     def get_all_points(self, batch_dict):
         batch_size = batch_dict['batch_size']
-        # print("all,  ",batch_size,batch_dict['record_len'])
-
-        # print("不同points shape: ",batch_dict['origin_lidar_for_vsa_project'].shape,batch_dict['origin_lidar_for_vsa_project'].shape,batch_dict['origin_lidar_for_vsa_noproject'].shape)
         if self.model_cfg['point_source'] == 'raw_points':
             # 根据投影要求选择是否投影
             if "rmpa_project_lidar" in batch_dict and not batch_dict['rmpa_project_lidar']:
@@ -191,7 +178,6 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
         for bs_idx in range(batch_size):
             bs_mask = (batch_indices == bs_idx)
             sampled_points = src_points[bs_mask].unsqueeze(dim=0)  # (1, N, 3)
-            # print("每辆车的点云数量",sampled_points.shape)
             tmp_bs_idx_points.append(sampled_points)
             if sampled_points.shape[1]>max_pointnum_batch:
                 max_pointnum_batch = sampled_points.shape[1]
@@ -226,15 +212,7 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
             point_coords: (N, 4)
 
         """
-
-        # keypoints = self.get_sampled_points(batch_dict) # BxNx4
-
         keypoints = self.get_all_points(batch_dict) # BxNx4
-        # 有没有说法，不要fps了，直接拿全部来计算
-        # print("key points shape",keypoints.shape,batch_dict['origin_lidar_for_vsa_project'].shape,batch_dict['batch_size'],keypoints.shape)
-
-
-        # kpt_mask1 = torch.logical_and(keypoints[..., 2] > -2.8, keypoints[..., 2] < 1.0)
         kpt_mask1 = torch.logical_and(keypoints[..., 2] > -3, keypoints[..., 2] < 1.0)
 
         kpt_mask2 = None
@@ -245,7 +223,6 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
             boxes = torch.zeros((len(dets_list), max_len, 7), dtype=dets_list[0].dtype,
                                 device=dets_list[0].device)
             for i, dets in enumerate(dets_list):
-                # 这个是新增的部分
                 dets = dets[:, [0, 1, 2, 5, 4, 3, 6]]  # hwl -> lwh
                 if len(dets)==0:
                     continue
@@ -265,9 +242,7 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
 
         kpt_mask_flag = False
         if (kpt_mask).sum() < 2:
-            # 此处可能在原本没有框的视角中选中两个点，后续我会对没有框的视角进行mask，导致最终点数不一致
             kpt_mask[0, torch.randint(0, 1024, (2,))] = True
-            # 加个flag吧，后面如果flag成立，默认加入第一个视角中的点？？
             kpt_mask_flag = True
         batch_dict.update({'kpt_mask_flag': kpt_mask_flag})
         
@@ -285,7 +260,6 @@ class Resolutionaware_Multiscale_Progressive_Attention(nn.Module):
         batch_size, num_keypoints, _ = keypoints.shape
 
         new_xyz = keypoints[kpt_mask]
-        # 这里会没有点？
         new_xyz_batch_cnt = torch.tensor([(mask).sum() for mask in kpt_mask], device=new_xyz.device).int()
 
         if self.msa_points_fusion:

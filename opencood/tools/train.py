@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-
 import sys
-sys.path.append("/data/gkx/Code")
+from pathlib import Path
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+    
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 import argparse
 import os
-import statistics
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import torch
-# torch.autograd.set_detect_anomaly(True)
 from torch.utils.data import DataLoader, Subset
 from tensorboardX import SummaryWriter
 import opencood.hypes_yaml.yaml_utils as yaml_utils
@@ -22,12 +24,9 @@ import random
 import numpy as np
 from numpy import cov, trace, iscomplexobj
 from scipy.linalg import sqrtm
-import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from opencood.visualization.simple_vis import visualize_averaged_channels_individual,visualize_all_channels_grid,visualize_channels_individually
 from torch.cuda.amp import GradScaler
 
-# 设置随机种子以确保确定性
+
 def seed_everything(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -37,23 +36,22 @@ def seed_everything(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 def worker_init_fn(worker_id):
-    # 为每个worker设置不同但确定的种子
     worker_seed = torch.initial_seed() % 2**32 + worker_id
     np.random.seed(worker_seed)
     random.seed(worker_seed)
     
-seed_everything(42)  # 固定种子
+seed_everything(42)  
 
-# disconet不能用这个文件训练！
+
 def train_parser():
     parser = argparse.ArgumentParser(description="synthetic data generation")
 
-    # V2VNET
-    parser.add_argument("--hypes_yaml", "-y", type=str, default="/home/ubuntu/Code2/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml",
+    parser.add_argument("--hypes_yaml", "-y", type=str, default="",
                         help='data generation yaml file needed ')
 
     parser.add_argument('--qkv', default='',
                         help='mark this process')
+    
     parser.add_argument('--model_dir', default='',
                         help='Continued training path')
     
@@ -70,14 +68,8 @@ def train_parser():
 def main():
     opt = train_parser()
 
-    #  resume
-    # hypes = yaml_utils.load_yaml(opt.hypes_yaml, opt)
-
     #  start
     hypes = yaml_utils.load_resume_yaml(opt.hypes_yaml, opt)
-    # 添加梯度累积参数，如果hypes中没有定义，则默认为1
-    # accumulation_steps = hypes['train_params'].get('accumulation_steps', 4)  # 默认累积4个批次
-    # print(f'Using gradient accumulation with {accumulation_steps} steps')
 
     print('Dataset Building')
     opencood_train_dataset = build_dataset(hypes, visualize=False, train=True)
@@ -89,8 +81,8 @@ def main():
                               batch_size=hypes['train_params']['batch_size'],
                               num_workers=4,
                               collate_fn=opencood_train_dataset.collate_batch_train,
-                              shuffle=True,
-                            #   shuffle=False,
+                            #   shuffle=True,
+                              shuffle=False,
                               pin_memory=True,
                               drop_last=True,
                               prefetch_factor=2,
@@ -108,8 +100,6 @@ def main():
     print('Creating Model')
     model = train_utils.create_model(hypes)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    # torch.cuda.set_device("cuda:0")
-    # device = torch.device('cuda:0')
 
     # record lowest validation loss checkpoint.
     lowest_val_loss = 1e5
@@ -123,19 +113,8 @@ def main():
     
     scaler = GradScaler(enabled=torch.cuda.is_available())
     
-    # 根据不同条件设置需要解冻的层
-    if opt.model_dir and opt.diff_model_dir: # 两个模型路径都给定的情况
-        trainable_layers = [
-            'roi_head.feature_enhance',
-            'attention_2',
-            'layernorm_2']
-        init_epoch = 78   
-        model = train_utils.load_saved_model_new(opt.diff_model_dir, model)
-        model = train_utils.load_saved_model_new(opt.model_dir, model)
-        print("loading model from", opt.model_dir)
-        print("loading diffusion model from", opt.diff_model_dir)
-        
-    elif opt.model_dir: # 只给了opt.model_dir的情况,此时训练分类头
+    #  Set layers to unfreeze based on different conditions
+    if opt.model_dir: 
         trainable_layers = [
             'mdd',
             'roi_head',
@@ -144,38 +123,38 @@ def main():
             'cls_layers',
             'iou_layers',
             'reg_layers',
-                            ]
-        init_epoch = 78
+            ]
+        init_epoch = 10
         diff_epoch = 0 
         print("loading model from", opt.model_dir)
         model = train_utils.load_saved_model_new(opt.model_dir, model)
         
-    else: # 从头开始训练的情况
-        trainable_layers = []  # 不需要特别解冻任何层
+    else:
+        trainable_layers = [] 
         init_epoch = 0
     
     if trainable_layers:
         for param in model.parameters():
             param.requires_grad = False
         
-        # 解冻指定层
+        # Unfreeze specified layers
         unfrozen_count = 0
         for name, param in model.named_parameters():
-            if any(layer_name in name for layer_name in trainable_layers): # and 'cond_fc_layers' not in name
+            if any(layer_name in name for layer_name in trainable_layers):
                 param.requires_grad = True
                 unfrozen_count += 1
-                print(f"解冻层: {name}")
+                print(f"Unfrozen layer: {name}")
         
-        print(f"总共解冻 {unfrozen_count} 个参数组")
+        print(f"Total unfrozen parameter groups:{unfrozen_count}")
     
-    # 设置学习率调度器
+    # Setup learning rate scheduler
     scheduler = train_utils.setup_lr_schedular(hypes, optimizer, init_epoch=diff_epoch if diff_epoch == 0 else diff_epoch,data_loader=train_loader)
     saved_path = train_utils.setup_train(hypes)
 
     if init_epoch > 0:
-        print(f"从第 {init_epoch} 个epoch恢复训练")
+        print(f"Resume training from epoch {init_epoch}")
     else:
-        print("从头开始训练")
+        print("Training from scratch")
 
     # we assume gpu is necessary
     if torch.cuda.is_available():
@@ -193,36 +172,18 @@ def main():
         for param_group in optimizer.param_groups:
             print('learning rate %f' % param_group["lr"])
         for i, batch_data in enumerate(train_loader):
-            # if i < 628:
-            #     print(i)
-            #     continue
             if batch_data is None or batch_data['ego']['object_bbx_mask'].sum()==0 or ('processed_lidar' in batch_data['ego'] and batch_data['ego']['processed_lidar'] == {}):
                 continue
             # the model will be evaluation mode during validation
             model.train()
-
-            if (str(type(model))[8:-2].split(".")[-1] == "PointPillarSDCoper" or str(type(model))[8:-2].split(".")[
-                -1] == "DiscoNetSDCoper" or str(type(model))[8:-2].split(".")[-1] == "SDCoper") and \
-                    hypes['model']['args']['activate_stage2']:
-                pass
             # fixed some param
             model.stage1_fix()
-
             model.zero_grad()
             optimizer.zero_grad()
             batch_data = train_utils.to_device(batch_data, device)
             batch_data['ego']['epoch'] = epoch
 
             ouput_dict = model(batch_data['ego'])
-            
-            # 可视化
-            # if i > 6760:
-            #     gt_bev_feature = ouput_dict['gt_feature'][0]
-            #     pre_bev_feature = ouput_dict['pred_feature'][0]
-            #     # 可视化gt bev
-            #     visualize_averaged_channels_individual(gt_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/gt_bev_{i}")
-            #     # 可视化预测bev
-            #     visualize_averaged_channels_individual(pre_bev_feature, f"/home/ubuntu/Code2/opencood/bev_visualizations/pre_bev_{i}")
             
             if ouput_dict is None:
                 continue
@@ -249,53 +210,6 @@ def main():
                 scaler.step(optimizer)
                 scaler.update()
                 scheduler.step()
-
-        #——————————————————————————————————可视化————————————————————————————————————
-        # with torch.no_grad():
-        #     ouput_dict['pred_out_inf_no_cond'] = []
-        #     for batch_idx in range(len(ouput_dict['gt_x0'])):
-        #         seed = np.random.randint(0, 2147483647)
-        #         generator = torch.Generator(device=next(model.mdd.unet.parameters()).device).manual_seed(seed)
-        #         uncond_result = model.mdd.ddim_sample(
-        #                     batch_size=ouput_dict['gt_x0'][batch_idx].shape[0],
-        #                     image_shape=ouput_dict['gt_x0'][batch_idx].shape,
-        #                     generator=generator,
-        #                     num_inference_steps=1000,
-        #                     eta=0.0,
-        #                     guidance_scale=1.0,  # 设为1.0禁用CFG
-        #                     x_self_cond=None,    # 设为None以跳过条件应用
-        #                     output_type="numpy",
-        #                 )
-        #         x_noisy_no_cond = uncond_result["images"] if isinstance(uncond_result, dict) else uncond_result[0]
-        #         # x_noisy_no_cond = model.mdd.ddim_sample(ouput_dict['gt_x0'][batch_idx].shape, ouput_dict['gt_x0'][batch_idx].device, None,guidance_scale=1)#x_start=noise,
-        #         ouput_dict['pred_out_inf_no_cond'].append(x_noisy_no_cond)
-        #     viz_config = [
-        #         # ('batch_gt_spatial_features', 'gt_bev'),
-        #         # ('gt_x0', 'gt_x0'),
-        #         # ('gt_noise', 'gt_noise'),
-        #         # ('pred_out', 'pre_bev'),
-        #         # ('pred_out_inf_with_cond', 'pre_inf_with_cond_bev'),
-        #         ('pred_out_inf_no_cond', 'pre_inf_with_no_bev'),
-        #         # ('noise', 'noise'),
-        #         # ('x', 'x')
-        #     ]
-        #     base_path = f"/data/gkx/Code/opencood/bev_visualizations/train_1ch_withcond_eps"
-        #     # 计算全局最小值和最大值
-        #     features = [ouput_dict[key][0] for key, _ in viz_config]
-        #     global_vmin, global_vmax = float('inf'), float('-inf')
-        #     for feature in features:
-        #         channels = torch.mean(feature, dim=1).detach().cpu().numpy()
-        #         global_vmin = min(global_vmin, np.min(channels))
-        #         global_vmax = max(global_vmax, np.max(channels))
-        #     # 可视化
-        #     for key, name in viz_config:
-        #         visualize_channels_individually(
-        #             ouput_dict[key][0], 
-        #             f"{base_path}/{name}_{epoch}", 
-        #             # global_vmin, 
-        #             # global_vmax
-        #         )
-        #——————————————————————————————————可视化————————————————————————————————————
     
         if epoch % hypes['train_params']['save_freq'] == 0:
             torch.save(model.state_dict(),
@@ -329,171 +243,6 @@ def main():
         os.system(cmd)
 
 
-# def calculate_fid(act1, act2):
-#     # calculate mean and covariance statistics
-#     mu1, sigma1 = act1.mean(axis=0), cov(act1, rowvar=False)
-#     mu2, sigma2 = act2.mean(axis=0), cov(act2, rowvar=False)
-#     # calculate sum squared difference between means
-#     ssdiff = np.sum((mu1 - mu2)**2.0)
-#     # calculate sqrt of product between cov
-#     # 添加小的对角矩阵以提高数值稳定性
-#     eps = 1e-6
-#     sigma1 = sigma1 + np.eye(sigma1.shape[0]) * eps
-#     sigma2 = sigma2 + np.eye(sigma2.shape[0]) * eps
-    
-#     covmean = sqrtm(sigma1.dot(sigma2))
-    
-#     # check and correct imaginary numbers from sqrt
-#     if iscomplexobj(covmean):
-#         covmean = covmean.real
-#     # calculate score
-#     fid = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
-#     return fid
-
-def add_gradient_histograms(model, writer, step):
-    for name, param in model.named_parameters():
-        if "roi_head.feature_enhance." in name or "roi_head.self_attention." in name:
-            print(f"Found module with roi_head.factor_encoder: {name}")
-        if param.requires_grad and param.grad is not None:
-            writer.add_histogram(f'gradients/{name}', param.grad, step)
-            # 可选：也可以记录参数值的直方图
-            writer.add_histogram(f'weights/{name}', param, step)
-
-
-def visualize_bev_features(bev_feature, save_dir='./bev_visualizations', n_cols=5):
-    """
-    Visualize Bird's Eye View (BEV) features.
-    
-    Args:
-        bev_feature: Tensor of shape [N, C, H, W]
-        save_dir: Directory to save visualizations
-        n_cols: Number of columns in the grid plot
-    """
-    import os
-    os.makedirs(save_dir, exist_ok=True)
-    
-    N, C, H, W = bev_feature.shape
-    
-    # Create a figure for each of the N BEV features
-    for n in range(N):
-        # Get the current BEV feature
-        feature = bev_feature[n]  # Shape: [C, H, W]
-        
-        # Calculate how many rows we need
-        n_rows = (C + n_cols - 1) // n_cols
-        
-        # Create a figure with subplots
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 3, n_rows * 3))
-        fig.suptitle(f'BEV Feature {n+1}/{N}', fontsize=16)
-        
-        # Flatten axes for easy indexing if multiple rows
-        if n_rows > 1:
-            axes = axes.flatten()
-        
-        # Loop through each channel
-        for c in range(C):
-            # Get the current channel
-            channel_data = feature[c].detach().cpu().numpy()  # Shape: [H, W]
-            
-            # Normalize data for better visualization
-            norm = Normalize(vmin=channel_data.min(), vmax=channel_data.max())
-            
-            # Get the corresponding axis
-            if C <= n_cols and n_rows == 1:
-                ax = axes[c] if n_cols > 1 else axes
-            else:
-                ax = axes[c]
-            
-            # Plot the feature as a heatmap
-            im = ax.imshow(channel_data, cmap='viridis', norm=norm)
-            ax.set_title(f'Channel {c}')
-            ax.axis('off')
-            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-        
-        # Hide empty subplots
-        for c in range(C, n_rows * n_cols):
-            if C <= n_cols and n_rows == 1:
-                if c < n_cols:  # Check if we're still within the valid range
-                    if n_cols > 1:
-                        axes[c].axis('off')
-            else:
-                axes[c].axis('off')
-        
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig(f'{save_dir}/bev_feature_{n+1}.png', dpi=200)
-        plt.close(fig)
-
-
-# def visualize_averaged_channels_individual(bev_feature, save_dir='./bev_avg_viz'):
-#     import os
-#     # os.makedirs(save_dir, exist_ok=True)
-    
-#     N, C, H, W = bev_feature.shape
-    
-#     for n in range(N):
-#         # Average across channels
-#         feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
-        
-#         # Create a new figure for each BEV
-#         fig, ax = plt.subplots(figsize=(6, 6))
-        
-#         norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
-#         im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
-#         ax.set_title(f'BEV {n+1} (avg)')
-#         ax.axis('off')
-#         fig.colorbar(im, ax=ax)
-        
-#         # Save individual figure
-#         plt.tight_layout()
-#         plt.savefig(f'{save_dir}/bev_{n+1}_avg_channels.png', dpi=200)
-#         plt.close(fig)
-
-
-# def visualize_averaged_channels(bev_feature, save_dir='./bev_avg_viz'):
-#     """
-#     Visualize the average of all channels for each BEV feature.
-    
-#     Args:
-#         bev_feature: Tensor of shape [N, C, H, W]
-#         save_dir: Directory to save visualizations
-#     """
-#     import os
-#     os.makedirs(save_dir, exist_ok=True)
-    
-#     N, C, H, W = bev_feature.shape
-    
-#     # Create a grid to display all N BEV averages
-#     n_cols = min(7, N)
-#     n_rows = (N + n_cols - 1) // n_cols
-    
-#     fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 3, n_rows * 3))
-#     if n_rows > 1 or n_cols > 1:
-#         axes = axes.flatten()
-    
-#     for n in range(N):
-#         # Average across channels
-#         feature_avg = torch.mean(bev_feature[n], dim=0).detach().cpu().numpy()
-        
-#         # Get corresponding axis
-#         if N == 1:
-#             ax = axes
-#         else:
-#             ax = axes[n]
-        
-#         norm = Normalize(vmin=feature_avg.min(), vmax=feature_avg.max())
-#         im = ax.imshow(feature_avg, cmap='viridis', norm=norm)
-#         ax.set_title(f'BEV {n+1} (avg)')
-#         ax.axis('off')
-#         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    
-#     # Hide empty subplots
-#     for n in range(N, n_rows * n_cols):
-#         if N > 1:  # Only if axes is a collection
-#             axes[n].axis('off')
-    
-#     plt.tight_layout()
-#     plt.savefig(f'{save_dir}/averaged_channels_all_bevs.png', dpi=200)
-#     plt.close(fig)
 
 
 if __name__ == '__main__':

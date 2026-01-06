@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # Author: Yifan Lu <yifan_lu@sjtu.edu.cn>
 # License: TDG-Attribution-NonCommercial-NoDistrib
-import sys
-sys.path.append("/raid/luogy/ypy/CoAlign/CoAlign-main")
 import argparse
 import os
 import time
@@ -16,7 +14,7 @@ import opencood.hypes_yaml.yaml_utils as yaml_utils
 from opencood.tools import train_utils, inference_utils
 from opencood.data_utils.datasets import build_dataset
 from opencood.utils import eval_utils
-from opencood.visualization import vis_utils, my_vis, simple_vis
+from opencood.visualization import vis_utils, simple_vis
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 def test_parser():
@@ -24,7 +22,7 @@ def test_parser():
     # parser.add_argument('--model_dir', type=str, required=True,
     #                     help='Continued training path')
 
-    parser.add_argument('--model_dir', type=str, default="/raid/luogy/ypy/CoAlign/CoAlign-main/checkpoints/coalign_openv2v/pure_train",
+    parser.add_argument('--model_dir', type=str, default="",
                         help='Continued training path')
 
     parser.add_argument('--fusion_method', type=str,
@@ -127,7 +125,6 @@ def main():
 
     
     infer_info = opt.fusion_method + opt.note
-    print("1111111",infer_info)
 
 
     for i, batch_data in enumerate(data_loader):
@@ -204,7 +201,7 @@ def main():
                 infer_result.update({"cav_box_np": cav_box_np, \
                                      "lidar_agent_record": lidar_agent_record})
 
-            # 这部分是保存可视化图片，我们不需要！
+            
             # if (i % opt.save_vis_interval == 0) and (pred_box_tensor is not None):
             #     vis_save_path_root = os.path.join(opt.model_dir, f'vis_{infer_info}')
             #     if not os.path.exists(vis_save_path_root):

@@ -23,24 +23,26 @@ class Matcher(nn.Module):
 
     @torch.no_grad()
     def forward(self, data_dict):
-        clusters, scores = self.clustering(data_dict)
-        data_dict['boxes_fused'], data_dict[
-            'scores_fused'] = self.cluster_fusion(clusters, scores)
+        clusters, scores,cluster_indices,cur_cluster_id = self.clustering(data_dict)
+        data_dict['boxes_fused'], data_dict['scores_fused'], data_dict['cluster_indices'], data_dict['cur_cluster_id']= \
+            self.cluster_fusion(clusters, scores,cluster_indices,cur_cluster_id)
         self.merge_keypoints(data_dict)
         return data_dict
 
-
+    
     def clustering(self, data_dict):
         """
         Assign predicted boxes to clusters according to their ious with each other
         """
         clusters_batch = []
         scores_batch = []
+        cluster_indices_batch = []
+        cur_cluster_id_batch = []
         record_len = [int(l) for l in data_dict['record_len']]
         lidar_poses = data_dict['lidar_pose'].cpu().numpy()
-        for i, l in enumerate(record_len):
+        for i, l in enumerate(record_len):         
             cur_boxes_list = data_dict['det_boxes'][sum(record_len[:i]):sum(record_len[:i])+l]
-            
+                
             # Added by Yifan Lu 
             if data_dict['proj_first'] is False:
                 cur_boxes_list_ego = []
@@ -57,38 +59,53 @@ class Matcher(nn.Module):
                     cur_boxes_list_ego.append(cur_boxes_ego)
                 cur_boxes_list = cur_boxes_list_ego
 
-
             cur_scores_list = data_dict['det_scores'][sum(record_len[:i]):sum(record_len[:i])+l]
             cur_boxes_list = [b for b in cur_boxes_list if len(b) > 0]
-            cur_scores_list = [s for s in cur_scores_list if len(s) > 0]
+            cur_scores_list = [s for s in cur_scores_list if len(s) > 0]         
             if len(cur_scores_list) == 0:
                 clusters_batch.append([torch.Tensor([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.57]).
                                       to(torch.device('cuda')).view(1, 7)])
                 scores_batch.append([torch.Tensor([0.01]).to(torch.device('cuda')).view(-1)])
+                cluster_indices_batch.append(torch.ones(1, device=torch.device('cuda'), dtype=torch.int))
+                # 因为没有形成任何有效簇 (ID >= 1)，下一个可用 ID 是 1
+                cur_cluster_id_batch.append(1)
                 continue
-
+      
             pred_boxes_cat = torch.cat(cur_boxes_list, dim=0)
             pred_boxes_cat[:, -1] = limit_period(pred_boxes_cat[:, -1])
             pred_scores_cat = torch.cat(cur_scores_list, dim=0)
 
+             # 在调用boxes_iou3d_gpu前确保数据类型是float32
+            pred_boxes_cat = pred_boxes_cat.float()  # 显式转换为Float类型
             ious = boxes_iou3d_gpu(pred_boxes_cat, pred_boxes_cat)
+            
+            
             cluster_indices = torch.zeros(len(ious)).int() # gt assignments of preds
             cur_cluster_id = 1
             while torch.any(cluster_indices == 0):
+                # 找到第一个0出现的位置
                 cur_idx = torch.where(cluster_indices == 0)[0][0] # find the idx of the first pred which is not assigned yet
+                # 找到和它iou>0.1的所有box,给这些box索引上分，标注它属于第几个集合
                 cluster_indices[torch.where(ious[cur_idx] > 0.1)[0]] = cur_cluster_id
                 cur_cluster_id += 1
             clusters = []
             scores = []
+            if cur_cluster_id == 1:  # 没有找到任何聚类
+                # 可以选择默认将所有未分配的点分配到一个聚类
+                cluster_indices[cluster_indices == 0] = 1
+                cur_cluster_id = 2
             for j in range(1, cur_cluster_id):
                 clusters.append(pred_boxes_cat[cluster_indices==j])
                 scores.append(pred_scores_cat[cluster_indices==j])
+            # 在这个上面可以添加一个feature  
             clusters_batch.append(clusters)
             scores_batch.append(scores)
+            cluster_indices_batch.append(cluster_indices)
+            cur_cluster_id_batch.append(cur_cluster_id)
 
-        return clusters_batch, scores_batch
+        return clusters_batch, scores_batch,cluster_indices_batch,cur_cluster_id_batch
 
-    def cluster_fusion(self, clusters, scores):
+    def cluster_fusion(self, clusters, scores, cluster_indices_batch=None, cur_cluster_id_batch=None):
         """
         Merge boxes in each cluster with scores as weights for merging
         """
@@ -98,6 +115,10 @@ class Matcher(nn.Module):
             for c, s in zip(cl, sl): # frame's cluster
                 # reverse direction for non-dominant direction of boxes
                 dirs = c[:, -1]
+                if s.numel() == 0:
+                    print("Empty tensor encountered, skipping fusion for this cluster.")
+                    # 处理空张量情况
+                    continue  # 直接返回，跳过这个聚类
                 max_score_idx = torch.argmax(s)
                 dirs_diff = torch.abs(dirs - dirs[max_score_idx].item())
                 lt_pi = (dirs_diff > pi).int()
@@ -137,13 +158,47 @@ class Matcher(nn.Module):
             scores_fused[sum(len_records[:i]):sum(len_records[:i]) + l] for
             i, l in enumerate(len_records)]
 
+        new_cluster_indices_batch = []
+        new_cur_cluster_id_batch = []
         for i in range(len(boxes_fused)):
+            # Get the mask for boxes within range
             corners3d = boxes_to_corners_3d(boxes_fused[i], order='hwl')
             mask = get_mask_for_boxes_within_range_torch(corners3d, self.pc_range)
+            
+            # Apply mask to boxes_fused, scores_fused, and clusters
             boxes_fused[i] = boxes_fused[i][mask]
             scores_fused[i] = scores_fused[i][mask]
+            
+            # Get the cluster IDs that correspond to valid boxes
+            valid_cluster_ids = []
+            for j, valid in enumerate(mask):
+                if valid:
+                    valid_cluster_ids.append(j + 1)  # Cluster IDs start from 1
+            
+            # Create a mapping from old cluster IDs to new ones
+            old_to_new_id = {}
+            new_id = 1
+            for old_id in valid_cluster_ids:
+                old_to_new_id[old_id] = new_id
+                new_id += 1
+            
+            # Update cluster indices
+            original_indices = cluster_indices_batch[i] #索引越界了
+            new_indices = torch.zeros_like(original_indices)
+            
+            for old_id, new_id in old_to_new_id.items():
+                new_indices[original_indices == old_id] = new_id
+            
+            new_cluster_indices_batch.append(new_indices)
+            new_cur_cluster_id_batch.append(len(valid_cluster_ids) + 1)  # New maximum cluster ID
+            # corners3d = boxes_to_corners_3d(boxes_fused[i], order='hwl')
+            # mask = get_mask_for_boxes_within_range_torch(corners3d, self.pc_range)
+            # boxes_fused[i] = boxes_fused[i][mask]
+            # scores_fused[i] = scores_fused[i][mask]
+            # clusters[i] = clusters[i][mask]
+        
 
-        return boxes_fused, scores_fused
+        return boxes_fused, scores_fused, new_cluster_indices_batch, new_cur_cluster_id_batch
 
     def merge_keypoints(self, data_dict):
         # merge keypoints
@@ -156,7 +211,6 @@ class Matcher(nn.Module):
         record_len = data_dict['record_len']
         lidar_poses = data_dict['lidar_pose'].cpu().numpy()
         for l in data_dict['record_len']:
-            # Added by Yifan Lu
             # if not project first, first transform the keypoints coords
             if data_dict['proj_first'] is False:
                 kpts_coor_cur = []
@@ -174,8 +228,11 @@ class Matcher(nn.Module):
             kpts_feat_out.append(
                 torch.cat(keypoints_features[idx:l + idx], dim=0))
             idx += l
-        data_dict['point_features'] = kpts_feat_out
-        data_dict['point_coords'] = kpts_coor_out
+        # data_dict['point_features'] = kpts_feat_out
+        # data_dict['point_coords'] = kpts_coor_out
+
+        data_dict['merge_point_features'] = kpts_feat_out
+        data_dict['merge_point_coords'] = kpts_coor_out
 
         if data_dict['proj_first'] is False:
-            data_dict['point_coords'] = kpts_coor_out_ego
+            data_dict['merge_point_coords'] = kpts_coor_out_ego

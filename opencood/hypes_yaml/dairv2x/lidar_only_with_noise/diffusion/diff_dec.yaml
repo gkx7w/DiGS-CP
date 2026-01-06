@@ -88,7 +88,7 @@ postprocess: &postprocess_params
 
 # model related
 model:
-  core_method: point_pillar_diffusion_dec_det_dair #fpvrcnn_cobevt_compare
+  core_method: point_pillar_diffusion_dec_det
   args:
 #    activate_stage2: False
     activate_stage2: True

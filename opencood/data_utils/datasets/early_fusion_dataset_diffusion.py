@@ -17,7 +17,6 @@ from opencood.utils.transformation_utils import x1_to_x2
 from opencood.utils.heter_utils import AgentSelector
 from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu
 from opencood.utils import common_utils
-# from opencood.visualization.my_vis import visualize
 from opencood.visualization.simple_vis import visualize
 from opencood.utils.box_utils import boxes_to_corners_3d
 

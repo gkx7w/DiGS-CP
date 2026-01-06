@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-# Author: ypy
-
 import sys
-sys.path.append("/data/gkx/Code")
-
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'  
+from pathlib import Path
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT)) 
 import argparse
 import os
 import time
@@ -20,7 +19,6 @@ import opencood.hypes_yaml.yaml_utils as yaml_utils
 from opencood.tools import train_utils, inference_utils
 from opencood.data_utils.datasets import build_dataset
 from opencood.utils import eval_utils
-from opencood.visualization import vis_utils, my_vis, simple_vis
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -36,12 +34,13 @@ def test_parser():
     # parser.add_argument('--model_dir', type=str,
     #                     default="/data/gkx/Code/checkpoints/fisrt_no_fuse_best/net_epoch80.pth",
     #                     help='Continued training path')
+    parser.add_argument('--eval_mode', default=True, help='Set is_inference to False for evaluation')
     
     parser.add_argument('--diff_model_dir', type=str,
-                        default="/data/gkx/Code/checkpoints/opv2v/train_1channel_traincond_cls_eps_det/net_epoch89.pth",
+                        default="/data/gkx/DiGS-CP/checkpoints/opv2v/train_traincond_cls_eps_det/net_epoch89.pth",
                         help='Continued training path')
 
-    parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/Code/opencood/hypes_yaml/v2xset/diffusion/v2xset_pointpillar_diff_dec.yaml",
+    parser.add_argument("--hypes_yaml", "-y", type=str, default="/data/gkx/DiGS-CP/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_diff.yaml",
                         help='data generation yaml file needed ') #/data/gkx/Code/opencood/hypes_yaml/opv2v/lidar_only_with_noise/diffusion/pointpillar_early_diff_dec.yaml
     
     parser.add_argument('--also_laplace', action='store_true',
@@ -61,6 +60,12 @@ def main():
     assert opt.fusion_method in ['late', 'early', 'intermediate', 'no', 'no_w_uncertainty', 'single']
 
     hypes = yaml_utils.load_yaml(None, opt)
+    
+    if opt.eval_mode:
+        print("Forcing is_inference to True for evaluation...")
+        if 'model' in hypes:
+            hypes['model']['args']['is_inference'] = True
+
 
     hypes['validate_dir'] = hypes['test_dir']
     if "OPV2V" in hypes['test_dir'] or "v2xsim" in hypes['test_dir']:
@@ -94,7 +99,7 @@ def main():
     # 构建模型文件路径
     directory = os.path.dirname(diff_model_path)
     model_name = os.path.splitext(os.path.basename(diff_model_path))[0]
-    yaml_save_path = directory + "/" + "".join(model_name) + "_AP030507_2s.yaml"
+    yaml_save_path = directory + "/" + "".join(model_name) + "_trainop_AP030507_2s.yaml"
     
     print(f"评估结果将保存至: {yaml_save_path}")
 

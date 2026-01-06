@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
-import sys
-sys.path.append("/raid/luogy/ypy/CoAlign/CoAlign-main")
 import argparse
 import os
 import time
@@ -17,7 +13,7 @@ import opencood.hypes_yaml.yaml_utils as yaml_utils
 from opencood.tools import train_utils, inference_utils
 from opencood.data_utils.datasets import build_dataset
 from opencood.utils import eval_utils
-from opencood.visualization import vis_utils, my_vis, simple_vis
+from opencood.visualization import vis_utils, simple_vis
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -26,7 +22,7 @@ def test_parser():
     # parser.add_argument('--model_dir', type=str, required=True,
     #                     help='Continued training path')
 
-    parser.add_argument('--model_dir', type=str, default="/raid/luogy/ypy/CoAlign/CoAlign-main/checkpoints/coalign_openv2v/pure_train",
+    parser.add_argument('--model_dir', type=str, default="",
                         help='Continued training path')
 
     parser.add_argument('--also_laplace', action='store_true',
@@ -192,7 +188,7 @@ def main():
                                             result_stat,
                                             0.7)
 
-                    # 暂时不需要可视化
+
                     # if (i % opt.save_vis_interval == 0) and (pred_box_tensor is not None) and (use_laplace is False):
                     #     vis_save_path_root = os.path.join(opt.model_dir, f'vis_{noise_level}')
                     #     if not os.path.exists(vis_save_path_root):

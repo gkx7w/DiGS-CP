@@ -274,7 +274,7 @@ class PillarVFE(nn.Module):
             points_count = voxel_num_points.float().unsqueeze(-1)
             
             # 拼接所有特征 [M, 4]
-            statistical_features = torch.cat([std_dev, points_count], dim=1)
+            statistical_features = points_count
             # statistical_features = torch.cat([mean_relative_offsets, std_dev, max_distances, points_count], dim=1)  #mean_relative_offsets
     
             # # 处理只有一个点的情况（方差和最大距离应为0）！！导致生成了很多0

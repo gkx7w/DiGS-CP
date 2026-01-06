@@ -7,3 +7,12 @@ spconv/
 checkpoints/
 build/
 pypcd-master/
+
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+
+*.pth
+*.ckpt
